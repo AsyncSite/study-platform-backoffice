@@ -1,7 +1,10 @@
 import axios from 'axios';
 import type { LoginRequest, LoginResponse } from '../types/auth';
+import { env } from '../config/environment';
+import { mockAuthApi } from './mockAuth';
 
-const AUTH_API_URL = 'https://api.asyncsite.com/api/auth';
+// Use environment-specific auth API URL
+const AUTH_API_URL = env.authApiUrl;
 
 // Create a separate axios instance for auth to avoid circular dependencies
 const authClient = axios.create({
@@ -12,7 +15,8 @@ const authClient = axios.create({
   },
 });
 
-export const authApi = {
+// Real auth API implementation
+const realAuthApi = {
   login: async (credentials: LoginRequest): Promise<LoginResponse> => {
     try {
       const response = await authClient.post<LoginResponse>('/login', credentials);
@@ -43,3 +47,6 @@ export const authApi = {
     }
   },
 };
+
+// Export either mock or real API based on environment
+export const authApi = env.enableMockAuth ? mockAuthApi : realAuthApi;

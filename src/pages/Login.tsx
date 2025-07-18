@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import styled from 'styled-components';
 import { useAuth } from '../contexts/AuthContext';
 import Button, { ButtonVariant } from '../components/common/Button';
+import { env } from '../config/environment';
+import { MockLoginInfo } from '../api/mockAuth';
 
 const Login: React.FC = () => {
   const [username, setUsername] = useState('');
@@ -46,6 +48,10 @@ const Login: React.FC = () => {
         
         <LoginForm onSubmit={handleSubmit}>
           <FormTitle>관리자 로그인</FormTitle>
+          
+          {env.enableMockAuth && (
+            <MockLoginInfoContainer dangerouslySetInnerHTML={{ __html: MockLoginInfo() }} />
+          )}
           
           {error && <ErrorMessage>{error}</ErrorMessage>}
           
@@ -245,6 +251,10 @@ const HelpLink = styled.a`
   &:hover {
     text-decoration: underline;
   }
+`;
+
+const MockLoginInfoContainer = styled.div`
+  margin-bottom: 20px;
 `;
 
 export default Login;
