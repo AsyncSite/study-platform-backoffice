@@ -2,23 +2,54 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { ThemeProvider } from 'styled-components';
 import Dashboard from './pages/Dashboard';
 import StudyManagement from './pages/StudyManagement';
+import Login from './pages/Login';
 import GlobalStyle from './styles/GlobalStyle';
 import theme from './styles/theme';
 import Layout from './components/Layout';
+import PrivateRoute from './components/PrivateRoute';
+import { AuthProvider } from './contexts/AuthContext';
 
 function App() {
   return (
     <ThemeProvider theme={theme}>
       <GlobalStyle />
       <Router>
-        <Layout>
+        <AuthProvider>
           <Routes>
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/studies" element={<StudyManagement />} />
+            <Route path="/login" element={<Login />} />
+            <Route
+              path="/"
+              element={
+                <PrivateRoute>
+                  <Layout>
+                    <Navigate to="/dashboard" replace />
+                  </Layout>
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/dashboard"
+              element={
+                <PrivateRoute>
+                  <Layout>
+                    <Dashboard />
+                  </Layout>
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/studies"
+              element={
+                <PrivateRoute>
+                  <Layout>
+                    <StudyManagement />
+                  </Layout>
+                </PrivateRoute>
+              }
+            />
             {/* Will add more routes */}
           </Routes>
-        </Layout>
+        </AuthProvider>
       </Router>
     </ThemeProvider>
   );

@@ -1,7 +1,16 @@
 import React from 'react';
 import styled from 'styled-components';
+import { useAuth } from '../../contexts/AuthContext';
 
 const TopNavigation: React.FC = () => {
+  const { user, logout } = useAuth();
+  
+  const handleLogout = () => {
+    if (window.confirm('로그아웃 하시겠습니까?')) {
+      logout();
+    }
+  };
+  
   return (
     <TopNav>
       <Container>
@@ -24,8 +33,19 @@ const TopNavigation: React.FC = () => {
           </NotificationIcon>
           
           <UserProfile>
-            <UserAvatar>관리자</UserAvatar>
-            <DropdownIcon>▼</DropdownIcon>
+            <UserInfo>
+              <UserAvatar>{user?.name?.[0] || user?.username?.[0] || '관'}</UserAvatar>
+              <UserDetails>
+                <UserName>{user?.name || user?.username || '관리자'}</UserName>
+                <UserRole>{user?.role === 'ADMIN' ? '관리자' : '운영자'}</UserRole>
+              </UserDetails>
+            </UserInfo>
+            <Dropdown>
+              <DropdownIcon>▼</DropdownIcon>
+              <DropdownMenu>
+                <DropdownItem onClick={handleLogout}>로그아웃</DropdownItem>
+              </DropdownMenu>
+            </Dropdown>
           </UserProfile>
         </TopNavContent>
       </Container>
@@ -153,7 +173,13 @@ const UserProfile = styled.div`
   display: flex;
   align-items: center;
   gap: 10px;
-  cursor: pointer;
+  position: relative;
+`;
+
+const UserInfo = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
 `;
 
 const UserAvatar = styled.div`
@@ -164,13 +190,70 @@ const UserAvatar = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 10px;
+  font-size: 14px;
   font-weight: 500;
+  text-transform: uppercase;
+`;
+
+const UserDetails = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+`;
+
+const UserName = styled.span`
+  font-size: 14px;
+  font-weight: 500;
+  color: ${({ theme }) => theme.colors.text.primary};
+`;
+
+const UserRole = styled.span`
+  font-size: 11px;
+  color: ${({ theme }) => theme.colors.text.secondary};
+`;
+
+const Dropdown = styled.div`
+  position: relative;
+  cursor: pointer;
+  
+  &:hover .dropdown-menu {
+    display: block;
+  }
 `;
 
 const DropdownIcon = styled.span`
   font-size: 12px;
   color: ${({ theme }) => theme.colors.gray[500]};
+`;
+
+const DropdownMenu = styled.div.attrs({ className: 'dropdown-menu' })`
+  display: none;
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: ${({ theme }) => theme.colors.surface};
+  border-radius: ${({ theme }) => theme.radii.medium};
+  box-shadow: ${({ theme }) => theme.shadows.large};
+  padding: 8px 0;
+  min-width: 150px;
+  margin-top: 8px;
+  z-index: 1000;
+`;
+
+const DropdownItem = styled.button`
+  width: 100%;
+  padding: 10px 16px;
+  text-align: left;
+  font-size: 14px;
+  color: ${({ theme }) => theme.colors.text.primary};
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: ${({ theme }) => theme.transitions.fast};
+  
+  &:hover {
+    background: ${({ theme }) => theme.colors.gray[100]};
+  }
 `;
 
 export default TopNavigation;
