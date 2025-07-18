@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { ThemeProvider } from 'styled-components';
 import Dashboard from './pages/Dashboard';
 import StudyManagement from './pages/StudyManagement';
+import MemberManagement from './pages/MemberManagement';
 import Login from './pages/Login';
 import GlobalStyle from './styles/GlobalStyle';
 import theme from './styles/theme';
@@ -43,6 +44,16 @@ function App() {
                 <PrivateRoute>
                   <Layout>
                     <StudyManagement />
+                  </Layout>
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/members"
+              element={
+                <PrivateRoute>
+                  <Layout>
+                    <MemberManagement />
                   </Layout>
                 </PrivateRoute>
               }
