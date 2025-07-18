@@ -9,9 +9,15 @@ export interface LoginResponse {
   data: {
     accessToken: string;
     refreshToken?: string;
-    user: User;
+    tokenType?: string;
+    expiresIn?: number;
+    username: string;
+    email: string;
+    roles: string[];
   };
   message?: string;
+  error?: any;
+  timestamp?: string;
 }
 
 export interface User {

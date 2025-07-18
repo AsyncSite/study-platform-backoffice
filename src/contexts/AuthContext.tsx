@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { User, LoginRequest } from '../types/auth';
+import { UserRole } from '../types/auth';
 import { authApi } from '../api/auth';
 
 interface AuthContextType {
@@ -56,12 +57,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const response = await authApi.login(credentials);
       
       if (response.success && response.data) {
-        const { accessToken, user } = response.data;
+        const { accessToken, username, email, roles } = response.data;
         
         // Check if user is admin
-        if (user.role !== 'ADMIN' && user.role !== 'OPERATOR') {
+        if (!roles.includes('ADMIN') && !roles.includes('OPERATOR')) {
           throw new Error('접근 권한이 없습니다. 관리자만 접속할 수 있습니다.');
         }
+        
+        // Create user object from response
+        const user: User = {
+          id: email, // Using email as ID since it's not provided
+          username,
+          email,
+          role: roles.includes('ADMIN') ? UserRole.ADMIN : UserRole.OPERATOR,
+          name: username
+        };
         
         // Save to localStorage
         localStorage.setItem('authToken', accessToken);

@@ -57,7 +57,11 @@ export const mockAuthApi = {
       data: {
         accessToken: `mock-jwt-token-${Date.now()}`,
         refreshToken: `mock-refresh-token-${Date.now()}`,
-        user: mockUser.user,
+        tokenType: 'Bearer',
+        expiresIn: 3600,
+        username: mockUser.user.username,
+        email: mockUser.user.email,
+        roles: [mockUser.user.role],
       },
       message: '로그인 성공',
     };
