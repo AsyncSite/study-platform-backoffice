@@ -1,14 +1,41 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import styled from 'styled-components';
 import { useAuth } from '../../contexts/AuthContext';
+import {useNavigate} from "react-router-dom";
 
 const TopNavigation: React.FC = () => {
+  const navigate = useNavigate();
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
   const { user, logout } = useAuth();
   
+  // 외부 클릭 감지
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   const handleLogout = () => {
     if (window.confirm('로그아웃 하시겠습니까?')) {
       logout();
     }
+  };
+
+  const handleMoveMyPage = () => {
+      navigate('/myPage');
+  };
+
+  const toggleDropdown = () => {
+    setIsDropdownOpen(!isDropdownOpen);
   };
   
   return (
@@ -32,17 +59,18 @@ const TopNavigation: React.FC = () => {
             <NotificationBadge />
           </NotificationIcon>
           
-          <UserProfile>
-            <UserInfo>
+          <UserProfile ref={dropdownRef}>
+            <UserInfo onClick={toggleDropdown}>
               <UserAvatar>{user?.name?.[0] || user?.username?.[0] || '관'}</UserAvatar>
               <UserDetails>
                 <UserName>{user?.name || user?.username || '관리자'}</UserName>
                 <UserRole>{user?.role === 'ADMIN' ? '관리자' : '운영자'}</UserRole>
               </UserDetails>
             </UserInfo>
-            <Dropdown>
+            <Dropdown onClick={toggleDropdown}>
               <DropdownIcon>▼</DropdownIcon>
-              <DropdownMenu>
+              <DropdownMenu isOpen={isDropdownOpen}>
+                <DropdownItem onClick={handleMoveMyPage}>마이페이지</DropdownItem>
                 <DropdownItem onClick={handleLogout}>로그아웃</DropdownItem>
               </DropdownMenu>
             </Dropdown>
@@ -215,10 +243,6 @@ const UserRole = styled.span`
 const Dropdown = styled.div`
   position: relative;
   cursor: pointer;
-  
-  &:hover .dropdown-menu {
-    display: block;
-  }
 `;
 
 const DropdownIcon = styled.span`
@@ -226,8 +250,8 @@ const DropdownIcon = styled.span`
   color: ${({ theme }) => theme.colors.gray[500]};
 `;
 
-const DropdownMenu = styled.div.attrs({ className: 'dropdown-menu' })`
-  display: none;
+const DropdownMenu = styled.div<{ isOpen: boolean }>`
+  display: ${({ isOpen }) => isOpen ? 'block' : 'none'};
   position: absolute;
   top: 100%;
   right: 0;

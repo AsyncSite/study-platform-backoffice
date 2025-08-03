@@ -16,7 +16,7 @@ const tabs: Tab[] = [
   { id: 'payments', label: '결제 관리', icon: '💰', path: '/payments' },
   { id: 'analytics', label: '통계/분석', icon: '📈', path: '/analytics' },
   { id: 'support', label: '문의/지원', icon: '💬', path: '/support' },
-  { id: 'settings', label: '설정', icon: '⚙️', path: '/settings' },
+  { id: 'settings', label: '설정', icon: '⚙️', path: '/myPage' },
 ];
 
 const TabNavigation: React.FC = () => {

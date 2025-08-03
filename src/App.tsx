@@ -3,6 +3,7 @@ import { ThemeProvider } from 'styled-components';
 import Dashboard from './pages/Dashboard';
 import StudyManagement from './pages/StudyManagement';
 import MemberManagement from './pages/MemberManagement';
+import MyPage from './pages/MyPage';
 import Login from './pages/Login';
 import GlobalStyle from './styles/GlobalStyle';
 import theme from './styles/theme';
@@ -54,6 +55,16 @@ function App() {
                 <PrivateRoute>
                   <Layout>
                     <MemberManagement />
+                  </Layout>
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/myPage"
+              element={
+                <PrivateRoute>
+                  <Layout>
+                    <MyPage />
                   </Layout>
                 </PrivateRoute>
               }
