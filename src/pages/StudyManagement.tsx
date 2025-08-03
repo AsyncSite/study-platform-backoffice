@@ -1,264 +1,397 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import StudyStatusOverview from '../components/study/StudyStatusOverview';
-import StudyRecentActivity, { type Activity } from '../components/study/StudyRecentActivity';
-import StudyCard from '../components/study/StudyCard';
-import StudyFilters from '../components/study/StudyFilters';
-import Pagination from '../components/common/Pagination';
-import Button, { ButtonVariant } from '../components/common/Button';
 import Card from '../components/common/Card';
-import type { StudyResponse } from '../types/api';
+import Button from '../components/common/Button';
+import StudyManagementTabs, { type StudyTab } from '../components/study/StudyManagementTabs';
+import PendingStudiesTab from '../components/study/PendingStudiesTab';
+import ActiveStudiesTab from '../components/study/ActiveStudiesTab';
+import InactiveStudiesTab from '../components/study/InactiveStudiesTab';
+import StudyDetailModal from '../components/study/StudyDetailModal';
+import StudyRejectModal from '../components/study/StudyRejectModal';
+import StudyApplicationsModal from '../components/study/StudyApplicationsModal';
+import AdminStudyCreateModal from '../components/study/AdminStudyCreateModal';
+import type { StudyResponse, StudyCreateRequest } from '../types/api';
 import { StudyStatus } from '../types/api';
-
-// Mock data
-const mockStudies: StudyResponse[] = [
-  {
-    id: 'ST-2025-001',
-    title: 'React 심화 스터디',
-    description: 'React의 고급 기능과 최적화 기법을 학습합니다',
-    proposerId: 'developer@email.com',
-    status: StudyStatus.PENDING,
-    createdAt: '2025-01-17T14:30:00',
-    updatedAt: '2025-01-17T14:30:00',
-  },
-  {
-    id: 'ST-2025-002',
-    title: '알고리즘 문제풀이',
-    description: '매주 알고리즘 문제를 풀고 리뷰합니다',
-    proposerId: 'coder@email.com',
-    status: StudyStatus.APPROVED,
-    createdAt: '2025-01-10T10:00:00',
-    updatedAt: '2025-01-10T10:00:00',
-  },
-  {
-    id: 'ST-2025-003',
-    title: 'Python 기초',
-    description: 'Python 프로그래밍 기초 학습',
-    proposerId: 'student@email.com',
-    status: StudyStatus.REJECTED,
-    createdAt: '2025-01-16T09:00:00',
-    updatedAt: '2025-01-16T15:00:00',
-  },
-  // Add more mock data
-];
-
-const mockActivities: Activity[] = [
-  { id: '1', type: 'approved', title: 'React 스터디 승인됨', timestamp: '10분 전' },
-  { id: '2', type: 'pending', title: '새 스터디 제안 도착', timestamp: '25분 전' },
-  { id: '3', type: 'rejected', title: 'Python 스터디 거절됨', timestamp: '1시간 전' },
-];
+import { studyApi } from '../api/study';
+import { useAuth } from '../contexts/AuthContext';
+import { useNotification } from '../contexts/NotificationContext';
+import { Plus, RefreshCw } from 'lucide-react';
 
 const StudyManagement: React.FC = () => {
-  const [studies, setStudies] = useState<StudyResponse[]>(mockStudies);
-  const [filter, setFilter] = useState<StudyStatus | 'ALL'>('ALL');
-  const [viewMode, setViewMode] = useState<'card' | 'list'>('card');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [searchQuery, setSearchQuery] = useState('');
+  const { user } = useAuth();
+  const { showToast, showConfirm } = useNotification();
+  
+  // State
+  const [activeTab, setActiveTab] = useState<StudyTab>('PENDING');
+  const [studies, setStudies] = useState<StudyResponse[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showDeleted, setShowDeleted] = useState(false);
+  
+  // Modals
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [selectedStudy, setSelectedStudy] = useState<StudyResponse | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
+  const [studyToReject, setStudyToReject] = useState<StudyResponse | null>(null);
+  const [isApplicationsModalOpen, setIsApplicationsModalOpen] = useState(false);
+  const [applicationStudy, setApplicationStudy] = useState<StudyResponse | null>(null);
 
-  const itemsPerPage = 9;
+  // Load studies on mount and when showDeleted changes
+  useEffect(() => {
+    loadStudies();
+  }, [showDeleted]);
 
-  // Filter studies
-  const filteredStudies = studies.filter((study) => {
-    const matchesFilter = filter === 'ALL' || study.status === filter;
-    const matchesSearch = 
-      study.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      study.proposerId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      study.id.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesFilter && matchesSearch;
-  });
-
-  // Pagination
-  const totalPages = Math.ceil(filteredStudies.length / itemsPerPage);
-  const paginatedStudies = filteredStudies.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
-
-  // Status distribution
-  const distribution = {
-    approved: studies.filter(s => s.status === StudyStatus.APPROVED).length,
-    pending: studies.filter(s => s.status === StudyStatus.PENDING).length,
-    rejected: studies.filter(s => s.status === StudyStatus.REJECTED).length,
+  const loadStudies = async () => {
+    try {
+      setLoading(true);
+      const response = showDeleted 
+        ? await studyApi.getPagedStudiesIncludingDeleted(0, 100, 'createdAt,desc')
+        : await studyApi.getPagedStudies(0, 100, 'createdAt,desc');
+      
+      setStudies(response.content);
+    } catch (error) {
+      console.error('Failed to load studies:', error);
+      showToast('스터디 목록을 불러오는데 실패했습니다.', 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleApprove = (id: string) => {
-    setStudies(prev => 
-      prev.map(study => 
-        study.id === id ? { ...study, status: StudyStatus.APPROVED } : study
-      )
-    );
+  // Filter studies by tab
+  const getFilteredStudies = () => {
+    switch (activeTab) {
+      case 'PENDING':
+        return studies.filter(s => s.status === StudyStatus.PENDING);
+      case 'ACTIVE':
+        return studies.filter(s => s.status === StudyStatus.APPROVED || s.status === StudyStatus.IN_PROGRESS);
+      case 'INACTIVE':
+        return studies.filter(s => s.status === StudyStatus.TERMINATED || s.status === StudyStatus.REJECTED);
+      default:
+        return [];
+    }
+  };
+
+  // Study actions
+  const handleApprove = async (id: string) => {
+    try {
+      await studyApi.approveStudy(id);
+      await loadStudies();
+      showToast('스터디가 승인되었습니다.', 'success');
+    } catch (error) {
+      console.error('Failed to approve study:', error);
+      showToast('스터디 승인에 실패했습니다.', 'error');
+    }
   };
 
   const handleReject = (id: string) => {
-    setStudies(prev => 
-      prev.map(study => 
-        study.id === id ? { ...study, status: StudyStatus.REJECTED } : study
-      )
-    );
+    const study = studies.find(s => s.id === id);
+    if (study) {
+      setStudyToReject(study);
+      setIsRejectModalOpen(true);
+    }
   };
 
-  const handleTerminate = (id: string) => {
-    setStudies(prev => 
-      prev.map(study => 
-        study.id === id ? { ...study, status: StudyStatus.TERMINATED } : study
-      )
-    );
+  const handleRejectConfirm = async (reason: string) => {
+    if (!studyToReject) return;
+    
+    try {
+      await studyApi.rejectStudy(studyToReject.id, reason);
+      await loadStudies();
+      setIsRejectModalOpen(false);
+      setStudyToReject(null);
+      showToast('스터디가 거절되었습니다.', 'success');
+    } catch (error) {
+      console.error('Failed to reject study:', error);
+      showToast('스터디 거절에 실패했습니다.', 'error');
+    }
   };
 
-  const handleDelete = (id: string) => {
-    setStudies(prev => prev.filter(study => study.id !== id));
+  const handleTerminate = async (id: string) => {
+    const study = studies.find(s => s.id === id);
+    if (!study) return;
+    
+    const confirmed = await showConfirm({
+      title: '스터디 종료',
+      message: `"${study.title}" 스터디를 정말 종료하시겠습니까?\n\n종료된 스터디는 더 이상 새로운 지원을 받을 수 없습니다.`,
+      confirmText: '종료',
+      variant: 'warning'
+    });
+    
+    if (!confirmed) return;
+    
+    try {
+      await studyApi.terminateStudy(id);
+      await loadStudies();
+      showToast('스터디가 종료되었습니다.', 'success');
+    } catch (error: any) {
+      console.error('Failed to terminate study:', error);
+      const errorMessage = error.response?.data?.error?.message || '스터디 종료에 실패했습니다.';
+      showToast(errorMessage, 'error');
+    }
+  };
+
+  const handleReactivate = async (id: string) => {
+    const study = studies.find(s => s.id === id);
+    if (!study) return;
+    
+    const confirmed = await showConfirm({
+      title: '스터디 재활성화',
+      message: `"${study.title}" 스터디를 재활성화하시겠습니까?\n\n종료된 스터디가 다시 활성화되어 새로운 지원을 받을 수 있게 됩니다.`,
+      confirmText: '재활성화',
+      variant: 'info'
+    });
+    
+    if (!confirmed) return;
+    
+    try {
+      await studyApi.reactivateStudy(id);
+      await loadStudies();
+      showToast('스터디가 재활성화되었습니다.', 'success');
+    } catch (error: any) {
+      console.error('Failed to reactivate study:', error);
+      const errorMessage = error.response?.data?.error?.message || '스터디 재활성화에 실패했습니다.';
+      showToast(errorMessage, 'error');
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    const study = studies.find(s => s.id === id);
+    if (!study) return;
+    
+    const confirmed = await showConfirm({
+      title: '스터디 삭제',
+      message: `"${study.title}" 스터디를 영구적으로 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다.`,
+      confirmText: '삭제',
+      variant: 'danger'
+    });
+    
+    if (!confirmed) return;
+    
+    try {
+      await studyApi.deleteStudy(id);
+      await loadStudies();
+      showToast('스터디가 삭제되었습니다.', 'success');
+    } catch (error: any) {
+      console.error('Failed to delete study:', error);
+      const errorMessage = error.response?.data?.error?.message || '스터디 삭제에 실패했습니다.';
+      showToast(errorMessage, 'error');
+    }
   };
 
   const handleView = (id: string) => {
-    console.log('View study:', id);
+    const study = studies.find(s => s.id === id);
+    if (study) {
+      setSelectedStudy(study);
+      setIsDetailModalOpen(true);
+    }
   };
 
+  const handleManageApplications = (study: StudyResponse) => {
+    setApplicationStudy(study);
+    setIsApplicationsModalOpen(true);
+  };
+
+  const handleCreateStudy = async (data: StudyCreateRequest) => {
+    try {
+      await studyApi.createStudy(data);
+      await loadStudies();
+      setIsCreateModalOpen(false);
+      showToast('스터디가 생성되었습니다. 관리자 권한으로 생성된 스터디는 즉시 활성화됩니다.', 'success');
+    } catch (error) {
+      console.error('Failed to create study:', error);
+      showToast('스터디 생성에 실패했습니다.', 'error');
+      throw error;
+    }
+  };
+
+  // Count studies by status
+  const pendingCount = studies.filter(s => s.status === StudyStatus.PENDING).length;
+  const activeCount = studies.filter(s => s.status === StudyStatus.APPROVED || s.status === StudyStatus.IN_PROGRESS).length;
+  const inactiveCount = studies.filter(s => s.status === StudyStatus.TERMINATED || s.status === StudyStatus.REJECTED).length;
+
   return (
-    <StudyManagementContainer>
-      <DetailLayout>
-        {/* Left Panel */}
-        <LeftPanel>
-          <StudyStatusOverview 
-            pendingCount={distribution.pending}
-            distribution={distribution}
+    <Container>
+      <Header>
+        <HeaderContent>
+          <Title>스터디 관리</Title>
+          <Description>
+            모든 스터디의 생성, 승인, 참여 신청을 통합 관리합니다.
+          </Description>
+        </HeaderContent>
+        <HeaderActions>
+          <Button
+            variant="secondary"
+            size="medium"
+            onClick={() => setShowDeleted(!showDeleted)}
+          >
+            {showDeleted ? '활성 스터디만' : '삭제된 스터디 포함'}
+          </Button>
+          <Button
+            variant="primary"
+            size="medium"
+            onClick={() => setIsCreateModalOpen(true)}
+          >
+            <Plus size={20} />
+            관리자 스터디 생성
+          </Button>
+          <RefreshButton onClick={loadStudies}>
+            <RefreshCw size={20} />
+          </RefreshButton>
+        </HeaderActions>
+      </Header>
+
+      <MainCard>
+        <StudyManagementTabs
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          pendingCount={pendingCount}
+          activeCount={activeCount}
+          inactiveCount={inactiveCount}
+        />
+
+        {activeTab === 'PENDING' && (
+          <PendingStudiesTab
+            studies={getFilteredStudies()}
+            loading={loading}
+            onApprove={handleApprove}
+            onReject={handleReject}
+            onView={handleView}
           />
-          
-          <StudyRecentActivity activities={mockActivities} />
-          
-          <QuickActions>
-            <Button variant={ButtonVariant.PRIMARY} fullWidth>
-              + 새 스터디 추가
-            </Button>
-            <Button variant={ButtonVariant.SECONDARY} fullWidth>
-              📊 리포트 생성
-            </Button>
-          </QuickActions>
-        </LeftPanel>
-        
-        {/* Right Panel */}
-        <RightPanel>
-          <PanelHeader>
-            <PanelTitle>스터디 관리</PanelTitle>
-            
-            <ViewControls>
-              <StudyFilters
-                activeFilter={filter}
-                onFilterChange={setFilter}
-                viewMode={viewMode}
-                onViewModeChange={setViewMode}
-              />
-            </ViewControls>
-          </PanelHeader>
-          
-          <SearchBar
-            type="text"
-            placeholder="🔍 스터디 검색 (제목, 제안자, ID)"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+        )}
+
+        {activeTab === 'ACTIVE' && (
+          <ActiveStudiesTab
+            studies={getFilteredStudies()}
+            loading={loading}
+            onTerminate={handleTerminate}
+            onView={handleView}
+            onManageApplications={handleManageApplications}
           />
-          
-          <StudyGrid>
-            {paginatedStudies.map((study) => (
-              <StudyCard
-                key={study.id}
-                study={study}
-                onApprove={handleApprove}
-                onReject={handleReject}
-                onTerminate={handleTerminate}
-                onView={handleView}
-                onDelete={handleDelete}
-              />
-            ))}
-          </StudyGrid>
-          
-          {totalPages > 1 && (
-            <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={setCurrentPage}
-            />
-          )}
-        </RightPanel>
-      </DetailLayout>
-    </StudyManagementContainer>
+        )}
+
+        {activeTab === 'INACTIVE' && (
+          <InactiveStudiesTab
+            studies={getFilteredStudies()}
+            loading={loading}
+            onReactivate={handleReactivate}
+            onDelete={handleDelete}
+            onView={handleView}
+          />
+        )}
+      </MainCard>
+
+      {/* Modals */}
+      <AdminStudyCreateModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSubmit={handleCreateStudy}
+      />
+
+      <StudyDetailModal
+        isOpen={isDetailModalOpen}
+        onClose={() => {
+          setIsDetailModalOpen(false);
+          setSelectedStudy(null);
+        }}
+        study={selectedStudy}
+        onApprove={async (id) => {
+          await handleApprove(id);
+          setIsDetailModalOpen(false);
+          setSelectedStudy(null);
+        }}
+        onReject={(id) => {
+          handleReject(id);
+          setIsDetailModalOpen(false);
+          setSelectedStudy(null);
+        }}
+        onTerminate={async (id) => {
+          await handleTerminate(id);
+          setIsDetailModalOpen(false);
+          setSelectedStudy(null);
+        }}
+        onReactivate={async (id) => {
+          await handleReactivate(id);
+          setIsDetailModalOpen(false);
+          setSelectedStudy(null);
+        }}
+      />
+
+      <StudyRejectModal
+        isOpen={isRejectModalOpen}
+        onClose={() => {
+          setIsRejectModalOpen(false);
+          setStudyToReject(null);
+        }}
+        onReject={handleRejectConfirm}
+        studyTitle={studyToReject?.title || ''}
+      />
+
+      <StudyApplicationsModal
+        isOpen={isApplicationsModalOpen}
+        onClose={() => {
+          setIsApplicationsModalOpen(false);
+          setApplicationStudy(null);
+        }}
+        study={applicationStudy}
+      />
+    </Container>
   );
 };
 
-const StudyManagementContainer = styled.div`
-  width: 100%;
-  padding: 20px 0;
+const Container = styled.div`
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
 `;
 
-const DetailLayout = styled.div`
-  display: grid;
-  grid-template-columns: 300px 1fr;
-  gap: 30px;
-  
-  @media (max-width: ${({ theme }) => theme.breakpoints.desktop}) {
-    grid-template-columns: 1fr;
-  }
-`;
-
-const LeftPanel = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-`;
-
-const QuickActions = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-`;
-
-const RightPanel = styled(Card)`
-  padding: 30px;
-`;
-
-const PanelHeader = styled.div`
+const Header = styled.div`
   display: flex;
   justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 32px;
+`;
+
+const HeaderContent = styled.div``;
+
+const Title = styled.h1`
+  font-size: 28px;
+  font-weight: 700;
+  color: ${({ theme }) => theme.colors.text.primary};
+  margin-bottom: 8px;
+`;
+
+const Description = styled.p`
+  font-size: 16px;
+  color: ${({ theme }) => theme.colors.text.secondary};
+`;
+
+const HeaderActions = styled.div`
+  display: flex;
+  gap: 12px;
   align-items: center;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
-  gap: 20px;
 `;
 
-const PanelTitle = styled.h2`
-  font-size: 20px;
-  font-weight: bold;
-`;
-
-const ViewControls = styled.div`
+const RefreshButton = styled.button`
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
-  gap: 20px;
-`;
+  justify-content: center;
+  background: ${({ theme }) => theme.colors.background.secondary};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 8px;
+  color: ${({ theme }) => theme.colors.text.secondary};
+  cursor: pointer;
+  transition: all 0.2s;
 
-const SearchBar = styled.input`
-  width: 100%;
-  padding: 12px 20px;
-  border-radius: 20px;
-  border: none;
-  background: ${({ theme }) => theme.colors.gray[100]};
-  font-size: 14px;
-  margin-bottom: 20px;
-  outline: none;
-  transition: ${({ theme }) => theme.transitions.normal};
-  
-  &:focus {
-    background: ${({ theme }) => theme.colors.gray[200]};
+  &:hover {
+    background: ${({ theme }) => theme.colors.background.primary};
+    color: ${({ theme }) => theme.colors.primary};
   }
 `;
 
-const StudyGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 20px;
-  
-  @media (max-width: ${({ theme }) => theme.breakpoints.tablet}) {
-    grid-template-columns: 1fr;
-  }
+const MainCard = styled(Card)`
+  padding: 32px;
 `;
 
 export default StudyManagement;

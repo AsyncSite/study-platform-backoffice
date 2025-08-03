@@ -1,7 +1,6 @@
 import axios from 'axios';
 import type { LoginRequest, LoginResponse } from '../types/auth';
 import { env } from '../config/environment';
-import { mockAuthApi } from './mockAuth';
 
 // Use environment-specific auth API URL
 const AUTH_API_URL = env.authApiUrl;
@@ -15,11 +14,17 @@ const authClient = axios.create({
   },
 });
 
-// Real auth API implementation
-const realAuthApi = {
+// Auth API implementation
+export const authApi = {
   login: async (credentials: LoginRequest): Promise<LoginResponse> => {
     try {
       const response = await authClient.post<LoginResponse>('/login', credentials);
+      
+      // Store refresh token if provided
+      if (response.data.success && response.data.data?.refreshToken) {
+        localStorage.setItem('refreshToken', response.data.data.refreshToken);
+      }
+      
       return response.data;
     } catch (error) {
       throw error;
@@ -33,20 +38,10 @@ const realAuthApi = {
     localStorage.removeItem('user');
   },
 
-  // Verify token validity
+  // Verify token validity (deprecated - not used anymore)
   verifyToken: async (token: string): Promise<boolean> => {
-    try {
-      const response = await authClient.get('/verify', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      return response.status === 200;
-    } catch {
-      return false;
-    }
+    // Token verification is now handled by actual API calls
+    // If token is invalid, 401 will be returned and handled by axios interceptor
+    return true;
   },
 };
-
-// Export either mock or real API based on environment
-export const authApi = env.enableMockAuth ? mockAuthApi : realAuthApi;

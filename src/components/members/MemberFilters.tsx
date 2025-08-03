@@ -69,9 +69,8 @@ const MemberFilters: React.FC<MemberFiltersProps> = ({ onFilterChange }) => {
           <FilterLabel>역할</FilterLabel>
           <FilterSelect value={selectedRole} onChange={(e) => handleRoleChange(e.target.value)}>
             <option value="">전체</option>
-            <option value="USER">일반회원</option>
-            <option value="ADMIN">관리자</option>
-            <option value="OPERATOR">운영자</option>
+            <option value="ROLE_USER">일반회원</option>
+            <option value="ROLE_ADMIN">관리자</option>
           </FilterSelect>
         </FilterGroup>
 
@@ -89,10 +88,10 @@ const MemberFilters: React.FC<MemberFiltersProps> = ({ onFilterChange }) => {
           <FilterLabel>가입경로</FilterLabel>
           <FilterSelect value={selectedProvider} onChange={(e) => handleProviderChange(e.target.value)}>
             <option value="">전체</option>
-            <option value="local">일반가입</option>
-            <option value="google">구글</option>
-            <option value="kakao">카카오</option>
-            <option value="naver">네이버</option>
+            <option value="LOCAL">일반가입</option>
+            <option value="GOOGLE">구글</option>
+            <option value="KAKAO">카카오</option>
+            <option value="NAVER">네이버</option>
           </FilterSelect>
         </FilterGroup>
 

@@ -1,5 +1,11 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
+import { useNavigate } from 'react-router-dom';
+import { usersApi } from '../api/users';
+import { studyApi } from '../api/study';
+import type { UserStatistics } from '../types/user';
+import type { StudyResponse } from '../types/api';
+import { StudyStatus } from '../types/api';
 import StatCard from '../components/dashboard/StatCard';
 import StudyCard from '../components/dashboard/StudyCard';
 import ActivityCard from '../components/dashboard/ActivityCard';
@@ -7,60 +13,148 @@ import WeeklyTrendChart from '../components/dashboard/WeeklyTrendChart';
 import CategoryDistributionChart from '../components/dashboard/CategoryDistributionChart';
 
 const Dashboard: React.FC = () => {
-  // Mock data
-  const stats = [
-    {
-      label: '전체 회원',
-      value: '12,847',
-      change: { value: '12.5%', positive: true, description: '지난달 대비' },
-      barColor: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-    },
-    {
-      label: '활성 스터디',
-      value: '342',
-      change: { value: '8.2%', positive: true, description: '지난주 대비' },
-      barColor: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-    },
-    {
-      label: '월 매출',
-      value: '₩45.2M',
-      change: { value: '23.4%', positive: true, description: '목표 대비' },
-      barColor: '#f59e0b',
-    },
-    {
-      label: '대기중 문의',
-      value: '28',
-      change: { value: '5건', positive: false, description: '긴급 처리 필요' },
-      barColor: '#ef4444',
-    },
-  ];
+  const navigate = useNavigate();
+  const [userStatistics, setUserStatistics] = useState<UserStatistics | null>(null);
+  const [studies, setStudies] = useState<StudyResponse[]>([]);
+  const [, setLoading] = useState(true);
 
-  const studyData = [
-    {
-      title: 'React 심화 스터디',
-      schedule: '매주 화요일 19:00-21:00',
-      participants: { current: 18, max: 20 },
-      progress: 65,
-      nextMeeting: 'D-2',
-      satisfaction: 4.8,
-      status: 'active' as const,
-      iconLetter: 'R',
-      iconColor: '#eff6ff',
-      barColor: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+  useEffect(() => {
+    fetchStatistics();
+    fetchStudies();
+  }, []);
+
+  const fetchStatistics = async () => {
+    try {
+      setLoading(true);
+      const stats = await usersApi.getUserStatistics();
+      setUserStatistics(stats);
+    } catch (error: any) {
+      console.error('Failed to fetch statistics:', error);
+      
+      if (error.response?.status === 401) {
+        alert('세션이 만료되었습니다. 다시 로그인해주세요.');
+        navigate('/login');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchStudies = async () => {
+    try {
+      const response = await studyApi.getPaged({ page: 0, size: 2, sort: 'createdAt,desc' });
+      if (response.success && response.data) {
+        setStudies(response.data.content);
+      }
+    } catch (error) {
+      console.error('Failed to fetch studies:', error);
+    }
+  };
+
+  const calculateGrowthRate = (current: number, previous: number): string => {
+    if (previous === 0) return '0%';
+    const rate = ((current - previous) / previous * 100).toFixed(1);
+    return `${rate}%`;
+  };
+
+  const getStats = () => {
+    if (!userStatistics) {
+      return [
+        {
+          label: '전체 회원',
+          value: '-',
+          change: { value: '-', positive: true, description: '지난달 대비' },
+          barColor: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+        },
+        {
+          label: '활성 스터디',
+          value: '-',
+          change: { value: '-', positive: true, description: '지난주 대비' },
+          barColor: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+        },
+        {
+          label: '월 매출',
+          value: '-',
+          change: { value: '-', positive: true, description: '목표 대비' },
+          barColor: '#f59e0b',
+        },
+        {
+          label: '대기중 문의',
+          value: '-',
+          change: { value: '-', positive: false, description: '긴급 처리 필요' },
+          barColor: '#ef4444',
+        },
+      ];
+    }
+
+    const monthlyGrowth = userStatistics.newUsersThisMonth > 0 
+      ? calculateGrowthRate(userStatistics.newUsersThisMonth, userStatistics.newUsersThisMonth - userStatistics.newUsersThisWeek)
+      : '0%';
+
+    return [
+      {
+        label: '전체 회원',
+        value: userStatistics.totalUsers.toLocaleString() + '명',
+        change: { 
+          value: monthlyGrowth, 
+          positive: parseFloat(monthlyGrowth) >= 0, 
+          description: '지난달 대비' 
+        },
+        barColor: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+      },
+      {
+        label: '활성 회원',
+        value: userStatistics.activeUsers.toLocaleString() + '명',
+        change: { 
+          value: `${((userStatistics.activeUsers / userStatistics.totalUsers) * 100).toFixed(1)}%`, 
+          positive: true, 
+          description: '활성률' 
+        },
+        barColor: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+      },
+      {
+        label: '신규 가입',
+        value: userStatistics.newUsersToday.toLocaleString() + '명',
+        change: { 
+          value: `이번주 ${userStatistics.newUsersThisWeek}명`, 
+          positive: true, 
+          description: '오늘 기준' 
+        },
+        barColor: '#f59e0b',
+      },
+      {
+        label: '비활성 회원',
+        value: userStatistics.inactiveUsers.toLocaleString() + '명',
+        change: { 
+          value: `탈퇴 ${userStatistics.withdrawnUsers}명`, 
+          positive: false, 
+          description: '관리 필요' 
+        },
+        barColor: '#ef4444',
+      },
+    ];
+  };
+
+  const stats = getStats();
+
+  // Transform API studies to dashboard format
+  const studyData = studies.map((study, index) => ({
+    title: study.title,
+    schedule: '스케줄 정보 미제공', // API에서 제공하지 않음
+    participants: { 
+      current: Math.floor(Math.random() * 15) + 5, // 임시 데이터
+      max: 20 
     },
-    {
-      title: '알고리즘 마스터',
-      schedule: '매주 목요일 20:00-22:00',
-      participants: { current: 12, max: 15 },
-      progress: 40,
-      nextMeeting: 'D-4',
-      satisfaction: 4.6,
-      status: 'recruiting' as const,
-      iconLetter: 'A',
-      iconColor: '#d1fae5',
-      barColor: '#10b981',
-    },
-  ];
+    progress: Math.floor(Math.random() * 60) + 20, // 임시 데이터
+    nextMeeting: `D-${Math.floor(Math.random() * 7) + 1}`, // 임시 데이터
+    satisfaction: (Math.random() * 2 + 3).toFixed(1), // 3.0 ~ 5.0
+    status: study.status === StudyStatus.APPROVED ? 'active' as const : 'recruiting' as const,
+    iconLetter: study.title.charAt(0).toUpperCase(),
+    iconColor: index % 2 === 0 ? '#eff6ff' : '#d1fae5',
+    barColor: index % 2 === 0 
+      ? 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)' 
+      : '#10b981',
+  }));
 
   const activities = [
     { id: '1', type: 'new-member' as const, title: '새로운 회원 가입', description: '김민수 · park@email.com', timestamp: '2분 전' },
@@ -101,9 +195,13 @@ const Dashboard: React.FC = () => {
       </SectionHeader>
 
       <StudyGrid>
-        {studyData.map((study, index) => (
-          <StudyCard key={index} {...study} />
-        ))}
+        {studyData.length > 0 ? (
+          studyData.map((study, index) => (
+            <StudyCard key={index} {...study} />
+          ))
+        ) : (
+          <EmptyMessage>진행중인 스터디가 없습니다.</EmptyMessage>
+        )}
         <ActivityCard activities={activities} />
       </StudyGrid>
 
@@ -177,6 +275,12 @@ const ChartGrid = styled.div`
   @media (max-width: ${({ theme }) => theme.breakpoints.desktop}) {
     grid-template-columns: 1fr;
   }
+`;
+
+const EmptyMessage = styled.p`
+  color: ${({ theme }) => theme.colors.gray[500]};
+  text-align: center;
+  padding: 40px;
 `;
 
 export default Dashboard;

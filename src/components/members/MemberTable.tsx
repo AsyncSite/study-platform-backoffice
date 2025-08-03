@@ -21,10 +21,8 @@ const MemberTable: React.FC<MemberTableProps> = ({
 }) => {
   const getRoleBadgeVariant = (role: string) => {
     switch (role) {
-      case 'ADMIN':
+      case 'ROLE_ADMIN':
         return 'error';
-      case 'OPERATOR':
-        return 'warning';
       default:
         return 'default';
     }
@@ -32,11 +30,9 @@ const MemberTable: React.FC<MemberTableProps> = ({
 
   const getRoleLabel = (role: string) => {
     switch (role) {
-      case 'ADMIN':
+      case 'ROLE_ADMIN':
         return '관리자';
-      case 'OPERATOR':
-        return '운영자';
-      case 'USER':
+      case 'ROLE_USER':
         return '일반회원';
       default:
         return role;
@@ -71,11 +67,11 @@ const MemberTable: React.FC<MemberTableProps> = ({
 
   const getProviderIcon = (provider?: string) => {
     switch (provider) {
-      case 'google':
+      case 'GOOGLE':
         return '🇬';
-      case 'kakao':
+      case 'KAKAO':
         return '🇰';
-      case 'naver':
+      case 'NAVER':
         return '🇳';
       default:
         return '📧';
@@ -160,7 +156,7 @@ const MemberTable: React.FC<MemberTableProps> = ({
               <Td>{formatDate(user.createdAt)}</Td>
               <Td>{formatDateTime(user.lastLoginAt)}</Td>
               <Td>
-                <StudyCount>{user.studyCount || 0}개</StudyCount>
+                <StudyCount>-</StudyCount>
               </Td>
             </TableRow>
           ))}

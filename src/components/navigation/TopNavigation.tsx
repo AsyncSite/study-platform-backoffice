@@ -69,7 +69,7 @@ const TopNavigation: React.FC = () => {
             </UserInfo>
             <Dropdown onClick={toggleDropdown}>
               <DropdownIcon>▼</DropdownIcon>
-              <DropdownMenu isOpen={isDropdownOpen}>
+              <DropdownMenu $isOpen={isDropdownOpen}>
                 <DropdownItem onClick={handleMoveMyPage}>마이페이지</DropdownItem>
                 <DropdownItem onClick={handleLogout}>로그아웃</DropdownItem>
               </DropdownMenu>
@@ -250,8 +250,8 @@ const DropdownIcon = styled.span`
   color: ${({ theme }) => theme.colors.gray[500]};
 `;
 
-const DropdownMenu = styled.div<{ isOpen: boolean }>`
-  display: ${({ isOpen }) => isOpen ? 'block' : 'none'};
+const DropdownMenu = styled.div<{ $isOpen: boolean }>`
+  display: ${({ $isOpen }) => $isOpen ? 'block' : 'none'};
   position: absolute;
   top: 100%;
   right: 0;

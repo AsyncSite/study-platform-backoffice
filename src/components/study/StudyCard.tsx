@@ -5,14 +5,14 @@ import Badge, { BadgeVariant } from '../common/Badge';
 import Button, { ButtonVariant, ButtonSize } from '../common/Button';
 import type { StudyResponse } from '../../types/api';
 import { StudyStatus } from '../../types/api';
-import { format } from 'date-fns';
-import { ko } from 'date-fns/locale';
+import { formatDate } from '../../utils/dateUtils';
 
 interface StudyCardProps {
   study: StudyResponse;
   onApprove?: (id: string) => void;
   onReject?: (id: string) => void;
   onTerminate?: (id: string) => void;
+  onReactivate?: (id: string) => void;
   onView?: (id: string) => void;
   onDelete?: (id: string) => void;
 }
@@ -22,6 +22,7 @@ const StudyCard: React.FC<StudyCardProps> = ({
   onApprove,
   onReject,
   onTerminate,
+  onReactivate,
   onView,
   onDelete,
 }) => {
@@ -49,33 +50,62 @@ const StudyCard: React.FC<StudyCardProps> = ({
     return status.toLowerCase() as 'pending' | 'active' | 'rejected' | 'terminated';
   };
 
-  const formatDate = (dateString: string) => {
-    return format(new Date(dateString), 'yyyy.MM.dd HH:mm', { locale: ko });
-  };
 
   return (
-    <StyledStudyCard $variant={getCardVariant(study.status)}>
+    <StyledStudyCard $variant={getCardVariant(study.status)} $deleted={study.deleted}>
+      {study.deleted && <DeletedOverlay>삭제된 스터디</DeletedOverlay>}
       <CardHeader $variant={getCardVariant(study.status)} />
       <CardContent>
-        <CardTitle>{study.title}</CardTitle>
+        <CardTitle>
+          {study.title}
+          {study.generation && <GenerationBadge>{study.generation}기</GenerationBadge>}
+          {study.deleted && <DeletedBadge>삭제됨</DeletedBadge>}
+        </CardTitle>
+        {study.tagline && <CardTagline>{study.tagline}</CardTagline>}
         <CardId>ID: {study.id}</CardId>
         
         <StatusBadge variant={getStatusBadgeVariant(study.status)}>
           {getStatusText(study.status)}
         </StatusBadge>
         
+        {study.type && (
+          <TypeBadge $type={study.type}>
+            {study.type === 'PARTICIPATORY' ? '참여형' : '교육형'}
+          </TypeBadge>
+        )}
+        
         <CardInfo>제안자: {study.proposerId}</CardInfo>
+        {study.schedule && <CardInfo>일정: {study.schedule}</CardInfo>}
+        {study.capacity && (
+          <CardInfo>
+            정원: {study.enrolled || 0}/{study.capacity}명
+            {study.capacity === study.enrolled && ' (마감)'}
+          </CardInfo>
+        )}
+        {study.recruitDeadline && (
+          <CardInfo>
+            모집 마감: {formatDate(study.recruitDeadline, false)}
+          </CardInfo>
+        )}
         <CardInfo>
           {study.status === StudyStatus.PENDING ? '제안일' : '수정일'}: {formatDate(study.updatedAt)}
         </CardInfo>
         
-        {study.status === StudyStatus.REJECTED && (
-          <RejectReason>사유: 중복된 주제</RejectReason>
+        {study.status === StudyStatus.REJECTED && study.rejectionReason && (
+          <RejectReason>거절 사유: {study.rejectionReason}</RejectReason>
         )}
         
         <CardActions>
-          {study.status === StudyStatus.PENDING && (
+          {study.status === StudyStatus.PENDING && !study.deleted && (
             <>
+              <Button
+                variant={ButtonVariant.PRIMARY}
+                size={ButtonSize.SMALL}
+                onClick={() => onView?.(study.id)}
+                fullWidth
+              >
+                상세보기
+              </Button>
               <Button
                 variant={ButtonVariant.SUCCESS}
                 size={ButtonSize.SMALL}
@@ -95,7 +125,7 @@ const StudyCard: React.FC<StudyCardProps> = ({
             </>
           )}
           
-          {study.status === StudyStatus.APPROVED && (
+          {study.status === StudyStatus.APPROVED && !study.deleted && (
             <>
               <Button
                 variant={ButtonVariant.PRIMARY}
@@ -116,15 +146,59 @@ const StudyCard: React.FC<StudyCardProps> = ({
             </>
           )}
           
-          {(study.status === StudyStatus.REJECTED || study.status === StudyStatus.TERMINATED) && (
-            <Button
-              variant={ButtonVariant.GHOST}
-              size={ButtonSize.SMALL}
-              onClick={() => onDelete?.(study.id)}
-              fullWidth
-            >
-              삭제
-            </Button>
+          {study.status === StudyStatus.TERMINATED && !study.deleted && (
+            <>
+              <Button
+                variant={ButtonVariant.PRIMARY}
+                size={ButtonSize.SMALL}
+                onClick={() => onView?.(study.id)}
+                fullWidth
+              >
+                상세보기
+              </Button>
+              <Button
+                variant={ButtonVariant.SECONDARY}
+                size={ButtonSize.SMALL}
+                onClick={() => onReactivate?.(study.id)}
+                fullWidth
+              >
+                재활성화
+              </Button>
+              <Button
+                variant={ButtonVariant.GHOST}
+                size={ButtonSize.SMALL}
+                onClick={() => onDelete?.(study.id)}
+                fullWidth
+              >
+                삭제
+              </Button>
+            </>
+          )}
+          
+          {study.status === StudyStatus.REJECTED && !study.deleted && (
+            <>
+              <Button
+                variant={ButtonVariant.PRIMARY}
+                size={ButtonSize.SMALL}
+                onClick={() => onView?.(study.id)}
+                fullWidth
+              >
+                상세보기
+              </Button>
+              <Button
+                variant={ButtonVariant.GHOST}
+                size={ButtonSize.SMALL}
+                onClick={() => onDelete?.(study.id)}
+                fullWidth
+              >
+                삭제
+              </Button>
+            </>
+          )}
+          {study.deleted && (
+            <DeletedMessage>
+              삭제된 스터디입니다
+            </DeletedMessage>
           )}
         </CardActions>
       </CardContent>
@@ -132,7 +206,7 @@ const StudyCard: React.FC<StudyCardProps> = ({
   );
 };
 
-const StyledStudyCard = styled(Card)<{ $variant: string }>`
+const StyledStudyCard = styled(Card)<{ $variant: string; $deleted?: boolean }>`
   border-radius: 12px;
   overflow: hidden;
   position: relative;
@@ -161,6 +235,11 @@ const StyledStudyCard = styled(Card)<{ $variant: string }>`
     return styles[$variant as keyof typeof styles] || '';
   }}
   
+  ${({ $deleted }) => $deleted && `
+    opacity: 0.7;
+    filter: grayscale(50%);
+  `}
+  
   &:hover {
     transform: translateY(-2px);
     box-shadow: ${({ theme }) => theme.shadows.large};
@@ -185,10 +264,31 @@ const CardContent = styled.div`
 `;
 
 const CardTitle = styled.h3`
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-size: 16px;
   font-weight: bold;
   margin-bottom: 5px;
   color: ${({ theme }) => theme.colors.text.primary};
+`;
+
+const GenerationBadge = styled.span`
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  background: ${({ theme }) => theme.colors.primary};
+  color: white;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+`;
+
+const CardTagline = styled.p`
+  font-size: 13px;
+  color: ${({ theme }) => theme.colors.gray[600]};
+  margin-bottom: 8px;
+  font-style: italic;
 `;
 
 const CardId = styled.p`
@@ -198,7 +298,20 @@ const CardId = styled.p`
 `;
 
 const StatusBadge = styled(Badge)`
-  margin-bottom: 20px;
+  margin-bottom: 10px;
+`;
+
+const TypeBadge = styled.span<{ $type: string }>`
+  display: inline-block;
+  padding: 4px 10px;
+  background: ${({ $type, theme }) => 
+    $type === 'PARTICIPATORY' ? theme.colors.primary : theme.colors.secondary}20;
+  color: ${({ $type, theme }) => 
+    $type === 'PARTICIPATORY' ? theme.colors.primary : theme.colors.secondary};
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  margin-bottom: 15px;
 `;
 
 const CardInfo = styled.p`
@@ -208,15 +321,52 @@ const CardInfo = styled.p`
 `;
 
 const RejectReason = styled.p`
-  font-size: 11px;
-  color: ${({ theme }) => theme.colors.gray[600]};
+  font-size: 12px;
+  color: ${({ theme }) => theme.colors.error};
   margin-top: 10px;
+  padding: 8px 12px;
+  background: ${({ theme }) => theme.colors.error}10;
+  border-radius: 6px;
+  border-left: 3px solid ${({ theme }) => theme.colors.error};
 `;
 
 const CardActions = styled.div`
   display: flex;
   gap: 10px;
   margin-top: 20px;
+`;
+
+const DeletedOverlay = styled.div`
+  position: absolute;
+  top: 0;
+  right: 0;
+  background: ${({ theme }) => theme.colors.error};
+  color: white;
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  border-bottom-left-radius: 8px;
+  z-index: 10;
+`;
+
+const DeletedBadge = styled.span`
+  display: inline-block;
+  padding: 2px 8px;
+  background: ${({ theme }) => theme.colors.error};
+  color: white;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  margin-left: 8px;
+  vertical-align: middle;
+`;
+
+const DeletedMessage = styled.div`
+  text-align: center;
+  color: ${({ theme }) => theme.colors.gray[500]};
+  font-size: 14px;
+  padding: 20px;
+  font-style: italic;
 `;
 
 export default StudyCard;

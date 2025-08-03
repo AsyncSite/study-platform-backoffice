@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import type { User, LoginRequest } from '../types/auth';
 import { UserRole } from '../types/auth';
 import { authApi } from '../api/auth';
+import { useNotification } from '../contexts/NotificationContext';
 
 interface AuthContextType {
   user: User | null;
@@ -22,6 +23,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const { showToast } = useNotification();
 
   // Check for existing session on mount
   useEffect(() => {
@@ -31,17 +33,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       if (token && savedUser) {
         try {
-          // Verify token is still valid
-          const isValid = await authApi.verifyToken(token);
-          if (isValid) {
-            setUser(JSON.parse(savedUser));
-          } else {
-            // Token is invalid, clear storage
-            localStorage.removeItem('authToken');
-            localStorage.removeItem('user');
-          }
+          // Simply restore the user from localStorage
+          // If token is invalid, API calls will return 401 and we'll handle it in axios interceptor
+          setUser(JSON.parse(savedUser));
         } catch (error) {
-          console.error('Auth check failed:', error);
+          console.error('Failed to parse saved user:', error);
           localStorage.removeItem('authToken');
           localStorage.removeItem('user');
         }
@@ -50,14 +46,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     };
 
     checkAuth();
-  }, []);
+    
+    // Listen for auth:expired events
+    const handleAuthExpired = (event: CustomEvent<{ message: string }>) => {
+      showToast(event.detail.message, 'error');
+      setUser(null);
+    };
+    
+    window.addEventListener('auth:expired', handleAuthExpired as EventListener);
+    
+    return () => {
+      window.removeEventListener('auth:expired', handleAuthExpired as EventListener);
+    };
+  }, [showToast]);
 
   const login = async (credentials: LoginRequest) => {
     try {
       const response = await authApi.login(credentials);
       
       if (response.success && response.data) {
-        const { accessToken, username, email, roles } = response.data;
+        const { accessToken, refreshToken, username, email, roles } = response.data;
         
         // Check if user is admin
         if (!roles.includes('ADMIN') && !roles.includes('OPERATOR')) {
@@ -75,6 +83,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         
         // Save to localStorage
         localStorage.setItem('authToken', accessToken);
+        if (refreshToken) {
+          localStorage.setItem('refreshToken', refreshToken);
+        }
         localStorage.setItem('user', JSON.stringify(user));
         
         // Update state
@@ -97,6 +108,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     authApi.logout();
     setUser(null);
     navigate('/login');
+    showToast('로그아웃되었습니다.', 'info');
   };
 
   const value = {

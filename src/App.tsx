@@ -10,14 +10,16 @@ import theme from './styles/theme';
 import Layout from './components/Layout';
 import PrivateRoute from './components/PrivateRoute';
 import { AuthProvider } from './contexts/AuthContext';
+import { NotificationProvider } from './contexts/NotificationContext';
 
 function App() {
   return (
     <ThemeProvider theme={theme}>
       <GlobalStyle />
       <Router>
-        <AuthProvider>
-          <Routes>
+        <NotificationProvider>
+          <AuthProvider>
+            <Routes>
             <Route path="/login" element={<Login />} />
             <Route
               path="/"
@@ -70,8 +72,9 @@ function App() {
               }
             />
             {/* Will add more routes */}
-          </Routes>
-        </AuthProvider>
+            </Routes>
+          </AuthProvider>
+        </NotificationProvider>
       </Router>
     </ThemeProvider>
   );

@@ -9,10 +9,10 @@ export const UserStatus = {
 export type UserStatus = typeof UserStatus[keyof typeof UserStatus];
 
 export const UserProvider = {
-  LOCAL: 'local',
-  GOOGLE: 'google',
-  KAKAO: 'kakao',
-  NAVER: 'naver'
+  LOCAL: 'LOCAL',
+  GOOGLE: 'GOOGLE',
+  KAKAO: 'KAKAO',
+  NAVER: 'NAVER'
 } as const;
 
 export type UserProvider = typeof UserProvider[keyof typeof UserProvider];
@@ -22,22 +22,21 @@ export interface User {
   id: string;
   email: string;
   name: string;
+  phoneNumber?: string;
   profileImage?: string;
-  role: string; // 'USER' | 'ADMIN' | 'OPERATOR'
+  role: string; // 'ROLE_USER' | 'ROLE_ADMIN'
   status: UserStatus;
+  provider: string;
   createdAt: string;
   lastLoginAt?: string;
-  provider?: UserProvider;
-  studyCount?: number;
 }
 
 // Detailed user type for detail view
 export interface UserDetail extends User {
-  phone?: string;
-  loginCount: number;
+  updatedAt: string;
+  // Additional fields can be added later based on requirements
   participatingStudies?: StudySummary[];
   proposedStudies?: StudySummary[];
-  paymentSummary?: PaymentSummary;
   activityLogs?: ActivityLog[];
 }
 
@@ -99,13 +98,12 @@ export interface UserListResponse {
 
 export interface UserStatistics {
   totalUsers: number;
-  newUsersThisMonth: number;
   activeUsers: number;
+  inactiveUsers: number;
   withdrawnUsers: number;
+  newUsersToday: number;
+  newUsersThisWeek: number;
+  newUsersThisMonth: number;
   usersByRole: Record<string, number>;
   usersByProvider: Record<string, number>;
-  monthlySignups: Array<{
-    month: string;
-    count: number;
-  }>;
 }

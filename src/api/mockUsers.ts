@@ -21,7 +21,7 @@ const mockUsers: User[] = [
     createdAt: '2024-01-15T10:30:00Z',
     lastLoginAt: '2024-03-20T14:22:00Z',
     provider: 'local',
-    studyCount: 3
+    // studyCount: 3
   },
   {
     id: '2',
@@ -32,7 +32,7 @@ const mockUsers: User[] = [
     createdAt: '2024-02-20T09:15:00Z',
     lastLoginAt: '2024-03-21T10:45:00Z',
     provider: 'google',
-    studyCount: 5
+    // studyCount: 5
   },
   {
     id: '3',
@@ -43,7 +43,7 @@ const mockUsers: User[] = [
     createdAt: '2023-12-01T08:00:00Z',
     lastLoginAt: '2024-03-21T16:30:00Z',
     provider: 'local',
-    studyCount: 0
+    // studyCount: 0
   },
   {
     id: '4',
@@ -54,7 +54,7 @@ const mockUsers: User[] = [
     createdAt: '2024-01-10T11:20:00Z',
     lastLoginAt: '2024-02-15T13:40:00Z',
     provider: 'kakao',
-    studyCount: 1
+    // studyCount: 1
   },
   {
     id: '5',
@@ -64,7 +64,7 @@ const mockUsers: User[] = [
     status: UserStatus.WITHDRAWN,
     createdAt: '2023-11-05T14:00:00Z',
     provider: 'local',
-    studyCount: 0
+    // studyCount: 0
   }
 ];
 
@@ -83,7 +83,7 @@ for (let i = 6; i <= 50; i++) {
     createdAt: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000).toISOString(),
     lastLoginAt: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString(),
     provider: providers[Math.floor(Math.random() * providers.length)] as any,
-    studyCount: Math.floor(Math.random() * 10)
+    // studyCount: Math.floor(Math.random() * 10)
   });
 }
 
@@ -155,8 +155,8 @@ export const mockUsersApi = {
     
     return {
       ...user,
-      phone: '010-1234-5678',
-      loginCount: Math.floor(Math.random() * 100) + 10,
+      phoneNumber: '010-1234-5678',
+      updatedAt: user.createdAt,
       participatingStudies: [
         {
           id: '1',
@@ -173,11 +173,11 @@ export const mockUsersApi = {
           joinedAt: '2024-01-15T09:00:00Z'
         }
       ],
-      paymentSummary: {
-        totalAmount: 150000,
-        totalCount: 3,
-        lastPaymentAt: '2024-03-15T14:30:00Z'
-      },
+      // paymentSummary: {
+      //   totalAmount: 150000,
+      //   totalCount: 3,
+      //   lastPaymentAt: '2024-03-15T14:30:00Z'
+      // },
       activityLogs: [
         {
           id: '1',
@@ -239,9 +239,12 @@ export const mockUsersApi = {
     
     return {
       totalUsers: mockUsers.length,
-      newUsersThisMonth: 12,
       activeUsers,
+      inactiveUsers: mockUsers.filter(u => u.status === UserStatus.INACTIVE).length,
       withdrawnUsers,
+      newUsersToday: 3,
+      newUsersThisWeek: 8,
+      newUsersThisMonth: 12,
       usersByRole: {
         USER: mockUsers.filter(u => u.role === 'USER').length,
         ADMIN: mockUsers.filter(u => u.role === 'ADMIN').length,
@@ -252,12 +255,12 @@ export const mockUsersApi = {
         google: mockUsers.filter(u => u.provider === 'google').length,
         kakao: mockUsers.filter(u => u.provider === 'kakao').length,
         naver: mockUsers.filter(u => u.provider === 'naver').length
-      },
-      monthlySignups: [
-        { month: '2024-01', count: 15 },
-        { month: '2024-02', count: 23 },
-        { month: '2024-03', count: 12 }
-      ]
+      }
+      // monthlySignups: [
+      //   { month: '2024-01', count: 15 },
+      //   { month: '2024-02', count: 23 },
+      //   { month: '2024-03', count: 12 }
+      // ]
     };
   },
 

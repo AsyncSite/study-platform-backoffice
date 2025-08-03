@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
+import { useNavigate } from 'react-router-dom';
 import { usersApi } from '../../api/users';
 import { useAuth } from '../../contexts/AuthContext';
 import type { User, UserDetail, UpdateUserRoleRequest, UpdateUserStatusRequest } from '../../types/user';
@@ -20,6 +21,7 @@ const MemberDetailPanel: React.FC<MemberDetailPanelProps> = ({
   onClose,
   onUpdate
 }) => {
+  const navigate = useNavigate();
   const { user: currentUser } = useAuth();
   const [userDetail, setUserDetail] = useState<UserDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -34,8 +36,21 @@ const MemberDetailPanel: React.FC<MemberDetailPanelProps> = ({
       setLoading(true);
       const detail = await usersApi.getUserDetail(user.id);
       setUserDetail(detail);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to fetch user detail:', error);
+      
+      if (error.response?.status === 401) {
+        alert('세션이 만료되었습니다. 다시 로그인해주세요.');
+        navigate('/login');
+      } else if (error.response?.status === 403) {
+        alert('사용자 상세 정보를 조회할 권한이 없습니다.');
+        onClose();
+      } else if (error.response?.status === 404) {
+        alert('사용자를 찾을 수 없습니다.');
+        onClose();
+      } else {
+        alert(error.response?.data?.message || '사용자 상세 정보를 불러오는데 실패했습니다.');
+      }
     } finally {
       setLoading(false);
     }
@@ -51,9 +66,18 @@ const MemberDetailPanel: React.FC<MemberDetailPanelProps> = ({
       await usersApi.updateUserRole(user.id, request);
       alert('역할이 변경되었습니다.');
       onUpdate();
-    } catch (error) {
+      await fetchUserDetail();
+    } catch (error: any) {
       console.error('Failed to update role:', error);
-      alert('역할 변경에 실패했습니다.');
+      
+      if (error.response?.status === 401) {
+        alert('세션이 만료되었습니다. 다시 로그인해주세요.');
+        navigate('/login');
+      } else if (error.response?.status === 403) {
+        alert('역할을 변경할 권한이 없습니다.');
+      } else {
+        alert(error.response?.data?.message || '역할 변경에 실패했습니다.');
+      }
     }
   };
 
@@ -67,9 +91,18 @@ const MemberDetailPanel: React.FC<MemberDetailPanelProps> = ({
       await usersApi.updateUserStatus(user.id, request);
       alert('상태가 변경되었습니다.');
       onUpdate();
-    } catch (error) {
+      await fetchUserDetail();
+    } catch (error: any) {
       console.error('Failed to update status:', error);
-      alert('상태 변경에 실패했습니다.');
+      
+      if (error.response?.status === 401) {
+        alert('세션이 만료되었습니다. 다시 로그인해주세요.');
+        navigate('/login');
+      } else if (error.response?.status === 403) {
+        alert('상태를 변경할 권한이 없습니다.');
+      } else {
+        alert(error.response?.data?.message || '상태 변경에 실패했습니다.');
+      }
     }
   };
 
@@ -80,10 +113,18 @@ const MemberDetailPanel: React.FC<MemberDetailPanelProps> = ({
 
     try {
       const result = await usersApi.resetUserPassword(user.id);
-      alert(result.message);
-    } catch (error) {
+      alert(result.message || '비밀번호 초기화 이메일이 발송되었습니다.');
+    } catch (error: any) {
       console.error('Failed to reset password:', error);
-      alert('비밀번호 초기화에 실패했습니다.');
+      
+      if (error.response?.status === 401) {
+        alert('세션이 만료되었습니다. 다시 로그인해주세요.');
+        navigate('/login');
+      } else if (error.response?.status === 403) {
+        alert('비밀번호를 초기화할 권한이 없습니다.');
+      } else {
+        alert(error.response?.data?.message || '비밀번호 초기화에 실패했습니다.');
+      }
     }
   };
 
@@ -147,21 +188,19 @@ const MemberDetailPanel: React.FC<MemberDetailPanelProps> = ({
                   <InfoLabel>역할</InfoLabel>
                   <InfoValue>
                     <Badge variant={
-                      userDetail.role === 'ADMIN' ? 'error' :
-                      userDetail.role === 'OPERATOR' ? 'warning' : 'default'
+                      userDetail.role === 'ROLE_ADMIN' ? 'error' : 'default'
                     }>
-                      {userDetail.role === 'ADMIN' ? '관리자' :
-                       userDetail.role === 'OPERATOR' ? '운영자' : '일반회원'}
+                      {userDetail.role === 'ROLE_ADMIN' ? '관리자' : '일반회원'}
                     </Badge>
-                    {isAdmin && userDetail.role !== 'ADMIN' && (
+                    {isAdmin && userDetail.role !== 'ROLE_ADMIN' && (
                       <RoleActions>
-                        {userDetail.role !== 'OPERATOR' && (
-                          <ActionButton onClick={() => handleRoleChange('OPERATOR')}>
-                            운영자로 변경
+                        {userDetail.role === 'ROLE_USER' && (
+                          <ActionButton onClick={() => handleRoleChange('ROLE_ADMIN')}>
+                            관리자로 변경
                           </ActionButton>
                         )}
-                        {userDetail.role !== 'USER' && (
-                          <ActionButton onClick={() => handleRoleChange('USER')}>
+                        {userDetail.role === 'ROLE_ADMIN' && (
+                          <ActionButton onClick={() => handleRoleChange('ROLE_USER')}>
                             일반회원으로 변경
                           </ActionButton>
                         )}
@@ -211,20 +250,15 @@ const MemberDetailPanel: React.FC<MemberDetailPanelProps> = ({
                 <InfoGroup>
                   <InfoLabel>가입 경로</InfoLabel>
                   <InfoValue>
-                    {userDetail.provider === 'google' ? '구글' :
-                     userDetail.provider === 'kakao' ? '카카오' :
-                     userDetail.provider === 'naver' ? '네이버' : '일반가입'}
+                    {userDetail.provider === 'GOOGLE' ? '구글' :
+                     userDetail.provider === 'KAKAO' ? '카카오' :
+                     userDetail.provider === 'NAVER' ? '네이버' : '일반가입'}
                   </InfoValue>
                 </InfoGroup>
 
                 <InfoGroup>
                   <InfoLabel>연락처</InfoLabel>
-                  <InfoValue>{userDetail.phone || '미등록'}</InfoValue>
-                </InfoGroup>
-
-                <InfoGroup>
-                  <InfoLabel>총 로그인 횟수</InfoLabel>
-                  <InfoValue>{userDetail.loginCount}회</InfoValue>
+                  <InfoValue>{userDetail.phoneNumber || '미등록'}</InfoValue>
                 </InfoGroup>
 
                 {isAdmin && (

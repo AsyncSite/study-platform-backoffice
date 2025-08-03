@@ -11,11 +11,9 @@ interface Tab {
 
 const tabs: Tab[] = [
   { id: 'dashboard', label: '대시보드', icon: '📊', path: '/dashboard' },
-  { id: 'members', label: '회원 관리', icon: '👥', path: '/members' },
   { id: 'studies', label: '스터디 관리', icon: '📚', path: '/studies' },
-  { id: 'payments', label: '결제 관리', icon: '💰', path: '/payments' },
+  { id: 'members', label: '회원 관리', icon: '👥', path: '/members' },
   { id: 'analytics', label: '통계/분석', icon: '📈', path: '/analytics' },
-  { id: 'support', label: '문의/지원', icon: '💬', path: '/support' },
   { id: 'settings', label: '설정', icon: '⚙️', path: '/myPage' },
 ];
 

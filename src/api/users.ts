@@ -9,11 +9,10 @@ import type {
   UpdateUserStatusRequest
 } from '../types/user';
 import { env } from '../config/environment';
-import { mockUsersApi } from './mockUsers';
 
-const USERS_API_URL = `${env.apiBaseUrl}/api/users`;
+const USERS_API_URL = `${env.apiBaseUrl}/api/admin/users`;
 
-const realUsersApi = {
+export const usersApi = {
   // Get user list with pagination and filters
   getUsers: async (params: UserListRequest): Promise<UserListResponse> => {
     const response = await apiClient.get(USERS_API_URL, { params });
@@ -59,6 +58,3 @@ const realUsersApi = {
     return response.data;
   }
 };
-
-// Use mock API in development with mock auth enabled
-export const usersApi = env.enableMockAuth ? mockUsersApi : realUsersApi;

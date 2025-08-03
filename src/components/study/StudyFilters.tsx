@@ -7,6 +7,8 @@ interface StudyFiltersProps {
   onFilterChange: (filter: StudyStatus | 'ALL') => void;
   viewMode: 'card' | 'list';
   onViewModeChange: (mode: 'card' | 'list') => void;
+  showDeleted: boolean;
+  onToggleDeleted: () => void;
 }
 
 const StudyFilters: React.FC<StudyFiltersProps> = ({
@@ -14,6 +16,8 @@ const StudyFilters: React.FC<StudyFiltersProps> = ({
   onFilterChange,
   viewMode,
   onViewModeChange,
+  showDeleted,
+  onToggleDeleted,
 }) => {
   const filters = [
     { value: 'ALL', label: '전체' },
@@ -50,6 +54,18 @@ const StudyFilters: React.FC<StudyFiltersProps> = ({
           </FilterChip>
         ))}
       </FilterChips>
+      
+      <DeletedToggle>
+        <ToggleCheckbox
+          type="checkbox"
+          id="show-deleted"
+          checked={showDeleted}
+          onChange={onToggleDeleted}
+        />
+        <ToggleLabel htmlFor="show-deleted">
+          삭제된 항목 표시
+        </ToggleLabel>
+      </DeletedToggle>
     </FilterContainer>
   );
 };
@@ -103,6 +119,26 @@ const FilterChip = styled.button`
     color: #1d4ed8;
     border: 1px solid #3b82f6;
   }
+`;
+
+const DeletedToggle = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+`;
+
+const ToggleCheckbox = styled.input`
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+`;
+
+const ToggleLabel = styled.label`
+  font-size: 14px;
+  color: ${({ theme }) => theme.colors.gray[700]};
+  cursor: pointer;
+  user-select: none;
 `;
 
 export default StudyFilters;

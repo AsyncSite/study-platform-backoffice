@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
+import { useNavigate } from 'react-router-dom';
 import { usersApi } from '../api/users';
 import type { User, UserListRequest, UserStatistics } from '../types/user';
 import MemberStatCards from '../components/members/MemberStatCards';
@@ -9,6 +10,7 @@ import MemberDetailPanel from '../components/members/MemberDetailPanel';
 import Pagination from '../components/common/Pagination';
 
 const MemberManagement: React.FC = () => {
+  const navigate = useNavigate();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [totalPages, setTotalPages] = useState(0);
@@ -42,8 +44,19 @@ const MemberManagement: React.FC = () => {
       setUsers(response.content);
       setTotalPages(response.totalPages);
       setTotalElements(response.totalElements);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to fetch users:', error);
+      
+      if (error.response?.status === 401) {
+        alert('세션이 만료되었습니다. 다시 로그인해주세요.');
+        navigate('/login');
+      } else if (error.response?.status === 403) {
+        alert('회원 목록을 조회할 권한이 없습니다.');
+      } else if (error.code === 'ECONNABORTED' || error.code === 'ERR_NETWORK') {
+        alert('네트워크 연결을 확인해주세요.');
+      } else {
+        alert(error.response?.data?.message || '회원 목록을 불러오는데 실패했습니다.');
+      }
     } finally {
       setLoading(false);
     }
@@ -53,8 +66,18 @@ const MemberManagement: React.FC = () => {
     try {
       const stats = await usersApi.getUserStatistics();
       setStatistics(stats);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to fetch statistics:', error);
+      
+      if (error.response?.status === 401) {
+        alert('세션이 만료되었습니다. 다시 로그인해주세요.');
+        navigate('/login');
+      } else if (error.response?.status === 403) {
+        alert('통계를 조회할 권한이 없습니다.');
+      } else {
+        // 통계 조회 실패는 치명적이지 않으므로 콘솔에만 기록
+        console.error('통계 조회 실패:', error.response?.data?.message || '통계를 불러올 수 없습니다.');
+      }
     }
   };
 
@@ -141,9 +164,17 @@ const MemberManagement: React.FC = () => {
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to export users:', error);
-      alert('회원 목록 다운로드에 실패했습니다.');
+      
+      if (error.response?.status === 401) {
+        alert('세션이 만료되었습니다. 다시 로그인해주세요.');
+        navigate('/login');
+      } else if (error.response?.status === 403) {
+        alert('회원 목록을 다운로드할 권한이 없습니다.');
+      } else {
+        alert(error.response?.data?.message || '회원 목록 다운로드에 실패했습니다.');
+      }
     }
   }
 };

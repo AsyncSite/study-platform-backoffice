@@ -32,12 +32,58 @@ apiClient.interceptors.response.use(
   (response: AxiosResponse<ApiResponse<any>>) => {
     return response;
   },
-  (error) => {
-    if (error.response?.status === 401) {
-      // Handle unauthorized access
-      localStorage.removeItem('authToken');
-      window.location.href = '/login';
+  async (error) => {
+    const originalRequest = error.config;
+    
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+      
+      // Check if we have a refresh token
+      const refreshToken = localStorage.getItem('refreshToken');
+      
+      if (refreshToken) {
+        try {
+          // Try to refresh the token
+          const response = await axios.post(`${env.authApiUrl}/refresh`, {
+            refreshToken
+          });
+          
+          const { accessToken } = response.data.data;
+          localStorage.setItem('authToken', accessToken);
+          
+          // Retry the original request with new token
+          originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+          return apiClient(originalRequest);
+        } catch (refreshError) {
+          // Refresh failed, show notification and redirect to login
+          const event = new CustomEvent('auth:expired', { 
+            detail: { message: '세션이 만료되었습니다. 다시 로그인해주세요.' }
+          });
+          window.dispatchEvent(event);
+          
+          // Clean up and redirect after a delay
+          setTimeout(() => {
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('refreshToken');
+            localStorage.removeItem('user');
+            window.location.href = '/login';
+          }, 2000);
+        }
+      } else {
+        // No refresh token, notify and redirect
+        const event = new CustomEvent('auth:expired', { 
+          detail: { message: '인증이 필요합니다. 로그인 페이지로 이동합니다.' }
+        });
+        window.dispatchEvent(event);
+        
+        setTimeout(() => {
+          localStorage.removeItem('authToken');
+          localStorage.removeItem('user');
+          window.location.href = '/login';
+        }, 2000);
+      }
     }
+    
     return Promise.reject(error);
   }
 );
