@@ -3,7 +3,6 @@ import styled from 'styled-components';
 import StudyCreateModalEnhanced from './StudyCreateModalEnhanced';
 import type { StudyCreateRequest } from '../../types/api';
 import { AlertCircle } from 'lucide-react';
-import { useAuth } from '../../contexts/AuthContext';
 
 interface AdminStudyCreateModalProps {
   isOpen: boolean;
@@ -16,15 +15,12 @@ const AdminStudyCreateModal: React.FC<AdminStudyCreateModalProps> = ({
   onClose,
   onSubmit,
 }) => {
-  const { user } = useAuth();
-
   return (
     <>
       <StudyCreateModalEnhanced
         isOpen={isOpen}
         onClose={onClose}
         onSubmit={onSubmit}
-        currentUserId={user?.id}
         customHeader={
           <AdminNotice>
             <AlertCircle size={20} />
