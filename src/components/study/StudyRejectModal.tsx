@@ -41,7 +41,7 @@ const StudyRejectModal: React.FC<StudyRejectModalProps> = ({
       isOpen={isOpen}
       onClose={handleClose}
       title="스터디 거절"
-      width="500px"
+      size="medium"
     >
       <ModalContent>
         <StudyInfo>

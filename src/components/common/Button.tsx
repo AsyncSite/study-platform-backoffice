@@ -7,6 +7,7 @@ export const ButtonVariant = {
   SUCCESS: 'success',
   WARNING: 'warning',
   ERROR: 'error',
+  DANGER: 'error', // Alias for ERROR
   GHOST: 'ghost',
 } as const;
 

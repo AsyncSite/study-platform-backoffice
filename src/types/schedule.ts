@@ -1,26 +1,32 @@
-// 요일 enum
-export enum DayOfWeek {
-  MONDAY = 'MONDAY',
-  TUESDAY = 'TUESDAY',
-  WEDNESDAY = 'WEDNESDAY',
-  THURSDAY = 'THURSDAY',
-  FRIDAY = 'FRIDAY',
-  SATURDAY = 'SATURDAY',
-  SUNDAY = 'SUNDAY'
-}
+// 요일
+export const DayOfWeek = {
+  MONDAY: 'MONDAY',
+  TUESDAY: 'TUESDAY',
+  WEDNESDAY: 'WEDNESDAY',
+  THURSDAY: 'THURSDAY',
+  FRIDAY: 'FRIDAY',
+  SATURDAY: 'SATURDAY',
+  SUNDAY: 'SUNDAY'
+} as const;
 
-// 반복 주기 enum
-export enum ScheduleFrequency {
-  WEEKLY = 'WEEKLY',       // 매주
-  BIWEEKLY = 'BIWEEKLY',   // 격주
-  MONTHLY = 'MONTHLY'      // 매월
-}
+export type DayOfWeek = typeof DayOfWeek[keyof typeof DayOfWeek];
 
-// 기간 단위 enum
-export enum DurationUnit {
-  WEEKS = 'WEEKS',
-  MONTHS = 'MONTHS'
-}
+// 반복 주기
+export const ScheduleFrequency = {
+  WEEKLY: 'WEEKLY',       // 매주
+  BIWEEKLY: 'BIWEEKLY',   // 격주
+  MONTHLY: 'MONTHLY'      // 매월
+} as const;
+
+export type ScheduleFrequency = typeof ScheduleFrequency[keyof typeof ScheduleFrequency];
+
+// 기간 단위
+export const DurationUnit = {
+  WEEKS: 'WEEKS',
+  MONTHS: 'MONTHS'
+} as const;
+
+export type DurationUnit = typeof DurationUnit[keyof typeof DurationUnit];
 
 // 일정 데이터 인터페이스
 export interface ScheduleData {

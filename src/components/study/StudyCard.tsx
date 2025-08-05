@@ -15,6 +15,7 @@ interface StudyCardProps {
   onReactivate?: (id: string) => void;
   onView?: (id: string) => void;
   onDelete?: (id: string) => void;
+  customActions?: React.ReactNode;
 }
 
 const StudyCard: React.FC<StudyCardProps> = ({
@@ -25,6 +26,7 @@ const StudyCard: React.FC<StudyCardProps> = ({
   onReactivate,
   onView,
   onDelete,
+  customActions,
 }) => {
   const getStatusBadgeVariant = (status: StudyStatus): BadgeVariant => {
     const variants = {
@@ -200,6 +202,7 @@ const StudyCard: React.FC<StudyCardProps> = ({
               삭제된 스터디입니다
             </DeletedMessage>
           )}
+          {customActions}
         </CardActions>
       </CardContent>
     </StyledStudyCard>

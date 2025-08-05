@@ -68,7 +68,7 @@ const Tab = styled.button<{ $active: boolean }>`
 
   &:hover {
     color: ${({ theme }) => theme.colors.primary};
-    background: ${({ theme }) => theme.colors.background.secondary};
+    background: ${({ theme }) => theme.colors.gray[50]};
   }
 `;
 
@@ -84,7 +84,7 @@ const TabCount = styled.span<{ $active: boolean }>`
   font-size: 14px;
   font-weight: 600;
   background: ${({ $active, theme }) => 
-    $active ? theme.colors.primary : theme.colors.background.secondary};
+    $active ? theme.colors.primary : theme.colors.gray[50]};
   color: ${({ $active, theme }) => 
     $active ? 'white' : theme.colors.text.secondary};
 `;

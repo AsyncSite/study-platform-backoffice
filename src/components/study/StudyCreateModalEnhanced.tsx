@@ -7,7 +7,6 @@ import { format } from 'date-fns';
 import ScheduleInput from './ScheduleInput';
 import DurationInput from './DurationInput';
 import { 
-  DayOfWeek, 
   ScheduleFrequency, 
   DurationUnit,
   formatScheduleToKorean,
@@ -118,7 +117,7 @@ const StudyCreateModalEnhanced: React.FC<StudyCreateModalEnhancedProps> = ({
       const requestData: StudyCreateRequest = {
         title: title.trim(),
         description: description.trim(),
-        proposerId: currentUserId,
+        proposerId: currentUserId || 'admin',
         // Optional fields
         generation: generation ? parseInt(generation) : undefined,
         slug: slug || undefined,

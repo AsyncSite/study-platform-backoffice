@@ -16,6 +16,13 @@ export const theme = {
     errorLight: '#f87171',
     errorDark: '#dc2626',
     
+    // Additional color aliases
+    danger: '#ef4444',
+    info: '#6366f1',
+    secondary: '#64748b',
+    disabled: '#94a3b8',
+    border: '#e2e8f0',
+    
     gray: {
       50: '#f8fafc',
       100: '#f1f5f9',
@@ -35,6 +42,7 @@ export const theme = {
       primary: '#1e293b',
       secondary: '#64748b',
       tertiary: '#94a3b8',
+      disabled: '#cbd5e1',
     }
   },
   

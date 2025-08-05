@@ -3,8 +3,6 @@ import styled from 'styled-components';
 import StudyCard from './StudyCard';
 import { Clock, AlertCircle } from 'lucide-react';
 import type { StudyResponse } from '../../types/api';
-import { format } from 'date-fns';
-import { ko } from 'date-fns/locale';
 
 interface PendingStudiesTabProps {
   studies: StudyResponse[];
@@ -173,7 +171,7 @@ const StatCard = styled.div`
   align-items: center;
   gap: 16px;
   padding: 24px;
-  background: ${({ theme }) => theme.colors.background.secondary};
+  background: ${({ theme }) => theme.colors.gray[50]};
   border-radius: 12px;
 `;
 

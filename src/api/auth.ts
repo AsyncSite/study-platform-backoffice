@@ -39,7 +39,7 @@ export const authApi = {
   },
 
   // Verify token validity (deprecated - not used anymore)
-  verifyToken: async (token: string): Promise<boolean> => {
+  verifyToken: async (): Promise<boolean> => {
     // Token verification is now handled by actual API calls
     // If token is invalid, 401 will be returned and handled by axios interceptor
     return true;

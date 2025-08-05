@@ -43,7 +43,7 @@ const StudyApplicationsModal: React.FC<StudyApplicationsModalProps> = ({
       }
     } catch (error) {
       console.error('Failed to load applications:', error);
-      showToast('참여 신청 목록을 불러오는데 실패했습니다.', 'error');
+      showToast('참여 신청 목록을 불러오는데 실패했습니다.', { type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -64,13 +64,14 @@ const StudyApplicationsModal: React.FC<StudyApplicationsModalProps> = ({
 
     try {
       await applicationApi.acceptApplication(study.id, applicationId, {
-        message: '참여 신청이 승인되었습니다. 환영합니다!'
+        reviewerId: 'admin', // TODO: Get actual reviewer ID from auth context
+        note: '참여 신청이 승인되었습니다. 환영합니다!'
       });
-      showToast('참여 신청이 승인되었습니다.', 'success');
+      showToast('참여 신청이 승인되었습니다.', { type: 'success' });
       loadApplications();
     } catch (error) {
       console.error('Failed to accept application:', error);
-      showToast('참여 신청 승인에 실패했습니다.', 'error');
+      showToast('참여 신청 승인에 실패했습니다.', { type: 'error' });
     }
   };
 
@@ -89,13 +90,14 @@ const StudyApplicationsModal: React.FC<StudyApplicationsModalProps> = ({
 
     try {
       await applicationApi.rejectApplication(study.id, applicationId, {
+        reviewerId: 'admin', // TODO: Get actual reviewer ID from auth context
         reason: '죄송합니다. 현재 모집이 마감되었습니다.'
       });
-      showToast('참여 신청이 거절되었습니다.', 'success');
+      showToast('참여 신청이 거절되었습니다.', { type: 'success' });
       loadApplications();
     } catch (error) {
       console.error('Failed to reject application:', error);
-      showToast('참여 신청 거절에 실패했습니다.', 'error');
+      showToast('참여 신청 거절에 실패했습니다.', { type: 'error' });
     }
   };
 
@@ -186,24 +188,18 @@ const StudyApplicationsModal: React.FC<StudyApplicationsModalProps> = ({
                   </StatusBadge>
                 </ApplicationHeader>
 
-                {application.motivation && (
-                  <ApplicationContent>
-                    <ContentLabel>
-                      <FileText size={16} />
-                      지원 동기
-                    </ContentLabel>
-                    <ContentText>{application.motivation}</ContentText>
-                  </ApplicationContent>
-                )}
-
-                {application.experience && (
-                  <ApplicationContent>
-                    <ContentLabel>
-                      <FileText size={16} />
-                      관련 경험
-                    </ContentLabel>
-                    <ContentText>{application.experience}</ContentText>
-                  </ApplicationContent>
+                {application.answers && Object.keys(application.answers).length > 0 && (
+                  <>
+                    {Object.entries(application.answers).map(([question, answer]) => (
+                      <ApplicationContent key={question}>
+                        <ContentLabel>
+                          <FileText size={16} />
+                          {question}
+                        </ContentLabel>
+                        <ContentText>{answer}</ContentText>
+                      </ApplicationContent>
+                    ))}
+                  </>
                 )}
 
                 {application.status === ApplicationStatus.PENDING && (
@@ -216,7 +212,7 @@ const StudyApplicationsModal: React.FC<StudyApplicationsModalProps> = ({
                       승인
                     </Button>
                     <Button
-                      variant="danger"
+                      variant="error"
                       size="small"
                       onClick={() => handleReject(application.id)}
                     >
@@ -282,7 +278,7 @@ const ApplicationList = styled.div`
 
 const ApplicationCard = styled.div`
   padding: 20px;
-  background: ${({ theme }) => theme.colors.background.secondary};
+  background: ${({ theme }) => theme.colors.gray[50]};
   border-radius: 8px;
   border: 1px solid ${({ theme }) => theme.colors.border};
 `;
@@ -365,7 +361,7 @@ const ContentText = styled.div`
   font-size: 14px;
   line-height: 1.6;
   color: ${({ theme }) => theme.colors.text.primary};
-  background: ${({ theme }) => theme.colors.background.primary};
+  background: ${({ theme }) => theme.colors.background};
   padding: 12px;
   border-radius: 6px;
 `;

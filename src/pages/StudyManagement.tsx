@@ -18,7 +18,7 @@ import { useNotification } from '../contexts/NotificationContext';
 import { Plus, RefreshCw } from 'lucide-react';
 
 const StudyManagement: React.FC = () => {
-  const { user } = useAuth();
+  const { } = useAuth(); // user removed - not used
   const { showToast, showConfirm } = useNotification();
   
   // State
@@ -51,7 +51,7 @@ const StudyManagement: React.FC = () => {
       setStudies(response.content);
     } catch (error) {
       console.error('Failed to load studies:', error);
-      showToast('스터디 목록을 불러오는데 실패했습니다.', 'error');
+      showToast('스터디 목록을 불러오는데 실패했습니다.', { type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -63,7 +63,7 @@ const StudyManagement: React.FC = () => {
       case 'PENDING':
         return studies.filter(s => s.status === StudyStatus.PENDING);
       case 'ACTIVE':
-        return studies.filter(s => s.status === StudyStatus.APPROVED || s.status === StudyStatus.IN_PROGRESS);
+        return studies.filter(s => s.status === StudyStatus.APPROVED);
       case 'INACTIVE':
         return studies.filter(s => s.status === StudyStatus.TERMINATED || s.status === StudyStatus.REJECTED);
       default:
@@ -76,10 +76,10 @@ const StudyManagement: React.FC = () => {
     try {
       await studyApi.approveStudy(id);
       await loadStudies();
-      showToast('스터디가 승인되었습니다.', 'success');
+      showToast('스터디가 승인되었습니다.', { type: 'success' });
     } catch (error) {
       console.error('Failed to approve study:', error);
-      showToast('스터디 승인에 실패했습니다.', 'error');
+      showToast('스터디 승인에 실패했습니다.', { type: 'error' });
     }
   };
 
@@ -99,10 +99,10 @@ const StudyManagement: React.FC = () => {
       await loadStudies();
       setIsRejectModalOpen(false);
       setStudyToReject(null);
-      showToast('스터디가 거절되었습니다.', 'success');
+      showToast('스터디가 거절되었습니다.', { type: 'success' });
     } catch (error) {
       console.error('Failed to reject study:', error);
-      showToast('스터디 거절에 실패했습니다.', 'error');
+      showToast('스터디 거절에 실패했습니다.', { type: 'error' });
     }
   };
 
@@ -122,11 +122,11 @@ const StudyManagement: React.FC = () => {
     try {
       await studyApi.terminateStudy(id);
       await loadStudies();
-      showToast('스터디가 종료되었습니다.', 'success');
+      showToast('스터디가 종료되었습니다.', { type: 'success' });
     } catch (error: any) {
       console.error('Failed to terminate study:', error);
       const errorMessage = error.response?.data?.error?.message || '스터디 종료에 실패했습니다.';
-      showToast(errorMessage, 'error');
+      showToast(errorMessage, { type: 'error' });
     }
   };
 
@@ -146,11 +146,11 @@ const StudyManagement: React.FC = () => {
     try {
       await studyApi.reactivateStudy(id);
       await loadStudies();
-      showToast('스터디가 재활성화되었습니다.', 'success');
+      showToast('스터디가 재활성화되었습니다.', { type: 'success' });
     } catch (error: any) {
       console.error('Failed to reactivate study:', error);
       const errorMessage = error.response?.data?.error?.message || '스터디 재활성화에 실패했습니다.';
-      showToast(errorMessage, 'error');
+      showToast(errorMessage, { type: 'error' });
     }
   };
 
@@ -170,11 +170,11 @@ const StudyManagement: React.FC = () => {
     try {
       await studyApi.deleteStudy(id);
       await loadStudies();
-      showToast('스터디가 삭제되었습니다.', 'success');
+      showToast('스터디가 삭제되었습니다.', { type: 'success' });
     } catch (error: any) {
       console.error('Failed to delete study:', error);
       const errorMessage = error.response?.data?.error?.message || '스터디 삭제에 실패했습니다.';
-      showToast(errorMessage, 'error');
+      showToast(errorMessage, { type: 'error' });
     }
   };
 
@@ -196,17 +196,17 @@ const StudyManagement: React.FC = () => {
       await studyApi.createStudy(data);
       await loadStudies();
       setIsCreateModalOpen(false);
-      showToast('스터디가 생성되었습니다. 관리자 권한으로 생성된 스터디는 즉시 활성화됩니다.', 'success');
+      showToast('스터디가 생성되었습니다. 관리자 권한으로 생성된 스터디는 즉시 활성화됩니다.', { type: 'success' });
     } catch (error) {
       console.error('Failed to create study:', error);
-      showToast('스터디 생성에 실패했습니다.', 'error');
+      showToast('스터디 생성에 실패했습니다.', { type: 'error' });
       throw error;
     }
   };
 
   // Count studies by status
   const pendingCount = studies.filter(s => s.status === StudyStatus.PENDING).length;
-  const activeCount = studies.filter(s => s.status === StudyStatus.APPROVED || s.status === StudyStatus.IN_PROGRESS).length;
+  const activeCount = studies.filter(s => s.status === StudyStatus.APPROVED).length;
   const inactiveCount = studies.filter(s => s.status === StudyStatus.TERMINATED || s.status === StudyStatus.REJECTED).length;
 
   return (
@@ -377,7 +377,7 @@ const RefreshButton = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
-  background: ${({ theme }) => theme.colors.background.secondary};
+  background: ${({ theme }) => theme.colors.gray[50]};
   border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 8px;
   color: ${({ theme }) => theme.colors.text.secondary};
@@ -385,7 +385,7 @@ const RefreshButton = styled.button`
   transition: all 0.2s;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.background.primary};
+    background: ${({ theme }) => theme.colors.background};
     color: ${({ theme }) => theme.colors.primary};
   }
 `;

@@ -68,7 +68,7 @@ const StyledSelect = styled.select<{ $hasError: boolean }>`
   }
 
   &:disabled {
-    background-color: ${({ theme }) => theme.colors.background.secondary};
+    background-color: ${({ theme }) => theme.colors.gray[100]};
     color: ${({ theme }) => theme.colors.text.disabled};
     cursor: not-allowed;
     opacity: 0.6;

@@ -123,4 +123,3 @@ const Message = styled.div`
 `;
 
 export default Toast;
-export type { ToastType };

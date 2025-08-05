@@ -49,7 +49,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     
     // Listen for auth:expired events
     const handleAuthExpired = (event: CustomEvent<{ message: string }>) => {
-      showToast(event.detail.message, 'error');
+      showToast(event.detail.message, { type: 'error' });
       setUser(null);
     };
     
@@ -108,7 +108,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     authApi.logout();
     setUser(null);
     navigate('/login');
-    showToast('로그아웃되었습니다.', 'info');
+    showToast('로그아웃되었습니다.', { type: 'info' });
   };
 
   const value = {

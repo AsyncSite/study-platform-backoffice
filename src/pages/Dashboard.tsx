@@ -42,9 +42,9 @@ const Dashboard: React.FC = () => {
 
   const fetchStudies = async () => {
     try {
-      const response = await studyApi.getPaged({ page: 0, size: 2, sort: 'createdAt,desc' });
-      if (response.success && response.data) {
-        setStudies(response.data.content);
+      const page = await studyApi.getPagedStudies(0, 2, 'createdAt,desc');
+      if (page && page.content) {
+        setStudies(page.content);
       }
     } catch (error) {
       console.error('Failed to fetch studies:', error);
@@ -147,7 +147,7 @@ const Dashboard: React.FC = () => {
     },
     progress: Math.floor(Math.random() * 60) + 20, // 임시 데이터
     nextMeeting: `D-${Math.floor(Math.random() * 7) + 1}`, // 임시 데이터
-    satisfaction: (Math.random() * 2 + 3).toFixed(1), // 3.0 ~ 5.0
+    satisfaction: parseFloat((Math.random() * 2 + 3).toFixed(1)), // 3.0 ~ 5.0
     status: study.status === StudyStatus.APPROVED ? 'active' as const : 'recruiting' as const,
     iconLetter: study.title.charAt(0).toUpperCase(),
     iconColor: index % 2 === 0 ? '#eff6ff' : '#d1fae5',

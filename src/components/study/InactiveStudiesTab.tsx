@@ -147,7 +147,7 @@ const StatCard = styled.div`
   align-items: center;
   gap: 16px;
   padding: 24px;
-  background: ${({ theme }) => theme.colors.background.secondary};
+  background: ${({ theme }) => theme.colors.gray[50]};
   border-radius: 12px;
 `;
 

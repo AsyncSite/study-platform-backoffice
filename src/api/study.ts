@@ -2,8 +2,7 @@ import { request } from './client';
 import type { 
   ApiResponse, 
   StudyCreateRequest, 
-  StudyResponse, 
-  StudyRejectRequest,
+  StudyResponse,
   Page, 
   PageRequest,
   ApplicationResponse,

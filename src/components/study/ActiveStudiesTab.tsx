@@ -1,7 +1,6 @@
 import React from 'react';
 import styled from 'styled-components';
 import StudyCard from './StudyCard';
-import Button from '../common/Button';
 import { Users, UserPlus, Activity, TrendingUp } from 'lucide-react';
 import type { StudyResponse } from '../../types/api';
 
@@ -163,7 +162,7 @@ const StatCard = styled.div`
   align-items: center;
   gap: 16px;
   padding: 24px;
-  background: ${({ theme }) => theme.colors.background.secondary};
+  background: ${({ theme }) => theme.colors.gray[50]};
   border-radius: 12px;
 `;
 
@@ -221,7 +220,7 @@ const StudyInfo = styled.div`
   align-items: center;
   gap: 16px;
   padding: 12px 16px;
-  background: ${({ theme }) => theme.colors.background.secondary};
+  background: ${({ theme }) => theme.colors.gray[50]};
   border-radius: 0 0 8px 8px;
   margin-top: -8px;
   position: relative;
@@ -246,7 +245,7 @@ const ApplicationButton = styled.button<{ $hasApplications: boolean }>`
   gap: 8px;
   padding: 8px 16px;
   background: ${({ theme, $hasApplications }) => 
-    $hasApplications ? theme.colors.primary : theme.colors.background.secondary};
+    $hasApplications ? theme.colors.primary : theme.colors.gray[50]};
   color: ${({ theme, $hasApplications }) => 
     $hasApplications ? 'white' : theme.colors.text.primary};
   border: 1px solid ${({ theme }) => theme.colors.border};
@@ -264,18 +263,5 @@ const ApplicationButton = styled.button<{ $hasApplications: boolean }>`
   }
 `;
 
-const ApplicationBadge = styled.span`
-  position: absolute;
-  top: -8px;
-  right: -8px;
-  background: ${({ theme }) => theme.colors.danger};
-  color: white;
-  font-size: 12px;
-  font-weight: 600;
-  padding: 2px 6px;
-  border-radius: 10px;
-  min-width: 20px;
-  text-align: center;
-`;
 
 export default ActiveStudiesTab;
