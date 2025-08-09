@@ -44,10 +44,21 @@ const StudyManagement: React.FC = () => {
         ? await studyApi.getPagedStudiesIncludingDeleted(0, 100, 'createdAt,desc')
         : await studyApi.getPagedStudies(0, 100, 'createdAt,desc');
       
-      setStudies(response.content);
-    } catch (error) {
+      if (response && response.content) {
+        setStudies(response.content);
+      } else {
+        console.warn('No content in response:', response);
+        setStudies([]);
+      }
+    } catch (error: any) {
       console.error('Failed to load studies:', error);
-      showToast('스터디 목록을 불러오는데 실패했습니다.', { type: 'error' });
+      console.error('Error details:', error.response);
+      
+      // Don't show error toast if it's a 401 (will be handled by interceptor)
+      if (error.response?.status !== 401) {
+        showToast('스터디 목록을 불러오는데 실패했습니다.', { type: 'error' });
+      }
+      setStudies([]);
     } finally {
       setLoading(false);
     }
