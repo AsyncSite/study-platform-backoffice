@@ -11,6 +11,7 @@ import Layout from './components/Layout';
 import PrivateRoute from './components/PrivateRoute';
 import { AuthProvider } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
+import NotiManagement from './pages/NotiManagement';
 
 function App() {
   return (
@@ -47,6 +48,16 @@ function App() {
                 <PrivateRoute>
                   <Layout>
                     <StudyManagement />
+                  </Layout>
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/noti-management"
+              element={
+                <PrivateRoute>
+                  <Layout>
+                    <NotiManagement />
                   </Layout>
                 </PrivateRoute>
               }

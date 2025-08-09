@@ -63,6 +63,21 @@ const GlobalStyle = createGlobalStyle`
   ::-webkit-scrollbar-thumb:hover {
     background: #94a3b8;
   }
+
+  /* Animation keyframes */
+  @keyframes spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  /* Utility classes for animations */
+  .animate-spin {
+    animation: spin 1s linear infinite;
+  }
 `;
 
 export default GlobalStyle;
