@@ -1,0 +1,50 @@
+name: Vercel Deployment Discord Notification
+
+on:
+  deployment_status:
+
+jobs:
+  notify-discord:
+    runs-on: ubuntu-latest
+    if: |
+      github.event.deployment_status.state == 'success' || 
+      github.event.deployment_status.state == 'failure' ||
+      github.event.deployment_status.state == 'error'
+    
+    steps:
+    - name: Send Discord Notification
+      env:
+        STATUS_COLOR: ${{ github.event.deployment_status.state == 'success' && '3066993' || '15158332' }}
+        STATUS_EMOJI: ${{ github.event.deployment_status.state == 'success' && '✅' || '❌' }}
+        STATUS_TEXT: ${{ github.event.deployment_status.state == 'success' && '성공' || '실패' }}
+      run: |
+        # Extract deployment info
+        DEPLOYMENT_URL="${{ github.event.deployment_status.target_url }}"
+        ENVIRONMENT="${{ github.event.deployment.environment }}"
+        DEPLOYER="${{ github.event.deployment.creator.login }}"
+        COMMIT_SHA="${{ github.event.deployment.sha }}"
+        COMMIT_SHORT="${COMMIT_SHA::8}"
+        
+        # Send Discord webhook
+        curl -H "Content-Type: application/json" \
+             -X POST \
+             -d "{
+               \"embeds\": [{
+                 \"title\": \"$STATUS_EMOJI AsyncSite Study Backoffice 배포 $STATUS_TEXT\",
+                 \"color\": $STATUS_COLOR,
+                 \"fields\": [
+                   {\"name\": \"서비스\", \"value\": \"study-platform-backoffice (백오피스)\", \"inline\": true},
+                   {\"name\": \"환경\", \"value\": \"$ENVIRONMENT\", \"inline\": true},
+                   {\"name\": \"배포자\", \"value\": \"$DEPLOYER\", \"inline\": true},
+                   {\"name\": \"커밋\", \"value\": \"\`$COMMIT_SHORT\`\", \"inline\": true},
+                   {\"name\": \"브랜치\", \"value\": \"${{ github.event.deployment.ref }}\", \"inline\": true},
+                   {\"name\": \"시간\", \"value\": \"$(TZ=Asia/Seoul date +'%Y-%m-%d %H:%M:%S KST')\", \"inline\": true},
+                   {\"name\": \"배포 URL\", \"value\": \"[$DEPLOYMENT_URL]($DEPLOYMENT_URL)\", \"inline\": false}
+                 ],
+                 \"footer\": {
+                   \"text\": \"Vercel × GitHub Actions\"
+                 },
+                 \"timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%S.000Z)\"
+               }]
+             }" \
+             https://discord.com/api/webhooks/1399402822105038999/2qQDazifNKeW_c8MhHqcrw6Li5yDQtBL7f2JIBQ_b4qVT3Vxh7TfpMV3kBFnDYAFL3-h
