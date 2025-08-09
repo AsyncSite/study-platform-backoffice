@@ -6,6 +6,7 @@ import { studyApi } from '../api/study';
 import type { UserStatistics } from '../types/user';
 import type { StudyResponse } from '../types/api';
 import { StudyStatus } from '../types/api';
+import { useNotification } from '../contexts/NotificationContext';
 import StatCard from '../components/dashboard/StatCard';
 import StudyCard from '../components/dashboard/StudyCard';
 import ActivityCard from '../components/dashboard/ActivityCard';
@@ -14,6 +15,7 @@ import CategoryDistributionChart from '../components/dashboard/CategoryDistribut
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
+  const { showToast } = useNotification();
   const [userStatistics, setUserStatistics] = useState<UserStatistics | null>(null);
   const [studies, setStudies] = useState<StudyResponse[]>([]);
   const [, setLoading] = useState(true);
@@ -31,9 +33,24 @@ const Dashboard: React.FC = () => {
     } catch (error: any) {
       console.error('Failed to fetch statistics:', error);
       
-      if (error.response?.status === 401) {
-        alert('세션이 만료되었습니다. 다시 로그인해주세요.');
-        navigate('/login');
+      // 401 에러는 이미 interceptor에서 처리됨
+      // 500 에러도 interceptor에서 처리되지만 추가 메시지 표시 가능
+      if (error.response?.status === 500) {
+        // showToast는 이미 interceptor에서 처리됨
+        // 대신 기본 통계 데이터를 설정하여 UI가 깨지지 않도록 함
+        setUserStatistics({
+          totalUsers: 0,
+          activeUsers: 0,
+          newUsersToday: 0,
+          newUsersThisWeek: 0,
+          newUsersThisMonth: 0,
+          inactiveUsers: 0,
+          withdrawnUsers: 0,
+          monthlyGrowth: 0
+        });
+      } else if (!error.response) {
+        // 네트워크 에러는 interceptor에서 처리됨
+        setUserStatistics(null);
       }
     } finally {
       setLoading(false);
@@ -46,8 +63,17 @@ const Dashboard: React.FC = () => {
       if (page && page.content) {
         setStudies(page.content);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to fetch studies:', error);
+      
+      // 에러 발생 시 빈 배열로 설정하여 UI가 깨지지 않도록 함
+      setStudies([]);
+      
+      // 추가 컨텍스트 메시지 표시 (선택적)
+      if (error.response?.status === 500) {
+        // interceptor에서 이미 메시지를 표시했으므로 추가 액션만 수행
+        console.log('스터디 데이터를 불러올 수 없습니다. 기본 화면을 표시합니다.');
+      }
     }
   };
 

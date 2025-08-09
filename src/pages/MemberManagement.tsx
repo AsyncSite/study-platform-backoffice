@@ -3,6 +3,7 @@ import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
 import { usersApi } from '../api/users';
 import type { User, UserListRequest, UserStatistics } from '../types/user';
+import { useNotification } from '../contexts/NotificationContext';
 import MemberStatCards from '../components/members/MemberStatCards';
 import MemberFilters from '../components/members/MemberFilters';
 import MemberTable from '../components/members/MemberTable';
@@ -11,6 +12,7 @@ import Pagination from '../components/common/Pagination';
 
 const MemberManagement: React.FC = () => {
   const navigate = useNavigate();
+  const { showToast } = useNotification();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [totalPages, setTotalPages] = useState(0);
@@ -47,15 +49,16 @@ const MemberManagement: React.FC = () => {
     } catch (error: any) {
       console.error('Failed to fetch users:', error);
       
-      if (error.response?.status === 401) {
-        alert('세션이 만료되었습니다. 다시 로그인해주세요.');
-        navigate('/login');
-      } else if (error.response?.status === 403) {
-        alert('회원 목록을 조회할 권한이 없습니다.');
-      } else if (error.code === 'ECONNABORTED' || error.code === 'ERR_NETWORK') {
-        alert('네트워크 연결을 확인해주세요.');
-      } else {
-        alert(error.response?.data?.message || '회원 목록을 불러오는데 실패했습니다.');
+      // 대부분의 에러는 interceptor에서 처리됨
+      // 여기서는 UI 상태만 관리
+      setUsers([]);
+      setTotalPages(0);
+      setTotalElements(0);
+      
+      // 500 에러의 경우 추가 컨텍스트 제공
+      if (error.response?.status === 500) {
+        // interceptor에서 이미 메시지 표시됨
+        // 필요시 페이지별 특별한 처리 추가 가능
       }
     } finally {
       setLoading(false);
@@ -69,15 +72,19 @@ const MemberManagement: React.FC = () => {
     } catch (error: any) {
       console.error('Failed to fetch statistics:', error);
       
-      if (error.response?.status === 401) {
-        alert('세션이 만료되었습니다. 다시 로그인해주세요.');
-        navigate('/login');
-      } else if (error.response?.status === 403) {
-        alert('통계를 조회할 권한이 없습니다.');
-      } else {
-        // 통계 조회 실패는 치명적이지 않으므로 콘솔에만 기록
-        console.error('통계 조회 실패:', error.response?.data?.message || '통계를 불러올 수 없습니다.');
-      }
+      // 통계 조회 실패는 치명적이지 않으므로 기본값 설정
+      setStatistics({
+        totalUsers: 0,
+        activeUsers: 0,
+        newUsersToday: 0,
+        newUsersThisWeek: 0,
+        newUsersThisMonth: 0,
+        inactiveUsers: 0,
+        withdrawnUsers: 0,
+        monthlyGrowth: 0
+      });
+      
+      // 에러 메시지는 interceptor에서 이미 표시됨
     }
   };
 

@@ -93,9 +93,46 @@ apiClient.interceptors.response.use(
       }
     }
     
-    // For other errors, check if it's a network error that might indicate session issues
+    // Handle 500 Internal Server Error
+    if (error.response?.status === 500) {
+      const event = new CustomEvent('server:error', { 
+        detail: { 
+          message: '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.',
+          shouldReauth: true // 500 에러도 종종 인증 문제일 수 있음
+        }
+      });
+      window.dispatchEvent(event);
+      return Promise.reject(error);
+    }
+    
+    // Handle other 5xx server errors
+    if (error.response?.status && error.response.status >= 500) {
+      const event = new CustomEvent('server:error', { 
+        detail: { 
+          message: `서버 오류 (${error.response.status}). 관리자에게 문의하세요.`,
+          shouldReauth: false
+        }
+      });
+      window.dispatchEvent(event);
+      return Promise.reject(error);
+    }
+    
+    // Handle 404 Not Found
+    if (error.response?.status === 404) {
+      const event = new CustomEvent('api:notfound', { 
+        detail: { message: '요청한 리소스를 찾을 수 없습니다.' }
+      });
+      window.dispatchEvent(event);
+      return Promise.reject(error);
+    }
+    
+    // Handle network errors
     if (!error.response && error.message === 'Network Error') {
-      console.error('Network error detected, might be a session issue');
+      const event = new CustomEvent('network:error', { 
+        detail: { message: '네트워크 연결을 확인해주세요.' }
+      });
+      window.dispatchEvent(event);
+      console.error('Network error detected');
     }
     
     return Promise.reject(error);

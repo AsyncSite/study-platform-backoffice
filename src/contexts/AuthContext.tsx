@@ -109,8 +109,33 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       showToast(event.detail.message, { type: 'error' });
     };
     
+    // Listen for server:error events (500 - server error)
+    const handleServerError = (event: CustomEvent<{ message: string; shouldReauth?: boolean }>) => {
+      showToast(event.detail.message, { type: 'error' });
+      
+      // If it might be an auth issue, suggest re-login
+      if (event.detail.shouldReauth) {
+        setTimeout(() => {
+          showToast('인증 문제일 수 있습니다. 다시 로그인을 시도해보세요.', { type: 'warning' });
+        }, 2000);
+      }
+    };
+    
+    // Listen for api:notfound events (404 - not found)
+    const handleApiNotFound = (event: CustomEvent<{ message: string }>) => {
+      showToast(event.detail.message, { type: 'warning' });
+    };
+    
+    // Listen for network:error events
+    const handleNetworkError = (event: CustomEvent<{ message: string }>) => {
+      showToast(event.detail.message, { type: 'error' });
+    };
+    
     window.addEventListener('auth:expired', handleAuthExpired as EventListener);
     window.addEventListener('auth:forbidden', handleAuthForbidden as EventListener);
+    window.addEventListener('server:error', handleServerError as EventListener);
+    window.addEventListener('api:notfound', handleApiNotFound as EventListener);
+    window.addEventListener('network:error', handleNetworkError as EventListener);
     
     // Optional: Set up periodic token validation (disabled for now)
     // Uncomment if you want periodic checks
@@ -130,6 +155,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return () => {
       window.removeEventListener('auth:expired', handleAuthExpired as EventListener);
       window.removeEventListener('auth:forbidden', handleAuthForbidden as EventListener);
+      window.removeEventListener('server:error', handleServerError as EventListener);
+      window.removeEventListener('api:notfound', handleApiNotFound as EventListener);
+      window.removeEventListener('network:error', handleNetworkError as EventListener);
       // clearInterval(intervalId);
     };
   }, [showToast, navigate]);
