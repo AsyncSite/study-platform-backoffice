@@ -34,8 +34,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
 
     try {
-      // Decode JWT to check expiration (basic check without library)
-      const payload = JSON.parse(atob(token.split('.')[1]));
+      // Check if token looks like a JWT (has 3 parts separated by dots)
+      const parts = token.split('.');
+      if (parts.length !== 3) {
+        // Not a JWT token, but we'll keep it for now
+        // Let the API calls determine if it's valid
+        return true;
+      }
+
+      // Decode JWT to check expiration
+      const payload = JSON.parse(atob(parts[1]));
+      
+      // Check if exp exists
+      if (!payload.exp) {
+        // No expiration, assume valid
+        return true;
+      }
+      
       const exp = payload.exp * 1000; // Convert to milliseconds
       
       if (Date.now() >= exp) {
@@ -50,12 +65,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       return true;
     } catch (error) {
-      console.error('Failed to validate token:', error);
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('refreshToken');
-      localStorage.removeItem('user');
-      setUser(null);
-      return false;
+      // If we can't parse the token, let API calls handle validation
+      console.warn('Could not parse token, keeping session:', error);
+      return true;
     }
   };
 
@@ -67,20 +79,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       if (token && savedUser) {
         try {
-          // Validate token before restoring user
-          const isValid = await validateSession();
-          if (isValid) {
-            setUser(JSON.parse(savedUser));
-          } else {
-            // Token invalid, redirect to login
-            navigate('/login');
-          }
+          // Simply restore the user from localStorage
+          // Let API calls handle token validation
+          setUser(JSON.parse(savedUser));
         } catch (error) {
-          console.error('Failed to restore session:', error);
+          console.error('Failed to parse saved user:', error);
           localStorage.removeItem('authToken');
           localStorage.removeItem('refreshToken');
           localStorage.removeItem('user');
-          navigate('/login');
         }
       }
       setLoading(false);
@@ -106,7 +112,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     window.addEventListener('auth:expired', handleAuthExpired as EventListener);
     window.addEventListener('auth:forbidden', handleAuthForbidden as EventListener);
     
-    // Set up periodic token validation (every 30 seconds)
+    // Optional: Set up periodic token validation (disabled for now)
+    // Uncomment if you want periodic checks
+    /*
     const intervalId = setInterval(async () => {
       if (user) {
         const isValid = await validateSession();
@@ -116,14 +124,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           navigate('/login');
         }
       }
-    }, 30000); // Check every 30 seconds
+    }, 300000); // Check every 5 minutes
+    */
     
     return () => {
       window.removeEventListener('auth:expired', handleAuthExpired as EventListener);
       window.removeEventListener('auth:forbidden', handleAuthForbidden as EventListener);
-      clearInterval(intervalId);
+      // clearInterval(intervalId);
     };
-  }, [showToast, navigate, user]);
+  }, [showToast, navigate]);
 
   const login = async (credentials: LoginRequest) => {
     try {
