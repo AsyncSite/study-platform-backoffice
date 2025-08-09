@@ -3,7 +3,6 @@ import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
 import { usersApi } from '../api/users';
 import type { User, UserListRequest, UserStatistics } from '../types/user';
-import { useNotification } from '../contexts/NotificationContext';
 import MemberStatCards from '../components/members/MemberStatCards';
 import MemberFilters from '../components/members/MemberFilters';
 import MemberTable from '../components/members/MemberTable';
@@ -12,7 +11,6 @@ import Pagination from '../components/common/Pagination';
 
 const MemberManagement: React.FC = () => {
   const navigate = useNavigate();
-  const { showToast } = useNotification();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [totalPages, setTotalPages] = useState(0);

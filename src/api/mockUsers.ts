@@ -245,6 +245,7 @@ export const mockUsersApi = {
       newUsersToday: 3,
       newUsersThisWeek: 8,
       newUsersThisMonth: 12,
+      monthlyGrowth: 5.2,
       usersByRole: {
         USER: mockUsers.filter(u => u.role === 'USER').length,
         ADMIN: mockUsers.filter(u => u.role === 'ADMIN').length,

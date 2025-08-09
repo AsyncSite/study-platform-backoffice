@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { useNavigate } from 'react-router-dom';
 import { usersApi } from '../api/users';
 import { studyApi } from '../api/study';
 import type { UserStatistics } from '../types/user';
 import type { StudyResponse } from '../types/api';
 import { StudyStatus } from '../types/api';
-import { useNotification } from '../contexts/NotificationContext';
 import StatCard from '../components/dashboard/StatCard';
 import StudyCard from '../components/dashboard/StudyCard';
 import ActivityCard from '../components/dashboard/ActivityCard';
@@ -14,8 +12,6 @@ import WeeklyTrendChart from '../components/dashboard/WeeklyTrendChart';
 import CategoryDistributionChart from '../components/dashboard/CategoryDistributionChart';
 
 const Dashboard: React.FC = () => {
-  const navigate = useNavigate();
-  const { showToast } = useNotification();
   const [userStatistics, setUserStatistics] = useState<UserStatistics | null>(null);
   const [studies, setStudies] = useState<StudyResponse[]>([]);
   const [, setLoading] = useState(true);

@@ -104,6 +104,7 @@ export interface UserStatistics {
   newUsersToday: number;
   newUsersThisWeek: number;
   newUsersThisMonth: number;
-  usersByRole: Record<string, number>;
-  usersByProvider: Record<string, number>;
+  monthlyGrowth: number;
+  usersByRole?: Record<string, number>;
+  usersByProvider?: Record<string, number>;
 }
