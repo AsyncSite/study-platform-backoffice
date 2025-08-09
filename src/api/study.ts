@@ -12,7 +12,8 @@ import type {
 } from '../types/api';
 
 // 게이트웨이를 통한 study-service 접근 경로
-const STUDY_API_PATH = '/api/studies/v1/studies';
+// Gateway가 /api/studies/** → /api/v1/studies/** 로 변환
+const STUDY_API_PATH = '/api/studies';
 
 // Study API methods
 export const studyApi = {

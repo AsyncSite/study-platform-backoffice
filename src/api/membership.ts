@@ -64,20 +64,20 @@ export const membershipApi = {
       totalElements: number;
       totalPages: number;
       number: number;
-    }>(`/api/v1/studies/${studyId}/applications`, { params });
+    }>(`/api/studies/${studyId}/applications`, { params });
     return response.data;
   },
 
   async getApplication(studyId: string, applicationId: string) {
     const response = await axios.get<ApplicationResponse>(
-      `/api/v1/studies/${studyId}/applications/${applicationId}`
+      `/api/studies/${studyId}/applications/${applicationId}`
     );
     return response.data;
   },
 
   async submitApplication(studyId: string, request: ApplicationRequest) {
     const response = await axios.post<ApplicationResponse>(
-      `/api/v1/studies/${studyId}/applications`,
+      `/api/studies/${studyId}/applications`,
       request
     );
     return response.data;
@@ -85,7 +85,7 @@ export const membershipApi = {
 
   async acceptApplication(studyId: string, applicationId: string, request: AcceptApplicationRequest) {
     const response = await axios.post<{ memberId: string }>(
-      `/api/v1/studies/${studyId}/applications/${applicationId}/accept`,
+      `/api/studies/${studyId}/applications/${applicationId}/accept`,
       request
     );
     return response.data;
@@ -93,13 +93,13 @@ export const membershipApi = {
 
   async rejectApplication(studyId: string, applicationId: string, request: RejectApplicationRequest) {
     await axios.post(
-      `/api/v1/studies/${studyId}/applications/${applicationId}/reject`,
+      `/api/studies/${studyId}/applications/${applicationId}/reject`,
       request
     );
   },
 
   async cancelApplication(studyId: string, applicationId: string, applicantId: string) {
-    await axios.delete(`/api/v1/studies/${studyId}/applications/${applicationId}`, {
+    await axios.delete(`/api/studies/${studyId}/applications/${applicationId}`, {
       params: { applicantId }
     });
   },
@@ -111,45 +111,45 @@ export const membershipApi = {
       totalElements: number;
       totalPages: number;
       number: number;
-    }>(`/api/v1/studies/${studyId}/members`, { params });
+    }>(`/api/studies/${studyId}/members`, { params });
     return response.data;
   },
 
   async getMember(studyId: string, memberId: string) {
     const response = await axios.get<MemberResponse>(
-      `/api/v1/studies/${studyId}/members/${memberId}`
+      `/api/studies/${studyId}/members/${memberId}`
     );
     return response.data;
   },
 
   async getMemberCount(studyId: string) {
-    const response = await axios.get<number>(`/api/v1/studies/${studyId}/members/count`);
+    const response = await axios.get<number>(`/api/studies/${studyId}/members/count`);
     return response.data;
   },
 
   async changeMemberRole(studyId: string, memberId: string, request: ChangeMemberRoleRequest) {
-    await axios.put(`/api/v1/studies/${studyId}/members/${memberId}/role`, request);
+    await axios.put(`/api/studies/${studyId}/members/${memberId}/role`, request);
   },
 
   async removeMember(studyId: string, memberId: string, requesterId: string) {
-    await axios.delete(`/api/v1/studies/${studyId}/members/${memberId}`, {
+    await axios.delete(`/api/studies/${studyId}/members/${memberId}`, {
       params: { requesterId }
     });
   },
 
   async warnMember(studyId: string, memberId: string, request: WarnMemberRequest) {
-    await axios.post(`/api/v1/studies/${studyId}/members/${memberId}/warnings`, request);
+    await axios.post(`/api/studies/${studyId}/members/${memberId}/warnings`, request);
   },
 
   async leaveStudy(studyId: string, userId: string) {
-    await axios.post(`/api/v1/studies/${studyId}/members/leave`, null, {
+    await axios.post(`/api/studies/${studyId}/members/leave`, null, {
       params: { userId }
     });
   },
 
   async getMemberStatistics(studyId: string) {
     const response = await axios.get<Record<string, any>>(
-      `/api/v1/studies/${studyId}/members/statistics`
+      `/api/studies/${studyId}/members/statistics`
     );
     return response.data;
   },
@@ -160,12 +160,12 @@ export const membershipApi = {
       proposedStudies: any[];
       participatingStudies: any[];
       leadingStudies: any[];
-    }>(`/api/v1/my-studies`, { params: { userId } });
+    }>(`/api/studies/my`, { params: { userId } });
     return response.data;
   },
 
   async getMyApplications(userId: string) {
-    const response = await axios.get<ApplicationResponse[]>(`/api/v1/my-applications`, {
+    const response = await axios.get<ApplicationResponse[]>(`/api/studies/my/applications`, {
       params: { userId }
     });
     return response.data;
