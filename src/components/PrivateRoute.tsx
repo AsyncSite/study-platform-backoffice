@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import styled from 'styled-components';
@@ -8,10 +8,24 @@ interface PrivateRouteProps {
 }
 
 const PrivateRoute: React.FC<PrivateRouteProps> = ({ children }) => {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, validateSession } = useAuth();
   const location = useLocation();
+  const [isValidating, setIsValidating] = useState(true);
+  const [sessionValid, setSessionValid] = useState(false);
 
-  if (loading) {
+  useEffect(() => {
+    const checkSession = async () => {
+      if (isAuthenticated) {
+        const isValid = await validateSession();
+        setSessionValid(isValid);
+      }
+      setIsValidating(false);
+    };
+
+    checkSession();
+  }, [isAuthenticated, validateSession, location.pathname]);
+
+  if (loading || isValidating) {
     return (
       <LoadingContainer>
         <LoadingSpinner />
@@ -20,7 +34,7 @@ const PrivateRoute: React.FC<PrivateRouteProps> = ({ children }) => {
     );
   }
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated || !sessionValid) {
     // Redirect to login page but save the attempted location
     return <Navigate to="/login" state={{ from: location }} replace />;
   }

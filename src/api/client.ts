@@ -35,6 +35,16 @@ apiClient.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
     
+    // Handle 403 Forbidden - User doesn't have permission
+    if (error.response?.status === 403) {
+      const event = new CustomEvent('auth:forbidden', { 
+        detail: { message: '권한이 없습니다. 관리자에게 문의하세요.' }
+      });
+      window.dispatchEvent(event);
+      return Promise.reject(error);
+    }
+    
+    // Handle 401 Unauthorized - Token invalid or expired
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
       
@@ -56,32 +66,36 @@ apiClient.interceptors.response.use(
           return apiClient(originalRequest);
         } catch (refreshError) {
           // Refresh failed, show notification and redirect to login
+          localStorage.removeItem('authToken');
+          localStorage.removeItem('refreshToken');
+          localStorage.removeItem('user');
+          
           const event = new CustomEvent('auth:expired', { 
             detail: { message: '세션이 만료되었습니다. 다시 로그인해주세요.' }
           });
           window.dispatchEvent(event);
           
-          // Clean up and redirect after a delay
-          setTimeout(() => {
-            localStorage.removeItem('authToken');
-            localStorage.removeItem('refreshToken');
-            localStorage.removeItem('user');
-            window.location.href = '/login';
-          }, 2000);
+          // Don't retry the request
+          return Promise.reject(refreshError);
         }
       } else {
         // No refresh token, notify and redirect
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('user');
+        
         const event = new CustomEvent('auth:expired', { 
           detail: { message: '인증이 필요합니다. 로그인 페이지로 이동합니다.' }
         });
         window.dispatchEvent(event);
         
-        setTimeout(() => {
-          localStorage.removeItem('authToken');
-          localStorage.removeItem('user');
-          window.location.href = '/login';
-        }, 2000);
+        // Don't retry the request
+        return Promise.reject(error);
       }
+    }
+    
+    // For other errors, check if it's a network error that might indicate session issues
+    if (!error.response && error.message === 'Network Error') {
+      console.error('Network error detected, might be a session issue');
     }
     
     return Promise.reject(error);

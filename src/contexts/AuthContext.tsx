@@ -11,6 +11,7 @@ interface AuthContextType {
   loading: boolean;
   login: (credentials: LoginRequest) => Promise<void>;
   logout: () => void;
+  validateSession: () => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -25,6 +26,39 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const navigate = useNavigate();
   const { showToast } = useNotification();
 
+  // Function to validate current session
+  const validateSession = async (): Promise<boolean> => {
+    const token = localStorage.getItem('authToken');
+    if (!token) {
+      return false;
+    }
+
+    try {
+      // Decode JWT to check expiration (basic check without library)
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const exp = payload.exp * 1000; // Convert to milliseconds
+      
+      if (Date.now() >= exp) {
+        // Token expired
+        console.log('Token expired, cleaning up...');
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('user');
+        setUser(null);
+        return false;
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Failed to validate token:', error);
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('user');
+      setUser(null);
+      return false;
+    }
+  };
+
   // Check for existing session on mount
   useEffect(() => {
     const checkAuth = async () => {
@@ -33,13 +67,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       if (token && savedUser) {
         try {
-          // Simply restore the user from localStorage
-          // If token is invalid, API calls will return 401 and we'll handle it in axios interceptor
-          setUser(JSON.parse(savedUser));
+          // Validate token before restoring user
+          const isValid = await validateSession();
+          if (isValid) {
+            setUser(JSON.parse(savedUser));
+          } else {
+            // Token invalid, redirect to login
+            navigate('/login');
+          }
         } catch (error) {
-          console.error('Failed to parse saved user:', error);
+          console.error('Failed to restore session:', error);
           localStorage.removeItem('authToken');
+          localStorage.removeItem('refreshToken');
           localStorage.removeItem('user');
+          navigate('/login');
         }
       }
       setLoading(false);
@@ -50,15 +91,39 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Listen for auth:expired events
     const handleAuthExpired = (event: CustomEvent<{ message: string }>) => {
       showToast(event.detail.message, { type: 'error' });
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('user');
       setUser(null);
+      navigate('/login');
+    };
+    
+    // Listen for auth:forbidden events (403 - no permission)
+    const handleAuthForbidden = (event: CustomEvent<{ message: string }>) => {
+      showToast(event.detail.message, { type: 'error' });
     };
     
     window.addEventListener('auth:expired', handleAuthExpired as EventListener);
+    window.addEventListener('auth:forbidden', handleAuthForbidden as EventListener);
+    
+    // Set up periodic token validation (every 30 seconds)
+    const intervalId = setInterval(async () => {
+      if (user) {
+        const isValid = await validateSession();
+        if (!isValid) {
+          showToast('세션이 만료되었습니다. 다시 로그인해주세요.', { type: 'error' });
+          setUser(null);
+          navigate('/login');
+        }
+      }
+    }, 30000); // Check every 30 seconds
     
     return () => {
       window.removeEventListener('auth:expired', handleAuthExpired as EventListener);
+      window.removeEventListener('auth:forbidden', handleAuthForbidden as EventListener);
+      clearInterval(intervalId);
     };
-  }, [showToast]);
+  }, [showToast, navigate, user]);
 
   const login = async (credentials: LoginRequest) => {
     try {
@@ -117,6 +182,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     loading,
     login,
     logout,
+    validateSession,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -9,16 +9,13 @@ import InactiveStudiesTab from '../components/study/InactiveStudiesTab';
 import StudyDetailModal from '../components/study/StudyDetailModal';
 import StudyRejectModal from '../components/study/StudyRejectModal';
 import StudyApplicationsModal from '../components/study/StudyApplicationsModal';
-import AdminStudyCreateModal from '../components/study/AdminStudyCreateModal';
-import type { StudyResponse, StudyCreateRequest } from '../types/api';
+import type { StudyResponse } from '../types/api';
 import { StudyStatus } from '../types/api';
 import { studyApi } from '../api/study';
-import { useAuth } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
-import { Plus, RefreshCw } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 
 const StudyManagement: React.FC = () => {
-  const { } = useAuth(); // user removed - not used
   const { showToast, showConfirm } = useNotification();
   
   // State
@@ -28,7 +25,6 @@ const StudyManagement: React.FC = () => {
   const [showDeleted, setShowDeleted] = useState(false);
   
   // Modals
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedStudy, setSelectedStudy] = useState<StudyResponse | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
@@ -191,18 +187,6 @@ const StudyManagement: React.FC = () => {
     setIsApplicationsModalOpen(true);
   };
 
-  const handleCreateStudy = async (data: StudyCreateRequest) => {
-    try {
-      await studyApi.createStudy(data);
-      await loadStudies();
-      setIsCreateModalOpen(false);
-      showToast('스터디가 생성되었습니다. 관리자 권한으로 생성된 스터디는 즉시 활성화됩니다.', { type: 'success' });
-    } catch (error) {
-      console.error('Failed to create study:', error);
-      showToast('스터디 생성에 실패했습니다.', { type: 'error' });
-      throw error;
-    }
-  };
 
   // Count studies by status
   const pendingCount = studies.filter(s => s.status === StudyStatus.PENDING).length;
@@ -225,14 +209,6 @@ const StudyManagement: React.FC = () => {
             onClick={() => setShowDeleted(!showDeleted)}
           >
             {showDeleted ? '활성 스터디만' : '삭제된 스터디 포함'}
-          </Button>
-          <Button
-            variant="primary"
-            size="medium"
-            onClick={() => setIsCreateModalOpen(true)}
-          >
-            <Plus size={20} />
-            관리자 스터디 생성
           </Button>
           <RefreshButton onClick={loadStudies}>
             <RefreshCw size={20} />
@@ -281,11 +257,6 @@ const StudyManagement: React.FC = () => {
       </MainCard>
 
       {/* Modals */}
-      <AdminStudyCreateModal
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        onSubmit={handleCreateStudy}
-      />
 
       <StudyDetailModal
         isOpen={isDetailModalOpen}
