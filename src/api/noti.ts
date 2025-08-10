@@ -1,6 +1,6 @@
 import { request } from './client';
-import type { 
-  ApiResponse, 
+import type {
+  ApiResponse,
 } from '../types/api';
 
 const NOTI_API_PATH = '/api/noti';
@@ -56,7 +56,7 @@ export const notiApi = {
   // Create a new study proposal
   getNotiSetting: async (userId: string): Promise<ApiResponse<NotiSetting>> => {
     return request<NotiSetting>({
-      method: 'POST',
+      method: 'GET',
       url: `${NOTI_API_PATH}/settings/${userId}`,
     });
   },
