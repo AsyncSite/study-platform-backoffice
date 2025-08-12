@@ -64,6 +64,24 @@ export const studyApi = {
     return response.data;
   },
 
+  // Start a study (change from APPROVED to IN_PROGRESS)
+  startStudy: async (studyId: string): Promise<StudyResponse> => {
+    const response = await request<StudyResponse>({
+      method: 'PATCH',
+      url: `${STUDY_API_PATH}/${studyId}/start`,
+    });
+    return response.data;
+  },
+
+  // Complete a study (change from IN_PROGRESS to COMPLETED)
+  completeStudy: async (studyId: string): Promise<StudyResponse> => {
+    const response = await request<StudyResponse>({
+      method: 'PATCH',
+      url: `${STUDY_API_PATH}/${studyId}/complete`,
+    });
+    return response.data;
+  },
+
   // Delete a study (only for terminated or rejected studies)
   deleteStudy: async (studyId: string): Promise<void> => {
     await request<void>({

@@ -3,6 +3,7 @@ import styled from 'styled-components';
 import StudyCard from './StudyCard';
 import { Users, UserPlus, Activity, TrendingUp } from 'lucide-react';
 import type { StudyResponse } from '../../types/api';
+import { StudyStatus } from '../../types/api';
 
 interface ActiveStudiesTabProps {
   studies: StudyResponse[];
@@ -10,6 +11,8 @@ interface ActiveStudiesTabProps {
   onTerminate: (id: string) => void;
   onView: (id: string) => void;
   onManageApplications: (study: StudyResponse) => void;
+  onStart?: (id: string) => void;
+  onComplete?: (id: string) => void;
 }
 
 const ActiveStudiesTab: React.FC<ActiveStudiesTabProps> = ({
@@ -18,6 +21,8 @@ const ActiveStudiesTab: React.FC<ActiveStudiesTabProps> = ({
   onTerminate,
   onView,
   onManageApplications,
+  onStart,
+  onComplete,
 }) => {
   if (loading) {
     return (
@@ -85,6 +90,23 @@ const ActiveStudiesTab: React.FC<ActiveStudiesTabProps> = ({
               onView={onView}
               customActions={
                 <>
+                  {/* 스터디 상태에 따른 액션 버튼 */}
+                  {study.status === StudyStatus.APPROVED && onStart && (
+                    <ActionButton
+                      onClick={() => onStart(study.id)}
+                      $variant="success"
+                    >
+                      스터디 시작
+                    </ActionButton>
+                  )}
+                  {study.status === StudyStatus.IN_PROGRESS && onComplete && (
+                    <ActionButton
+                      onClick={() => onComplete(study.id)}
+                      $variant="info"
+                    >
+                      스터디 완료
+                    </ActionButton>
+                  )}
                   {/* TODO: 실제 대기 중인 신청 수를 API에서 가져와야 함 */}
                   <ApplicationButton
                     onClick={() => onManageApplications(study)}
@@ -263,5 +285,31 @@ const ApplicationButton = styled.button<{ $hasApplications: boolean }>`
   }
 `;
 
+const ActionButton = styled.button<{ $variant: 'success' | 'info' | 'warning' }>`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: ${({ theme, $variant }) => {
+    switch ($variant) {
+      case 'success': return theme.colors.success;
+      case 'info': return theme.colors.info;
+      case 'warning': return theme.colors.warning;
+      default: return theme.colors.primary;
+    }
+  }};
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+  }
+`;
 
 export default ActiveStudiesTab;

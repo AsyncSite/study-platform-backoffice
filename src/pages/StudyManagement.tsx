@@ -70,7 +70,7 @@ const StudyManagement: React.FC = () => {
       case 'PENDING':
         return studies.filter(s => s.status === StudyStatus.PENDING);
       case 'ACTIVE':
-        return studies.filter(s => s.status === StudyStatus.APPROVED);
+        return studies.filter(s => s.status === StudyStatus.APPROVED || s.status === StudyStatus.IN_PROGRESS);
       case 'INACTIVE':
         return studies.filter(s => s.status === StudyStatus.TERMINATED || s.status === StudyStatus.REJECTED);
       default:
@@ -133,6 +133,54 @@ const StudyManagement: React.FC = () => {
     } catch (error: any) {
       console.error('Failed to terminate study:', error);
       const errorMessage = error.response?.data?.error?.message || '스터디 종료에 실패했습니다.';
+      showToast(errorMessage, { type: 'error' });
+    }
+  };
+
+  const handleStart = async (id: string) => {
+    const study = studies.find(s => s.id === id);
+    if (!study) return;
+    
+    const confirmed = await showConfirm({
+      title: '스터디 시작',
+      message: `"${study.title}" 스터디를 시작하시겠습니까?\n\n승인된 스터디가 진행 중 상태로 변경됩니다.`,
+      confirmText: '시작',
+      variant: 'info'
+    });
+    
+    if (!confirmed) return;
+    
+    try {
+      await studyApi.startStudy(id);
+      await loadStudies();
+      showToast('스터디가 시작되었습니다.', { type: 'success' });
+    } catch (error: any) {
+      console.error('Failed to start study:', error);
+      const errorMessage = error.response?.data?.error?.message || '스터디 시작에 실패했습니다.';
+      showToast(errorMessage, { type: 'error' });
+    }
+  };
+
+  const handleComplete = async (id: string) => {
+    const study = studies.find(s => s.id === id);
+    if (!study) return;
+    
+    const confirmed = await showConfirm({
+      title: '스터디 완료',
+      message: `"${study.title}" 스터디를 완료 처리하시겠습니까?\n\n진행 중인 스터디가 완료 상태로 변경됩니다.`,
+      confirmText: '완료',
+      variant: 'success'
+    });
+    
+    if (!confirmed) return;
+    
+    try {
+      await studyApi.completeStudy(id);
+      await loadStudies();
+      showToast('스터디가 완료되었습니다.', { type: 'success' });
+    } catch (error: any) {
+      console.error('Failed to complete study:', error);
+      const errorMessage = error.response?.data?.error?.message || '스터디 완료 처리에 실패했습니다.';
       showToast(errorMessage, { type: 'error' });
     }
   };
@@ -201,7 +249,7 @@ const StudyManagement: React.FC = () => {
 
   // Count studies by status
   const pendingCount = studies.filter(s => s.status === StudyStatus.PENDING).length;
-  const activeCount = studies.filter(s => s.status === StudyStatus.APPROVED).length;
+  const activeCount = studies.filter(s => s.status === StudyStatus.APPROVED || s.status === StudyStatus.IN_PROGRESS).length;
   const inactiveCount = studies.filter(s => s.status === StudyStatus.TERMINATED || s.status === StudyStatus.REJECTED).length;
 
   return (
@@ -253,6 +301,8 @@ const StudyManagement: React.FC = () => {
             onTerminate={handleTerminate}
             onView={handleView}
             onManageApplications={handleManageApplications}
+            onStart={handleStart}
+            onComplete={handleComplete}
           />
         )}
 

@@ -16,6 +16,8 @@ export interface AppError {
 export const StudyStatus = {
   PENDING: 'PENDING',
   APPROVED: 'APPROVED',
+  IN_PROGRESS: 'IN_PROGRESS',
+  COMPLETED: 'COMPLETED',
   REJECTED: 'REJECTED',
   TERMINATED: 'TERMINATED'
 } as const;
