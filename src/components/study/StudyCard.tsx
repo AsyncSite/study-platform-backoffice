@@ -29,9 +29,11 @@ const StudyCard: React.FC<StudyCardProps> = ({
   customActions,
 }) => {
   const getStatusBadgeVariant = (status: StudyStatus): BadgeVariant => {
-    const variants = {
+    const variants: Record<StudyStatus, BadgeVariant> = {
       [StudyStatus.PENDING]: BadgeVariant.WARNING,
       [StudyStatus.APPROVED]: BadgeVariant.SUCCESS,
+      [StudyStatus.IN_PROGRESS]: BadgeVariant.SUCCESS,
+      [StudyStatus.COMPLETED]: BadgeVariant.DEFAULT,
       [StudyStatus.REJECTED]: BadgeVariant.ERROR,
       [StudyStatus.TERMINATED]: BadgeVariant.DEFAULT,
     };
@@ -39,17 +41,29 @@ const StudyCard: React.FC<StudyCardProps> = ({
   };
 
   const getStatusText = (status: StudyStatus): string => {
-    const texts = {
+    const texts: Record<StudyStatus, string> = {
       [StudyStatus.PENDING]: '대기중',
       [StudyStatus.APPROVED]: '진행중',
+      [StudyStatus.IN_PROGRESS]: '진행중',
+      [StudyStatus.COMPLETED]: '완료됨',
       [StudyStatus.REJECTED]: '거절됨',
       [StudyStatus.TERMINATED]: '종료됨',
     };
     return texts[status];
   };
 
-  const getCardVariant = (status: StudyStatus) => {
-    return status.toLowerCase() as 'pending' | 'active' | 'rejected' | 'terminated';
+  type CardVariant = 'pending' | 'active' | 'rejected' | 'terminated';
+
+  const getCardVariant = (status: StudyStatus): CardVariant => {
+    const variantMap: Record<StudyStatus, CardVariant> = {
+      [StudyStatus.PENDING]: 'pending',
+      [StudyStatus.APPROVED]: 'active',
+      [StudyStatus.IN_PROGRESS]: 'active',
+      [StudyStatus.COMPLETED]: 'terminated',
+      [StudyStatus.REJECTED]: 'rejected',
+      [StudyStatus.TERMINATED]: 'terminated',
+    };
+    return variantMap[status];
   };
 
 
@@ -209,7 +223,7 @@ const StudyCard: React.FC<StudyCardProps> = ({
   );
 };
 
-const StyledStudyCard = styled(Card)<{ $variant: string; $deleted?: boolean }>`
+const StyledStudyCard = styled(Card)<{ $variant: 'pending' | 'active' | 'rejected' | 'terminated'; $deleted?: boolean }>`
   border-radius: 12px;
   overflow: hidden;
   position: relative;
@@ -249,7 +263,7 @@ const StyledStudyCard = styled(Card)<{ $variant: string; $deleted?: boolean }>`
   }
 `;
 
-const CardHeader = styled.div<{ $variant: string }>`
+const CardHeader = styled.div<{ $variant: 'pending' | 'active' | 'rejected' | 'terminated' }>`
   height: 12px;
   background: ${({ $variant, theme }) => {
     const colors = {

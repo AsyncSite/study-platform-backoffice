@@ -169,7 +169,7 @@ const StudyManagement: React.FC = () => {
       title: '스터디 완료',
       message: `"${study.title}" 스터디를 완료 처리하시겠습니까?\n\n진행 중인 스터디가 완료 상태로 변경됩니다.`,
       confirmText: '완료',
-      variant: 'success'
+      variant: 'info'
     });
     
     if (!confirmed) return;

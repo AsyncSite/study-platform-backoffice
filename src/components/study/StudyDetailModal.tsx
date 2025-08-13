@@ -53,9 +53,11 @@ const StudyDetailModal: React.FC<StudyDetailModalProps> = ({
   const formatDate = formatDateKorean;
 
   const getStatusColor = (status: StudyStatus) => {
-    const colors = {
+    const colors: Record<StudyStatus, string> = {
       [StudyStatus.PENDING]: '#fbbf24',
       [StudyStatus.APPROVED]: '#10b981',
+      [StudyStatus.IN_PROGRESS]: '#10b981',
+      [StudyStatus.COMPLETED]: '#6b7280',
       [StudyStatus.REJECTED]: '#ef4444',
       [StudyStatus.TERMINATED]: '#6b7280',
     };
@@ -63,9 +65,11 @@ const StudyDetailModal: React.FC<StudyDetailModalProps> = ({
   };
 
   const getStatusText = (status: StudyStatus) => {
-    const texts = {
+    const texts: Record<StudyStatus, string> = {
       [StudyStatus.PENDING]: '대기중',
       [StudyStatus.APPROVED]: '승인됨',
+      [StudyStatus.IN_PROGRESS]: '진행중',
+      [StudyStatus.COMPLETED]: '완료됨',
       [StudyStatus.REJECTED]: '거절됨',
       [StudyStatus.TERMINATED]: '종료됨',
     };
