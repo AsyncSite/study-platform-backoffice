@@ -190,6 +190,44 @@ const NotiManagement: React.FC = () => {
     }
   };
 
+  const handleSetDefault = async (template: NotiTemplate) => {
+    const confirmed = await showConfirm({
+      title: '기본 템플릿 지정',
+      message: `이 이벤트/채널 조합의 기본 템플릿으로 설정하시겠습니까?`,
+      confirmText: '지정',
+      cancelText: '취소',
+    });
+    if (!confirmed) return;
+
+    try {
+      const response = await notiApi.setDefaultTemplate(template.templateId);
+      if (response.success) {
+        showToast('기본 템플릿으로 설정되었습니다.', { type: 'success' });
+        refreshAll();
+      } else {
+        throw new Error(response.message || '기본 템플릿 설정에 실패했습니다.');
+      }
+    } catch (error: any) {
+      console.error('Failed to set default template:', error);
+      showToast(error.message || '기본 템플릿 설정에 실패했습니다.', { type: 'error' });
+    }
+  };
+
+  const handleChangePriority = async (template: NotiTemplate, value: number) => {
+    try {
+      const response = await notiApi.updateTemplatePriority(template.templateId, value);
+      if (response.success) {
+        showToast('우선순위가 변경되었습니다.', { type: 'success' });
+        refreshAll();
+      } else {
+        throw new Error(response.message || '우선순위 변경에 실패했습니다.');
+      }
+    } catch (error: any) {
+      console.error('Failed to update priority:', error);
+      showToast(error.message || '우선순위 변경에 실패했습니다.', { type: 'error' });
+    }
+  };
+
   const handleViewTemplate = (template: NotiTemplate) => {
     setSelectedTemplate(template);
     setShowDetailModal(true);
@@ -265,6 +303,8 @@ const NotiManagement: React.FC = () => {
               onView={handleViewTemplate}
               onEdit={handleEditTemplate}
               onDelete={handleDeactivateTemplate}
+              onSetDefault={handleSetDefault}
+              onChangePriority={handleChangePriority}
             />
           ))}
         </TemplatesGrid>

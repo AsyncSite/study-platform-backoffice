@@ -62,6 +62,17 @@ const NotiTemplateDetailModal: React.FC<NotiTemplateDetailModalProps> = ({
                 />
               </DetailField>
               
+              <DetailRow>
+                <DetailField>
+                  <DetailLabel>기본 템플릿 여부</DetailLabel>
+                  <DetailValue>{template.isDefault ? 'Yes' : 'No'}</DetailValue>
+                </DetailField>
+                <DetailField>
+                  <DetailLabel>우선순위</DetailLabel>
+                  <DetailValue>{template.priority}</DetailValue>
+                </DetailField>
+              </DetailRow>
+              
               <DetailField>
                 <DetailLabel>내용 템플릿</DetailLabel>
                 <DetailTextarea

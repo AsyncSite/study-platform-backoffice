@@ -1,6 +1,6 @@
 import React from 'react';
 import styled from 'styled-components';
-import { Eye, Edit, Trash2, Mail, MessageSquare, Bell } from 'lucide-react';
+import { Eye, Edit, Trash2, Mail, MessageSquare, Bell, Star, ArrowUp, ArrowDown } from 'lucide-react';
 import type { NotiTemplate } from '../../api/noti';
 
 interface NotiTemplateCardProps {
@@ -8,13 +8,17 @@ interface NotiTemplateCardProps {
   onView: (template: NotiTemplate) => void;
   onEdit: (template: NotiTemplate) => void;
   onDelete: (template: NotiTemplate) => void;
+  onSetDefault?: (template: NotiTemplate) => void;
+  onChangePriority?: (template: NotiTemplate, value: number) => void;
 }
 
 const NotiTemplateCard: React.FC<NotiTemplateCardProps> = ({
   template,
   onView,
   onEdit,
-  onDelete
+  onDelete,
+  onSetDefault,
+  onChangePriority
 }) => {
   const getChannelIcon = (channelType: string) => {
     const iconStyle = { width: '16px', height: '16px' };
@@ -38,7 +42,14 @@ const NotiTemplateCard: React.FC<NotiTemplateCardProps> = ({
   return (
     <TemplateCard>
       <CardHeader>
-        <TemplateTitle>{template.titleTemplate}</TemplateTitle>
+        <TemplateTitle>
+          {template.titleTemplate}
+          {template.isDefault && (
+            <DefaultBadge title="기본 템플릿">
+              <Star style={{ width: 14, height: 14 }} /> 기본
+            </DefaultBadge>
+          )}
+        </TemplateTitle>
         <ChannelBadge channelType={getChannelColor(template.channelType)}>
           {getChannelIcon(template.channelType)}
           {template.channelType}
@@ -52,6 +63,23 @@ const NotiTemplateCard: React.FC<NotiTemplateCardProps> = ({
         </FieldGroup>
         
         <FieldGroup>
+          <FieldLabel>Priority</FieldLabel>
+          <PriorityRow>
+            <PriorityValue>{template.priority}</PriorityValue>
+            {onChangePriority && (
+              <PriorityButton onClick={() => onChangePriority(template, template.priority + 1)} title="우선순위 +1">
+                <ArrowUp style={{ width: 14, height: 14 }} />
+              </PriorityButton>
+            )}
+            {onChangePriority && (
+              <PriorityButton onClick={() => onChangePriority(template, template.priority - 1)} title="우선순위 -1">
+                <ArrowDown style={{ width: 14, height: 14 }} />
+              </PriorityButton>
+            )}
+          </PriorityRow>
+        </FieldGroup>
+
+        <FieldGroup>
           <FieldLabel>Content Preview</FieldLabel>
           <ContentPreview>{template.contentTemplate}</ContentPreview>
         </FieldGroup>
@@ -61,6 +89,11 @@ const NotiTemplateCard: React.FC<NotiTemplateCardProps> = ({
             {template.active ? '활성' : '비활성'}
           </StatusBadge>
           <ActionButtons>
+            {onSetDefault && (
+              <ActionButton onClick={() => onSetDefault(template)} title="기본으로 지정">
+                <Star style={{ width: '16px', height: '16px' }} />
+              </ActionButton>
+            )}
             <ActionButton onClick={() => onView(template)} title="상세보기">
               <Eye style={{ width: '16px', height: '16px' }} />
             </ActionButton>
@@ -111,6 +144,20 @@ const TemplateTitle = styled.h3`
   line-height: 1.4;
   flex: 1;
   margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`;
+
+const DefaultBadge = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: ${({ theme }) => theme.colors.primary};
+  background: ${({ theme }) => theme.colors.primary}20;
+  padding: 2px 6px;
+  border-radius: ${({ theme }) => theme.radii.pill};
 `;
 
 const ChannelBadge = styled.span<{ channelType: string }>`
@@ -173,6 +220,30 @@ const FieldValue = styled.p`
   font-size: 14px;
   color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
+`;
+
+const PriorityRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`;
+
+const PriorityValue = styled.span`
+  font-size: 14px;
+  color: ${({ theme }) => theme.colors.text.primary};
+`;
+
+const PriorityButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: ${({ theme }) => theme.radii.medium};
+  background: ${({ theme }) => theme.colors.gray[50]};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  cursor: pointer;
+  &:hover { background: ${({ theme }) => theme.colors.gray[100]}; }
 `;
 
 const ContentPreview = styled.p`

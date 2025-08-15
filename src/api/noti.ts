@@ -25,6 +25,8 @@ export interface NotiTemplate {
   contentTemplate: string;
   variables: Record<string, string>;
   active: boolean;
+  isDefault: boolean;
+  priority: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -107,6 +109,21 @@ export const notiApi = {
     return request<void>({
       method: 'PATCH',
       url: `${NOTI_API_PATH}/templates/${templateId}/deactivate`,
+    });
+  },
+
+  setDefaultTemplate: async (templateId: string): Promise<ApiResponse<void>> => {
+    return request<void>({
+      method: 'PATCH',
+      url: `${NOTI_API_PATH}/templates/${templateId}/default`,
+    });
+  },
+
+  updateTemplatePriority: async (templateId: string, value: number): Promise<ApiResponse<void>> => {
+    return request<void>({
+      method: 'PATCH',
+      url: `${NOTI_API_PATH}/templates/${templateId}/priority`,
+      params: { value }
     });
   },
 
