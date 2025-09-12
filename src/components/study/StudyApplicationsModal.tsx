@@ -172,14 +172,15 @@ const StudyApplicationsModal: React.FC<StudyApplicationsModalProps> = ({
           </FilterTab>
         </FilterTabs>
 
-        {loading ? (
-          <LoadingMessage>참여 신청을 불러오는 중...</LoadingMessage>
-        ) : filteredApplications.length === 0 ? (
-          <EmptyMessage>
-            {filter === 'ALL' ? '참여 신청이 없습니다.' : `${filter === 'PENDING' ? '대기 중인' : filter === 'ACCEPTED' ? '승인된' : '거절된'} 참여 신청이 없습니다.`}
-          </EmptyMessage>
-        ) : (
-          <ApplicationList>
+        <ScrollableContent>
+          {loading ? (
+            <LoadingMessage>참여 신청을 불러오는 중...</LoadingMessage>
+          ) : filteredApplications.length === 0 ? (
+            <EmptyMessage>
+              {filter === 'ALL' ? '참여 신청이 없습니다.' : `${filter === 'PENDING' ? '대기 중인' : filter === 'ACCEPTED' ? '승인된' : '거절된'} 참여 신청이 없습니다.`}
+            </EmptyMessage>
+          ) : (
+            <ApplicationList>
             {filteredApplications.map((application) => {
               const isExpanded = expandedApplications.has(application.id);
               const hasContent = application.answers && Object.keys(application.answers).length > 0;
@@ -249,26 +250,55 @@ const StudyApplicationsModal: React.FC<StudyApplicationsModalProps> = ({
                 </ApplicationCard>
               );
             })}
-          </ApplicationList>
-        )}
+            </ApplicationList>
+          )}
+        </ScrollableContent>
       </Container>
     </Modal>
   );
 };
 
 const Container = styled.div`
-  min-height: 400px;
+  height: 800px;
+  display: flex;
+  flex-direction: column;
 `;
 
 const FilterTabs = styled.div`
   display: flex;
-  gap: 16px;
+  gap: 0;
   margin-bottom: 24px;
   border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+  flex-shrink: 0;
+`;
+
+const ScrollableContent = styled.div`
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 4px;
+
+  /* 스크롤바 스타일링 */
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: ${({ theme }) => theme.colors.gray[100]};
+    border-radius: 3px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: ${({ theme }) => theme.colors.gray[300]};
+    border-radius: 3px;
+    
+    &:hover {
+      background: ${({ theme }) => theme.colors.gray[400]};
+    }
+  }
 `;
 
 const FilterTab = styled.button<{ $active: boolean }>`
-  padding: 12px 0;
+  padding: 12px 16px;
   background: none;
   border: none;
   border-bottom: 2px solid ${({ $active, theme }) => 
@@ -279,6 +309,11 @@ const FilterTab = styled.button<{ $active: boolean }>`
   font-weight: ${({ $active }) => ($active ? '600' : '400')};
   cursor: pointer;
   transition: all 0.2s;
+  margin-right: 8px;
+
+  &:first-child {
+    margin-left: 0;
+  }
 
   &:hover {
     color: ${({ theme }) => theme.colors.primary};
