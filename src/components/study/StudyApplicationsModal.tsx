@@ -6,7 +6,7 @@ import { applicationApi } from '../../api/study';
 import { useNotification } from '../../contexts/NotificationContext';
 import type { StudyResponse, ApplicationResponse } from '../../types/api';
 import { ApplicationStatus } from '../../types/api';
-import { User, Clock, CheckCircle, XCircle, FileText } from 'lucide-react';
+import { User, Clock, CheckCircle, XCircle, FileText, ChevronDown, ChevronUp } from 'lucide-react';
 import {formatDate} from "../../utils/dateUtils.ts";
 
 interface StudyApplicationsModalProps {
@@ -24,6 +24,7 @@ const StudyApplicationsModal: React.FC<StudyApplicationsModalProps> = ({
   const [applications, setApplications] = useState<ApplicationResponse[]>([]);
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState<ApplicationStatus | 'ALL'>('PENDING');
+  const [expandedApplications, setExpandedApplications] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (isOpen && study) {
@@ -122,6 +123,18 @@ const StudyApplicationsModal: React.FC<StudyApplicationsModalProps> = ({
     }
   };
 
+  const toggleApplicationExpanded = (applicationId: string) => {
+    setExpandedApplications(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(applicationId)) {
+        newSet.delete(applicationId);
+      } else {
+        newSet.add(applicationId);
+      }
+      return newSet;
+    });
+  };
+
   if (!study) return null;
 
   return (
@@ -167,28 +180,42 @@ const StudyApplicationsModal: React.FC<StudyApplicationsModalProps> = ({
           </EmptyMessage>
         ) : (
           <ApplicationList>
-            {filteredApplications.map((application) => (
-              <ApplicationCard key={application.id}>
-                <ApplicationHeader>
-                  <ApplicantInfo>
-                    <User size={20} />
-                    <div>
-                      <ApplicantName>{application.applicantId}</ApplicantName>
-                      <ApplicantDate>
-                        {formatDate(application.createdAt, false, 'yyyy년 MM월 dd일 HH:mm')}
-                      </ApplicantDate>
-                    </div>
-                  </ApplicantInfo>
-                  <StatusBadge $status={getStatusColor(application.status)}>
-                    {getStatusIcon(application.status)}
-                    {application.status === ApplicationStatus.PENDING && '대기 중'}
-                    {application.status === ApplicationStatus.ACCEPTED && '승인됨'}
-                    {application.status === ApplicationStatus.REJECTED && '거절됨'}
-                  </StatusBadge>
-                </ApplicationHeader>
+            {filteredApplications.map((application) => {
+              const isExpanded = expandedApplications.has(application.id);
+              const hasContent = application.answers && Object.keys(application.answers).length > 0;
+              
+              return (
+                <ApplicationCard key={application.id}>
+                  <ApplicationHeader>
+                    <ApplicantInfo>
+                      <User size={20} />
+                      <div>
+                        <ApplicantName>{application.applicantId}</ApplicantName>
+                        <ApplicantDate>
+                          {formatDate(application.createdAt, false, 'yyyy년 MM월 dd일 HH:mm')}
+                        </ApplicantDate>
+                      </div>
+                    </ApplicantInfo>
+                    <HeaderRight>
+                      <StatusBadge $status={getStatusColor(application.status)}>
+                        {getStatusIcon(application.status)}
+                        {application.status === ApplicationStatus.PENDING && '대기 중'}
+                        {application.status === ApplicationStatus.ACCEPTED && '승인됨'}
+                        {application.status === ApplicationStatus.REJECTED && '거절됨'}
+                      </StatusBadge>
+                      {hasContent && (
+                        <ToggleButton
+                          onClick={() => toggleApplicationExpanded(application.id)}
+                          $expanded={isExpanded}
+                        >
+                          {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                        </ToggleButton>
+                      )}
+                    </HeaderRight>
+                  </ApplicationHeader>
 
-                {application.answers && Object.keys(application.answers).length > 0 && (
-                  <>
+                {hasContent && (
+                  <CollapsibleContent $expanded={isExpanded}>
                     {Object.entries(application.answers).map(([question, answer]) => (
                       <ApplicationContent key={question}>
                         <ContentLabel>
@@ -198,7 +225,7 @@ const StudyApplicationsModal: React.FC<StudyApplicationsModalProps> = ({
                         <ContentText>{answer}</ContentText>
                       </ApplicationContent>
                     ))}
-                  </>
+                  </CollapsibleContent>
                 )}
 
                 {application.status === ApplicationStatus.PENDING && (
@@ -219,8 +246,9 @@ const StudyApplicationsModal: React.FC<StudyApplicationsModalProps> = ({
                     </Button>
                   </ActionButtons>
                 )}
-              </ApplicationCard>
-            ))}
+                </ApplicationCard>
+              );
+            })}
           </ApplicationList>
         )}
       </Container>
@@ -369,6 +397,43 @@ const ActionButtons = styled.div`
   display: flex;
   gap: 8px;
   margin-top: 16px;
+`;
+
+const HeaderRight = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+`;
+
+const ToggleButton = styled.button<{ $expanded: boolean }>`
+  background: none;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: ${({ theme }) => theme.colors.text.secondary};
+  transition: all 0.2s;
+  transform: ${({ $expanded }) => $expanded ? 'rotate(0deg)' : 'rotate(0deg)'};
+
+  &:hover {
+    background: ${({ theme }) => theme.colors.gray[100]};
+    color: ${({ theme }) => theme.colors.primary};
+  }
+
+  svg {
+    transition: transform 0.2s;
+  }
+`;
+
+const CollapsibleContent = styled.div<{ $expanded: boolean }>`
+  overflow: hidden;
+  transition: all 0.3s ease-in-out;
+  max-height: ${({ $expanded }) => $expanded ? '1000px' : '0px'};
+  opacity: ${({ $expanded }) => $expanded ? '1' : '0'};
+  margin-top: ${({ $expanded }) => $expanded ? '16px' : '0px'};
 `;
 
 export default StudyApplicationsModal;
