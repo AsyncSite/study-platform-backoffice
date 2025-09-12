@@ -108,44 +108,36 @@ const StudyCard: React.FC<StudyCardProps> = ({
         )}
         
         <CardActions>
-          <Button
-              variant={ButtonVariant.PRIMARY}
-              size={ButtonSize.SMALL}
-              onClick={() => onView?.(study.id)}
-              fullWidth
+          <ActionButton
+            onClick={() => onView?.(study.id)}
+            $variant="primary"
           >
             상세보기
-          </Button>
+          </ActionButton>
           {study.status === StudyStatus.PENDING && !study.deleted && (
             <>
-              <Button
-                variant={ButtonVariant.SUCCESS}
-                size={ButtonSize.SMALL}
+              <ActionButton
                 onClick={() => onApprove?.(study.id)}
-                fullWidth
+                $variant="success"
               >
                 승인
-              </Button>
-              <Button
-                variant={ButtonVariant.ERROR}
-                size={ButtonSize.SMALL}
+              </ActionButton>
+              <ActionButton
                 onClick={() => onReject?.(study.id)}
-                fullWidth
+                $variant="error"
               >
                 거절
-              </Button>
+              </ActionButton>
             </>
           )}
           
           {study.status === StudyStatus.APPROVED && !study.deleted && (
-              <Button
-                variant={ButtonVariant.SECONDARY}
-                size={ButtonSize.SMALL}
+              <ActionButton
                 onClick={() => onTerminate?.(study.id)}
-                fullWidth
+                $variant="secondary"
               >
                 종료
-              </Button>
+              </ActionButton>
           )}
           {study.deleted && (
             <DeletedMessage>
@@ -160,6 +152,7 @@ const StudyCard: React.FC<StudyCardProps> = ({
 };
 
 const StyledStudyCard = styled(Card)<{ $variant: 'pending' | 'active' | 'rejected' | 'terminated'; $deleted?: boolean }>`
+  width: 400px;
   border-radius: 12px;
   overflow: hidden;
   position: relative;
@@ -285,8 +278,10 @@ const RejectReason = styled.p`
 
 const CardActions = styled.div`
   display: flex;
-  gap: 10px;
+  flex-wrap: wrap;
+  gap: 8px;
   margin-top: 20px;
+  align-items: center;
 `;
 
 const DeletedOverlay = styled.div`
@@ -320,6 +315,51 @@ const DeletedMessage = styled.div`
   font-size: 14px;
   padding: 20px;
   font-style: italic;
+`;
+
+const ActionButton = styled.button<{ $variant: 'primary' | 'success' | 'error' | 'secondary' | 'info' | 'warning' }>`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  min-height: 36px;
+  
+  background: ${({ theme, $variant }) => {
+    switch ($variant) {
+      case 'primary': return theme.colors.primary;
+      case 'success': return theme.colors.success;
+      case 'error': return theme.colors.danger;
+      case 'secondary': return theme.colors.gray[100];
+      case 'info': return theme.colors.info;
+      case 'warning': return theme.colors.warning;
+      default: return theme.colors.primary;
+    }
+  }};
+  
+  color: ${({ theme, $variant }) => {
+    switch ($variant) {
+      case 'secondary': return theme.colors.text.primary;
+      default: return 'white';
+    }
+  }};
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: ${({ theme }) => theme.shadows.medium};
+    opacity: 0.9;
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
 `;
 
 export default StudyCard;

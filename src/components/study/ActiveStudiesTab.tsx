@@ -229,8 +229,9 @@ const StatValue = styled.div`
 
 const StudyGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  grid-template-columns: repeat(auto-fill, 400px);
   gap: 24px;
+  justify-content: center;
 `;
 
 const StudyCardWrapper = styled.div`
@@ -264,32 +265,50 @@ const InfoItem = styled.div`
 const ApplicationButton = styled.button<{ $hasApplications: boolean }>`
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
+  gap: 6px;
   padding: 8px 16px;
-  background: ${({ theme, $hasApplications }) => 
-    $hasApplications ? theme.colors.primary : theme.colors.gray[50]};
-  color: ${({ theme, $hasApplications }) => 
-    $hasApplications ? 'white' : theme.colors.text.primary};
-  border: 1px solid ${({ theme }) => theme.colors.border};
+  border: none;
   border-radius: 6px;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
-  position: relative;
+  white-space: nowrap;
+  min-height: 36px;
+  background: ${({ theme, $hasApplications }) => 
+    $hasApplications ? theme.colors.primary : theme.colors.gray[100]};
+  color: ${({ theme, $hasApplications }) => 
+    $hasApplications ? 'white' : theme.colors.text.primary};
 
   &:hover {
+    transform: translateY(-1px);
+    box-shadow: ${({ theme }) => theme.shadows.medium};
     background: ${({ theme }) => theme.colors.primary};
     color: white;
-    border-color: ${({ theme }) => theme.colors.primary};
+    opacity: 0.9;
+  }
+
+  &:active {
+    transform: translateY(0);
   }
 `;
 
 const ActionButton = styled.button<{ $variant: 'success' | 'info' | 'warning' }>`
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
+  gap: 6px;
   padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  min-height: 36px;
+  
   background: ${({ theme, $variant }) => {
     switch ($variant) {
       case 'success': return theme.colors.success;
@@ -299,16 +318,15 @@ const ActionButton = styled.button<{ $variant: 'success' | 'info' | 'warning' }>
     }
   }};
   color: white;
-  border: none;
-  border-radius: 6px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
 
   &:hover {
-    opacity: 0.9;
     transform: translateY(-1px);
+    box-shadow: ${({ theme }) => theme.shadows.medium};
+    opacity: 0.9;
+  }
+
+  &:active {
+    transform: translateY(0);
   }
 `;
 

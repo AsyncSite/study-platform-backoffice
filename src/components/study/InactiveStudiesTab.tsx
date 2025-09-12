@@ -187,8 +187,9 @@ const StatValue = styled.div`
 
 const StudyGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  grid-template-columns: repeat(auto-fill, 400px);
   gap: 24px;
+  justify-content: center;
 `;
 
 const StudyCardWrapper = styled.div`
@@ -231,23 +232,31 @@ const ActionButtons = styled.div`
 const ActionButton = styled.button<{ $danger?: boolean }>`
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
   padding: 8px 16px;
-  background: ${({ theme, $danger }) => 
-    $danger ? theme.colors.danger + '10' : theme.colors.secondary + '10'};
-  color: ${({ theme, $danger }) => 
-    $danger ? theme.colors.danger : theme.colors.text.primary};
-  border: 1px solid ${({ theme, $danger }) => 
-    $danger ? theme.colors.danger + '20' : theme.colors.border};
+  border: none;
   border-radius: 6px;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
+  white-space: nowrap;
+  min-height: 36px;
+  
+  background: ${({ theme, $danger }) => 
+    $danger ? theme.colors.danger : theme.colors.gray[100]};
+  color: ${({ theme, $danger }) => 
+    $danger ? 'white' : theme.colors.text.primary};
 
   &:hover {
-    background: ${({ theme, $danger }) => 
-      $danger ? theme.colors.danger + '20' : theme.colors.secondary + '20'};
+    transform: translateY(-1px);
+    box-shadow: ${({ theme }) => theme.shadows.medium};
+    opacity: 0.9;
+  }
+
+  &:active {
+    transform: translateY(0);
   }
 `;
 
