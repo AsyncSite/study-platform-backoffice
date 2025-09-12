@@ -2,7 +2,6 @@ import React from 'react';
 import styled from 'styled-components';
 import Card from '../common/Card';
 import Badge, { BadgeVariant } from '../common/Badge';
-import Button, { ButtonVariant, ButtonSize } from '../common/Button';
 import type { StudyResponse } from '../../types/api';
 import { StudyStatus } from '../../types/api';
 import { formatDate } from '../../utils/dateUtils';
