@@ -12,7 +12,7 @@ import type { StudyResponse } from '../types/api';
 import { StudyStatus } from '../types/api';
 import { studyApi } from '../api/study';
 import { useNotification } from '../contexts/NotificationContext';
-import { RefreshCw, Users, Clock, CheckCircle, XCircle, Activity } from 'lucide-react';
+import { RefreshCw, CheckCircle, XCircle } from 'lucide-react';
 
 const StudyManagement: React.FC = () => {
   const { showToast, showConfirm } = useNotification();
@@ -262,38 +262,14 @@ const StudyManagement: React.FC = () => {
             </Description>
           </TitleSection>
           
-          {/* Statistics Cards */}
-          <StatsGrid>
-            <StatCard>
-              <StatIcon $color="warning">
-                <Clock size={20} />
-              </StatIcon>
-              <StatContent>
-                <StatValue>{pendingCount}</StatValue>
-                <StatLabel>승인 대기</StatLabel>
-              </StatContent>
-            </StatCard>
-            
-            <StatCard>
-              <StatIcon $color="success">
-                <Activity size={20} />
-              </StatIcon>
-              <StatContent>
-                <StatValue>{activeCount}</StatValue>
-                <StatLabel>활성 스터디</StatLabel>
-              </StatContent>
-            </StatCard>
-            
-            <StatCard>
-              <StatIcon $color="secondary">
-                <Users size={20} />
-              </StatIcon>
-              <StatContent>
-                <StatValue>{studies.length}</StatValue>
-                <StatLabel>전체 스터디</StatLabel>
-              </StatContent>
-            </StatCard>
-          </StatsGrid>
+          {/* Study Management Tabs */}
+          <StudyManagementTabs
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            pendingCount={pendingCount}
+            activeCount={activeCount}
+            inactiveCount={inactiveCount}
+          />
         </HeaderContent>
         
         <HeaderActions>
@@ -320,14 +296,6 @@ const StudyManagement: React.FC = () => {
       </Header>
 
       <MainCard>
-        <StudyManagementTabs
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
-          pendingCount={pendingCount}
-          activeCount={activeCount}
-          inactiveCount={inactiveCount}
-        />
-
         {activeTab === 'PENDING' && (
           <PendingStudiesTab
             studies={getFilteredStudies()}
@@ -470,103 +438,6 @@ const Description = styled.p`
   margin: 0;
 `;
 
-const StatsGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 20px;
-  
-  @media (max-width: 768px) {
-    grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
-  }
-`;
-
-const StatCard = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 20px;
-  background: ${({ theme }) => theme.colors.background};
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: 16px;
-  box-shadow: ${({ theme }) => theme.shadows.small};
-  transition: all 0.2s;
-  
-  &:hover {
-    box-shadow: ${({ theme }) => theme.shadows.medium};
-    transform: translateY(-2px);
-  }
-  
-  @media (max-width: 768px) {
-    flex-direction: column;
-    gap: 8px;
-    padding: 16px 12px;
-    text-align: center;
-  }
-`;
-
-const StatIcon = styled.div<{ $color: string }>`
-  width: 48px;
-  height: 48px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: ${({ theme, $color }) => {
-    switch ($color) {
-      case 'warning': return theme.colors.warning + '15';
-      case 'success': return theme.colors.success + '15';
-      case 'secondary': return theme.colors.primary + '15';
-      default: return theme.colors.primary + '15';
-    }
-  }};
-  color: ${({ theme, $color }) => {
-    switch ($color) {
-      case 'warning': return theme.colors.warning;
-      case 'success': return theme.colors.success;
-      case 'secondary': return theme.colors.primary;
-      default: return theme.colors.primary;
-    }
-  }};
-  border-radius: 12px;
-  flex-shrink: 0;
-  
-  @media (max-width: 768px) {
-    width: 40px;
-    height: 40px;
-  }
-`;
-
-const StatContent = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  
-  @media (max-width: 768px) {
-    align-items: center;
-  }
-`;
-
-const StatValue = styled.span`
-  font-size: 24px;
-  font-weight: 700;
-  color: ${({ theme }) => theme.colors.text.primary};
-  
-  @media (max-width: 768px) {
-    font-size: 20px;
-  }
-`;
-
-const StatLabel = styled.span`
-  font-size: 12px;
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.text.secondary};
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  
-  @media (max-width: 768px) {
-    font-size: 11px;
-  }
-`;
 
 const HeaderActions = styled.div`
   display: flex;
