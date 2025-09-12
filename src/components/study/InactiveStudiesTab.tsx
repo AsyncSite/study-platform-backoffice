@@ -187,7 +187,7 @@ const StatValue = styled.div`
 
 const StudyGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fill, 400px);
+  grid-template-columns: repeat(auto-fill, 350px);
   gap: 24px;
   justify-content: center;
 `;

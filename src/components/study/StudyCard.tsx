@@ -5,6 +5,7 @@ import Badge, { BadgeVariant } from '../common/Badge';
 import type { StudyResponse } from '../../types/api';
 import { StudyStatus } from '../../types/api';
 import { formatDate } from '../../utils/dateUtils';
+import { Users } from 'lucide-react';
 
 interface StudyCardProps {
   study: StudyResponse;
@@ -13,6 +14,7 @@ interface StudyCardProps {
   onTerminate?: (id: string) => void;
   onView?: (id: string) => void;
   customActions?: React.ReactNode;
+  showParticipantInfo?: boolean;
 }
 
 const StudyCard: React.FC<StudyCardProps> = ({
@@ -22,6 +24,7 @@ const StudyCard: React.FC<StudyCardProps> = ({
   onTerminate,
   onView,
   customActions,
+  showParticipantInfo = false,
 }) => {
   const getStatusBadgeVariant = (status: StudyStatus): BadgeVariant => {
     const variants: Record<StudyStatus, BadgeVariant> = {
@@ -106,6 +109,22 @@ const StudyCard: React.FC<StudyCardProps> = ({
           <RejectReason>거절 사유: {study.rejectionReason}</RejectReason>
         )}
         
+        {showParticipantInfo && (
+          <ParticipantInfo>
+            <InfoItem>
+              <Users size={16} />
+              <span>
+                {study.enrolled || 0}/{study.capacity || '∞'} 명
+              </span>
+            </InfoItem>
+            {study.generation && (
+              <InfoItem>
+                <span>기수: {study.generation}</span>
+              </InfoItem>
+            )}
+          </ParticipantInfo>
+        )}
+        
         <CardActions>
           <ActionButton
             onClick={() => onView?.(study.id)}
@@ -151,7 +170,7 @@ const StudyCard: React.FC<StudyCardProps> = ({
 };
 
 const StyledStudyCard = styled(Card)<{ $variant: 'pending' | 'active' | 'rejected' | 'terminated'; $deleted?: boolean }>`
-  width: 400px;
+  width: 350px;
   border-radius: 12px;
   overflow: hidden;
   position: relative;
@@ -314,6 +333,29 @@ const DeletedMessage = styled.div`
   font-size: 14px;
   padding: 20px;
   font-style: italic;
+`;
+
+const ParticipantInfo = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 16px;
+  background: ${({ theme }) => theme.colors.gray[50]};
+  border-radius: 8px;
+  margin-top: 16px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+`;
+
+const InfoItem = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: ${({ theme }) => theme.colors.text.secondary};
+
+  svg {
+    color: ${({ theme }) => theme.colors.text.disabled};
+  }
 `;
 
 const ActionButton = styled.button<{ $variant: 'primary' | 'success' | 'error' | 'secondary' | 'info' | 'warning' }>`

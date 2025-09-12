@@ -83,58 +83,45 @@ const ActiveStudiesTab: React.FC<ActiveStudiesTabProps> = ({
 
       <StudyGrid>
         {studies.map((study) => (
-          <StudyCardWrapper key={study.id}>
-            <StudyCard
-              study={study}
-              onTerminate={onTerminate}
-              onView={onView}
-              customActions={
-                <>
-                  {/* 스터디 상태에 따른 액션 버튼 */}
-                  {study.status === StudyStatus.APPROVED && onStart && (
-                    <ActionButton
-                      onClick={() => onStart(study.id)}
-                      $variant="success"
-                    >
-                      스터디 시작
-                    </ActionButton>
-                  )}
-                  {study.status === StudyStatus.IN_PROGRESS && onComplete && (
-                    <ActionButton
-                      onClick={() => onComplete(study.id)}
-                      $variant="info"
-                    >
-                      스터디 완료
-                    </ActionButton>
-                  )}
-                  {/* TODO: 실제 대기 중인 신청 수를 API에서 가져와야 함 */}
-                  <ApplicationButton
-                    onClick={() => onManageApplications(study)}
-                    $hasApplications={false}
+          <StudyCard
+            key={study.id}
+            study={study}
+            onTerminate={onTerminate}
+            onView={onView}
+            showParticipantInfo={true}
+            customActions={
+              <>
+                {/* 스터디 상태에 따른 액션 버튼 */}
+                {study.status === StudyStatus.APPROVED && onStart && (
+                  <ActionButton
+                    onClick={() => onStart(study.id)}
+                    $variant="success"
                   >
-                    <UserPlus size={16} />
-                    참여 신청 관리
-                    {/* {pendingApplications > 0 && (
-                      <ApplicationBadge>{pendingApplications}</ApplicationBadge>
-                    )} */}
-                  </ApplicationButton>
-                </>
-              }
-            />
-            <StudyInfo>
-              <InfoItem>
-                <Users size={16} />
-                <span>
-                  {study.enrolled || 0}/{study.capacity || '∞'} 명
-                </span>
-              </InfoItem>
-              {study.generation && (
-                <InfoItem>
-                  <span>기수: {study.generation}</span>
-                </InfoItem>
-              )}
-            </StudyInfo>
-          </StudyCardWrapper>
+                    스터디 시작
+                  </ActionButton>
+                )}
+                {study.status === StudyStatus.IN_PROGRESS && onComplete && (
+                  <ActionButton
+                    onClick={() => onComplete(study.id)}
+                    $variant="info"
+                  >
+                    스터디 완료
+                  </ActionButton>
+                )}
+                {/* TODO: 실제 대기 중인 신청 수를 API에서 가져와야 함 */}
+                <ApplicationButton
+                  onClick={() => onManageApplications(study)}
+                  $hasApplications={false}
+                >
+                  <UserPlus size={16} />
+                  참여 신청 관리
+                  {/* {pendingApplications > 0 && (
+                    <ApplicationBadge>{pendingApplications}</ApplicationBadge>
+                  )} */}
+                </ApplicationButton>
+              </>
+            }
+          />
         ))}
       </StudyGrid>
     </Container>
@@ -229,37 +216,9 @@ const StatValue = styled.div`
 
 const StudyGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fill, 400px);
+  grid-template-columns: repeat(auto-fill, 350px);
   gap: 24px;
   justify-content: center;
-`;
-
-const StudyCardWrapper = styled.div`
-  position: relative;
-`;
-
-const StudyInfo = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 12px 16px;
-  background: ${({ theme }) => theme.colors.gray[50]};
-  border-radius: 0 0 8px 8px;
-  margin-top: -8px;
-  position: relative;
-  z-index: 0;
-`;
-
-const InfoItem = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 14px;
-  color: ${({ theme }) => theme.colors.text.secondary};
-
-  svg {
-    color: ${({ theme }) => theme.colors.text.disabled};
-  }
 `;
 
 const ApplicationButton = styled.button<{ $hasApplications: boolean }>`
