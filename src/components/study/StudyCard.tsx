@@ -149,17 +149,6 @@ const StudyCard: React.FC<StudyCardProps> = ({
                 종료
               </Button>
           )}
-          
-          {study.status === StudyStatus.REJECTED && !study.deleted && (
-              <Button
-                variant={ButtonVariant.GHOST}
-                size={ButtonSize.SMALL}
-                onClick={() => onDelete?.(study.id)}
-                fullWidth
-              >
-                삭제
-              </Button>
-          )}
           {study.deleted && (
             <DeletedMessage>
               삭제된 스터디입니다
