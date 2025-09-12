@@ -704,7 +704,7 @@ const ActionSection = styled.div`
   gap: 8px;
   padding: 16px 24px 20px 24px;
   border-top: 1px solid ${({ theme }) => theme.colors.border};
-  background: ${({ theme }) => theme.colors.gray[25]};
+  background: ${({ theme }) => theme.colors.gray[50]};
 `;
 
 const ActionButton = styled.button<{ $variant: 'success' | 'danger' }>`
