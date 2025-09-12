@@ -12,7 +12,7 @@ import type { StudyResponse } from '../types/api';
 import { StudyStatus } from '../types/api';
 import { studyApi } from '../api/study';
 import { useNotification } from '../contexts/NotificationContext';
-import { RefreshCw, Users, Clock, CheckCircle, XCircle, Activity, TrendingUp } from 'lucide-react';
+import { RefreshCw, Users, Clock, CheckCircle, XCircle, Activity } from 'lucide-react';
 
 const StudyManagement: React.FC = () => {
   const { showToast, showConfirm } = useNotification();
@@ -419,7 +419,7 @@ const Container = styled.div`
   max-width: 1400px;
   margin: 0 auto;
   min-height: 100vh;
-  background: ${({ theme }) => theme.colors.gray[25] || theme.colors.gray[50]}05;
+  background: ${({ theme }) => theme.colors.gray[50]}05;
 `;
 
 const Header = styled.div`
