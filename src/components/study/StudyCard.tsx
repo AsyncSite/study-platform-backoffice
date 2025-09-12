@@ -13,7 +13,6 @@ interface StudyCardProps {
   onReject?: (id: string) => void;
   onTerminate?: (id: string) => void;
   onView?: (id: string) => void;
-  onDelete?: (id: string) => void;
   customActions?: React.ReactNode;
 }
 
@@ -23,7 +22,6 @@ const StudyCard: React.FC<StudyCardProps> = ({
   onReject,
   onTerminate,
   onView,
-  onDelete,
   customActions,
 }) => {
   const getStatusBadgeVariant = (status: StudyStatus): BadgeVariant => {

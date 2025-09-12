@@ -73,7 +73,6 @@ const InactiveStudiesTab: React.FC<InactiveStudiesTabProps> = ({
             </StatusIndicator>
             <StudyCard
               study={study}
-              onDelete={onDelete}
               onView={onView}
               customActions={
                 <ActionButtons>
