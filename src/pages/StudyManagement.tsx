@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import Card from '../components/common/Card';
-import Button from '../components/common/Button';
 import StudyManagementTabs, { type StudyTab } from '../components/study/StudyManagementTabs';
 import PendingStudiesTab from '../components/study/PendingStudiesTab';
 import ActiveStudiesTab from '../components/study/ActiveStudiesTab';
@@ -13,7 +12,7 @@ import type { StudyResponse } from '../types/api';
 import { StudyStatus } from '../types/api';
 import { studyApi } from '../api/study';
 import { useNotification } from '../contexts/NotificationContext';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, Users, Clock, CheckCircle, XCircle, Activity, TrendingUp } from 'lucide-react';
 
 const StudyManagement: React.FC = () => {
   const { showToast, showConfirm } = useNotification();
@@ -256,19 +255,64 @@ const StudyManagement: React.FC = () => {
     <Container>
       <Header>
         <HeaderContent>
-          <Title>스터디 관리</Title>
-          <Description>
-            모든 스터디의 생성, 승인, 참여 신청을 통합 관리합니다.
-          </Description>
+          <TitleSection>
+            <Title>스터디 관리</Title>
+            <Description>
+              모든 스터디의 생성, 승인, 참여 신청을 통합 관리합니다.
+            </Description>
+          </TitleSection>
+          
+          {/* Statistics Cards */}
+          <StatsGrid>
+            <StatCard>
+              <StatIcon $color="warning">
+                <Clock size={20} />
+              </StatIcon>
+              <StatContent>
+                <StatValue>{pendingCount}</StatValue>
+                <StatLabel>승인 대기</StatLabel>
+              </StatContent>
+            </StatCard>
+            
+            <StatCard>
+              <StatIcon $color="success">
+                <Activity size={20} />
+              </StatIcon>
+              <StatContent>
+                <StatValue>{activeCount}</StatValue>
+                <StatLabel>활성 스터디</StatLabel>
+              </StatContent>
+            </StatCard>
+            
+            <StatCard>
+              <StatIcon $color="secondary">
+                <Users size={20} />
+              </StatIcon>
+              <StatContent>
+                <StatValue>{studies.length}</StatValue>
+                <StatLabel>전체 스터디</StatLabel>
+              </StatContent>
+            </StatCard>
+          </StatsGrid>
         </HeaderContent>
+        
         <HeaderActions>
-          <Button
-            variant="secondary"
-            size="medium"
+          <ActionButton
+            $variant="secondary"
             onClick={() => setShowDeleted(!showDeleted)}
           >
-            {showDeleted ? '활성 스터디만' : '삭제된 스터디 포함'}
-          </Button>
+            {showDeleted ? (
+              <>
+                <CheckCircle size={18} />
+                활성 스터디만
+              </>
+            ) : (
+              <>
+                <XCircle size={18} />
+                삭제된 스터디 포함
+              </>
+            )}
+          </ActionButton>
           <RefreshButton onClick={loadStudies}>
             <RefreshCw size={20} />
           </RefreshButton>
@@ -374,56 +418,248 @@ const Container = styled.div`
   padding: 24px;
   max-width: 1400px;
   margin: 0 auto;
+  min-height: 100vh;
+  background: ${({ theme }) => theme.colors.gray[25] || theme.colors.gray[50]}05;
 `;
 
 const Header = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
+  background: linear-gradient(135deg, ${({ theme }) => theme.colors.primary}08 0%, ${({ theme }) => theme.colors.primary}03 100%);
+  border: 1px solid ${({ theme }) => theme.colors.primary}15;
+  border-radius: 20px;
+  padding: 32px;
   margin-bottom: 32px;
+  box-shadow: ${({ theme }) => theme.shadows.medium};
+  
+  @media (max-width: 768px) {
+    padding: 24px;
+  }
 `;
 
-const HeaderContent = styled.div``;
+const HeaderContent = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  margin-bottom: 24px;
+  
+  @media (max-width: 768px) {
+    gap: 24px;
+    margin-bottom: 20px;
+  }
+`;
+
+const TitleSection = styled.div``;
 
 const Title = styled.h1`
-  font-size: 28px;
+  font-size: 32px;
   font-weight: 700;
   color: ${({ theme }) => theme.colors.text.primary};
   margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  
+  @media (max-width: 768px) {
+    font-size: 28px;
+  }
 `;
 
 const Description = styled.p`
   font-size: 16px;
   color: ${({ theme }) => theme.colors.text.secondary};
+  line-height: 1.6;
+  margin: 0;
+`;
+
+const StatsGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 20px;
+  
+  @media (max-width: 768px) {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+`;
+
+const StatCard = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+  background: ${({ theme }) => theme.colors.background};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 16px;
+  box-shadow: ${({ theme }) => theme.shadows.small};
+  transition: all 0.2s;
+  
+  &:hover {
+    box-shadow: ${({ theme }) => theme.shadows.medium};
+    transform: translateY(-2px);
+  }
+  
+  @media (max-width: 768px) {
+    flex-direction: column;
+    gap: 8px;
+    padding: 16px 12px;
+    text-align: center;
+  }
+`;
+
+const StatIcon = styled.div<{ $color: string }>`
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: ${({ theme, $color }) => {
+    switch ($color) {
+      case 'warning': return theme.colors.warning + '15';
+      case 'success': return theme.colors.success + '15';
+      case 'secondary': return theme.colors.primary + '15';
+      default: return theme.colors.primary + '15';
+    }
+  }};
+  color: ${({ theme, $color }) => {
+    switch ($color) {
+      case 'warning': return theme.colors.warning;
+      case 'success': return theme.colors.success;
+      case 'secondary': return theme.colors.primary;
+      default: return theme.colors.primary;
+    }
+  }};
+  border-radius: 12px;
+  flex-shrink: 0;
+  
+  @media (max-width: 768px) {
+    width: 40px;
+    height: 40px;
+  }
+`;
+
+const StatContent = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  
+  @media (max-width: 768px) {
+    align-items: center;
+  }
+`;
+
+const StatValue = styled.span`
+  font-size: 24px;
+  font-weight: 700;
+  color: ${({ theme }) => theme.colors.text.primary};
+  
+  @media (max-width: 768px) {
+    font-size: 20px;
+  }
+`;
+
+const StatLabel = styled.span`
+  font-size: 12px;
+  font-weight: 500;
+  color: ${({ theme }) => theme.colors.text.secondary};
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  
+  @media (max-width: 768px) {
+    font-size: 11px;
+  }
 `;
 
 const HeaderActions = styled.div`
   display: flex;
   gap: 12px;
   align-items: center;
+  justify-content: flex-end;
+  
+  @media (max-width: 768px) {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
 `;
 
-const RefreshButton = styled.button`
-  width: 40px;
-  height: 40px;
+const ActionButton = styled.button<{ $variant: 'secondary' }>`
   display: flex;
   align-items: center;
   justify-content: center;
-  background: ${({ theme }) => theme.colors.gray[50]};
+  gap: 8px;
+  padding: 12px 20px;
+  background: ${({ theme }) => theme.colors.background};
   border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: 8px;
-  color: ${({ theme }) => theme.colors.text.secondary};
+  border-radius: 12px;
+  color: ${({ theme }) => theme.colors.text.primary};
+  font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
+  white-space: nowrap;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.background};
+    background: ${({ theme }) => theme.colors.gray[50]};
+    border-color: ${({ theme }) => theme.colors.primary}30;
     color: ${({ theme }) => theme.colors.primary};
+    transform: translateY(-1px);
+    box-shadow: ${({ theme }) => theme.shadows.small};
+  }
+  
+  svg {
+    flex-shrink: 0;
+  }
+`;
+
+const RefreshButton = styled.button`
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: ${({ theme }) => theme.colors.primary};
+  border: none;
+  border-radius: 12px;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: ${({ theme }) => theme.shadows.small};
+
+  &:hover {
+    background: ${({ theme }) => theme.colors.primary};
+    opacity: 0.9;
+    transform: translateY(-1px);
+    box-shadow: ${({ theme }) => theme.shadows.medium};
+  }
+  
+  &:active {
+    transform: translateY(0);
+  }
+  
+  svg {
+    transition: transform 0.2s;
+  }
+  
+  &:hover svg {
+    transform: rotate(90deg);
   }
 `;
 
 const MainCard = styled(Card)`
-  padding: 32px;
+  padding: 0;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: ${({ theme }) => theme.shadows.large};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  
+  /* 내부 컨텐츠에 패딩 적용 */
+  > * {
+    padding: 32px;
+  }
+  
+  @media (max-width: 768px) {
+    > * {
+      padding: 24px;
+    }
+  }
 `;
 
 export default StudyManagement;
