@@ -114,10 +114,16 @@ const EmptyState = styled.div`
   text-align: center;
   padding: 80px 20px;
   color: ${({ theme }) => theme.colors.text.secondary};
+  max-width: 400px;
+  margin: 0 auto;
 
   svg {
     color: ${({ theme }) => theme.colors.text.disabled};
-    margin-bottom: 16px;
+    margin-bottom: 24px;
+  }
+  
+  @media (max-width: 768px) {
+    padding: 60px 20px;
   }
 `;
 
@@ -134,9 +140,18 @@ const EmptyDescription = styled.p`
 
 const Stats = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
   margin-bottom: 32px;
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+  
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
 `;
 
 const StatCard = styled.div`
@@ -144,8 +159,21 @@ const StatCard = styled.div`
   align-items: center;
   gap: 16px;
   padding: 24px;
-  background: ${({ theme }) => theme.colors.gray[50]};
-  border-radius: 12px;
+  background: ${({ theme }) => theme.colors.background};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 16px;
+  box-shadow: ${({ theme }) => theme.shadows.small};
+  transition: all 0.2s;
+  
+  &:hover {
+    box-shadow: ${({ theme }) => theme.shadows.medium};
+    transform: translateY(-2px);
+  }
+  
+  @media (max-width: 768px) {
+    padding: 20px;
+    gap: 12px;
+  }
 `;
 
 const StatIcon = styled.div<{ $color: string }>`
@@ -156,19 +184,25 @@ const StatIcon = styled.div<{ $color: string }>`
   justify-content: center;
   background: ${({ theme, $color }) => {
     switch ($color) {
-      case 'danger': return theme.colors.danger + '20';
-      case 'secondary': return theme.colors.secondary + '20';
-      default: return theme.colors.secondary + '20';
+      case 'danger': return theme.colors.error + '15';
+      case 'secondary': return theme.colors.secondary + '15';
+      default: return theme.colors.secondary + '15';
     }
   }};
   color: ${({ theme, $color }) => {
     switch ($color) {
-      case 'danger': return theme.colors.danger;
+      case 'danger': return theme.colors.error;
       case 'secondary': return theme.colors.secondary;
       default: return theme.colors.secondary;
     }
   }};
   border-radius: 12px;
+  flex-shrink: 0;
+  
+  @media (max-width: 768px) {
+    width: 40px;
+    height: 40px;
+  }
 `;
 
 const StatContent = styled.div``;
@@ -187,9 +221,22 @@ const StatValue = styled.div`
 
 const StudyGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fill, 350px);
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
   gap: 24px;
   justify-content: center;
+  max-width: 1200px;
+  margin: 0 auto;
+  
+  @media (max-width: 1400px) {
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 20px;
+  }
+  
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    padding: 0 16px;
+  }
 `;
 
 const StudyCardWrapper = styled.div`
@@ -201,22 +248,23 @@ const StatusIndicator = styled.div<{ $status: StudyStatus }>`
   top: -10px;
   left: 16px;
   background: ${({ theme, $status }) => 
-    $status === StudyStatus.REJECTED ? theme.colors.danger : theme.colors.secondary};
+    $status === StudyStatus.REJECTED ? theme.colors.error : theme.colors.secondary};
   color: white;
   padding: 6px 16px;
   border-radius: 20px;
   font-size: 12px;
   font-weight: 600;
   z-index: 1;
+  box-shadow: ${({ theme }) => theme.shadows.small};
 `;
 
 const RejectionReason = styled.div`
   padding: 12px 16px;
-  background: ${({ theme }) => theme.colors.danger}10;
-  border: 1px solid ${({ theme }) => theme.colors.danger}20;
-  border-radius: 0 0 8px 8px;
+  background: ${({ theme }) => theme.colors.error}10;
+  border: 1px solid ${({ theme }) => theme.colors.error}20;
+  border-radius: 0 0 12px 12px;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.danger};
+  color: ${({ theme }) => theme.colors.error};
   margin-top: -8px;
 
   strong {
@@ -236,7 +284,7 @@ const ActionButton = styled.button<{ $danger?: boolean }>`
   gap: 6px;
   padding: 8px 16px;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
@@ -245,13 +293,16 @@ const ActionButton = styled.button<{ $danger?: boolean }>`
   min-height: 36px;
   
   background: ${({ theme, $danger }) => 
-    $danger ? theme.colors.danger : theme.colors.gray[100]};
+    $danger ? theme.colors.error : theme.colors.gray[100]};
   color: ${({ theme, $danger }) => 
     $danger ? 'white' : theme.colors.text.primary};
 
   &:hover {
     transform: translateY(-1px);
     box-shadow: ${({ theme }) => theme.shadows.medium};
+    background: ${({ theme, $danger }) => 
+      $danger ? theme.colors.error : theme.colors.primary};
+    color: white;
     opacity: 0.9;
   }
 

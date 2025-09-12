@@ -141,10 +141,16 @@ const EmptyState = styled.div`
   text-align: center;
   padding: 80px 20px;
   color: ${({ theme }) => theme.colors.text.secondary};
+  max-width: 400px;
+  margin: 0 auto;
 
   svg {
     color: ${({ theme }) => theme.colors.text.disabled};
-    margin-bottom: 16px;
+    margin-bottom: 24px;
+  }
+  
+  @media (max-width: 768px) {
+    padding: 60px 20px;
   }
 `;
 
@@ -161,9 +167,18 @@ const EmptyDescription = styled.p`
 
 const Stats = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
   margin-bottom: 32px;
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+  
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
 `;
 
 const StatCard = styled.div`
@@ -171,8 +186,21 @@ const StatCard = styled.div`
   align-items: center;
   gap: 16px;
   padding: 24px;
-  background: ${({ theme }) => theme.colors.gray[50]};
-  border-radius: 12px;
+  background: ${({ theme }) => theme.colors.background};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 16px;
+  box-shadow: ${({ theme }) => theme.shadows.small};
+  transition: all 0.2s;
+  
+  &:hover {
+    box-shadow: ${({ theme }) => theme.shadows.medium};
+    transform: translateY(-2px);
+  }
+  
+  @media (max-width: 768px) {
+    padding: 20px;
+    gap: 12px;
+  }
 `;
 
 const StatIcon = styled.div<{ $color: string }>`
@@ -183,10 +211,10 @@ const StatIcon = styled.div<{ $color: string }>`
   justify-content: center;
   background: ${({ theme, $color }) => {
     switch ($color) {
-      case 'primary': return theme.colors.primary + '20';
-      case 'success': return theme.colors.success + '20';
-      case 'info': return theme.colors.info + '20';
-      default: return theme.colors.secondary + '20';
+      case 'primary': return theme.colors.primary + '15';
+      case 'success': return theme.colors.success + '15';
+      case 'info': return theme.colors.info + '15';
+      default: return theme.colors.secondary + '15';
     }
   }};
   color: ${({ theme, $color }) => {
@@ -198,6 +226,12 @@ const StatIcon = styled.div<{ $color: string }>`
     }
   }};
   border-radius: 12px;
+  flex-shrink: 0;
+  
+  @media (max-width: 768px) {
+    width: 40px;
+    height: 40px;
+  }
 `;
 
 const StatContent = styled.div``;
@@ -216,9 +250,22 @@ const StatValue = styled.div`
 
 const StudyGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fill, 350px);
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
   gap: 24px;
   justify-content: center;
+  max-width: 1200px;
+  margin: 0 auto;
+  
+  @media (max-width: 1400px) {
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 20px;
+  }
+  
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    padding: 0 16px;
+  }
 `;
 
 const ApplicationButton = styled.button<{ $hasApplications: boolean }>`
@@ -228,7 +275,7 @@ const ApplicationButton = styled.button<{ $hasApplications: boolean }>`
   gap: 6px;
   padding: 8px 16px;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
@@ -260,7 +307,7 @@ const ActionButton = styled.button<{ $variant: 'success' | 'info' | 'warning' }>
   gap: 6px;
   padding: 8px 16px;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
