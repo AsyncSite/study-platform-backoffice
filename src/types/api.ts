@@ -117,11 +117,11 @@ export interface ApplicationResponse {
   id: string;
   studyId: string;
   applicantId: string;
-  status: ApplicationStatus;
   answers: Record<string, string>;
-  appliedAt: string;
-  reviewedAt?: string;
-  reviewerId?: string;
+  status: ApplicationStatus;
+  createdAt: string;
+  updatedAt: string;
+  reviewedBy?: string;
   reviewNote?: string;
 }
 

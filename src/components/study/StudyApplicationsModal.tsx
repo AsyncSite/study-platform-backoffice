@@ -176,7 +176,7 @@ const StudyApplicationsModal: React.FC<StudyApplicationsModalProps> = ({
                     <div>
                       <ApplicantName>{application.applicantId}</ApplicantName>
                       <ApplicantDate>
-                        {format(new Date(application.appliedAt), 'yyyy년 MM월 dd일 HH:mm', { locale: ko })}
+                        {format(new Date(application.createdAt), 'yyyy년 MM월 dd일 HH:mm', { locale: ko })}
                       </ApplicantDate>
                     </div>
                   </ApplicantInfo>
