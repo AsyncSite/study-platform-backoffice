@@ -65,7 +65,6 @@ const InactiveStudiesTab: React.FC<InactiveStudiesTabProps> = ({
           </StatContent>
         </StatCard>
       </Stats>
-
       <StudyGrid>
         {studies.map((study) => (
           <StudyCardWrapper key={study.id}>
