@@ -6,9 +6,8 @@ import { applicationApi } from '../../api/study';
 import { useNotification } from '../../contexts/NotificationContext';
 import type { StudyResponse, ApplicationResponse } from '../../types/api';
 import { ApplicationStatus } from '../../types/api';
-import { format } from 'date-fns';
-import { ko } from 'date-fns/locale';
 import { User, Clock, CheckCircle, XCircle, FileText } from 'lucide-react';
+import {formatDate} from "../../utils/dateUtils.ts";
 
 interface StudyApplicationsModalProps {
   isOpen: boolean;
@@ -176,7 +175,7 @@ const StudyApplicationsModal: React.FC<StudyApplicationsModalProps> = ({
                     <div>
                       <ApplicantName>{application.applicantId}</ApplicantName>
                       <ApplicantDate>
-                        {format(new Date(application.createdAt), 'yyyy년 MM월 dd일 HH:mm', { locale: ko })}
+                        {formatDate(application.createdAt, false, 'yyyy년 MM월 dd일 HH:mm')}
                       </ApplicantDate>
                     </div>
                   </ApplicantInfo>
