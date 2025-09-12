@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
 import Modal from '../common/Modal';
-import Button, { ButtonVariant } from '../common/Button';
 import type { StudyResponse } from '../../types/api';
 import { StudyStatus } from '../../types/api';
 import type { User } from '../../types/user';
