@@ -12,7 +12,6 @@ interface StudyCardProps {
   onApprove?: (id: string) => void;
   onReject?: (id: string) => void;
   onTerminate?: (id: string) => void;
-  onReactivate?: (id: string) => void;
   onView?: (id: string) => void;
   onDelete?: (id: string) => void;
   customActions?: React.ReactNode;
@@ -23,7 +22,6 @@ const StudyCard: React.FC<StudyCardProps> = ({
   onApprove,
   onReject,
   onTerminate,
-  onReactivate,
   onView,
   onDelete,
   customActions,
@@ -112,16 +110,16 @@ const StudyCard: React.FC<StudyCardProps> = ({
         )}
         
         <CardActions>
+          <Button
+              variant={ButtonVariant.PRIMARY}
+              size={ButtonSize.SMALL}
+              onClick={() => onView?.(study.id)}
+              fullWidth
+          >
+            상세보기
+          </Button>
           {study.status === StudyStatus.PENDING && !study.deleted && (
             <>
-              <Button
-                variant={ButtonVariant.PRIMARY}
-                size={ButtonSize.SMALL}
-                onClick={() => onView?.(study.id)}
-                fullWidth
-              >
-                상세보기
-              </Button>
               <Button
                 variant={ButtonVariant.SUCCESS}
                 size={ButtonSize.SMALL}
@@ -142,15 +140,6 @@ const StudyCard: React.FC<StudyCardProps> = ({
           )}
           
           {study.status === StudyStatus.APPROVED && !study.deleted && (
-            <>
-              <Button
-                variant={ButtonVariant.PRIMARY}
-                size={ButtonSize.SMALL}
-                onClick={() => onView?.(study.id)}
-                fullWidth
-              >
-                상세보기
-              </Button>
               <Button
                 variant={ButtonVariant.SECONDARY}
                 size={ButtonSize.SMALL}
@@ -159,48 +148,9 @@ const StudyCard: React.FC<StudyCardProps> = ({
               >
                 종료
               </Button>
-            </>
-          )}
-          
-          {study.status === StudyStatus.TERMINATED && !study.deleted && (
-            <>
-              <Button
-                variant={ButtonVariant.PRIMARY}
-                size={ButtonSize.SMALL}
-                onClick={() => onView?.(study.id)}
-                fullWidth
-              >
-                상세보기
-              </Button>
-              <Button
-                variant={ButtonVariant.SECONDARY}
-                size={ButtonSize.SMALL}
-                onClick={() => onReactivate?.(study.id)}
-                fullWidth
-              >
-                재활성화
-              </Button>
-              <Button
-                variant={ButtonVariant.GHOST}
-                size={ButtonSize.SMALL}
-                onClick={() => onDelete?.(study.id)}
-                fullWidth
-              >
-                삭제
-              </Button>
-            </>
           )}
           
           {study.status === StudyStatus.REJECTED && !study.deleted && (
-            <>
-              <Button
-                variant={ButtonVariant.PRIMARY}
-                size={ButtonSize.SMALL}
-                onClick={() => onView?.(study.id)}
-                fullWidth
-              >
-                상세보기
-              </Button>
               <Button
                 variant={ButtonVariant.GHOST}
                 size={ButtonSize.SMALL}
@@ -209,7 +159,6 @@ const StudyCard: React.FC<StudyCardProps> = ({
               >
                 삭제
               </Button>
-            </>
           )}
           {study.deleted && (
             <DeletedMessage>

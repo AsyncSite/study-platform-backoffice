@@ -74,7 +74,6 @@ const InactiveStudiesTab: React.FC<InactiveStudiesTabProps> = ({
             </StatusIndicator>
             <StudyCard
               study={study}
-              onReactivate={study.status === StudyStatus.TERMINATED ? onReactivate : undefined}
               onDelete={onDelete}
               onView={onView}
               customActions={
