@@ -1,14 +1,20 @@
 import React, { useState, useRef, useEffect } from 'react';
 import styled from 'styled-components';
 import { useAuth } from '../../contexts/AuthContext';
-import {useNavigate} from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import StudyCreateModal from '../study/StudyCreateModal';
+import { studyApi } from '../../api/study';
+import { useNotification } from '../../contexts/NotificationContext';
+import type { StudyCreateRequest } from '../../types/api';
 
 const TopNavigation: React.FC = () => {
   const navigate = useNavigate();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const { user, logout } = useAuth();
+  const { showToast } = useNotification();
   
   // 외부 클릭 감지
   useEffect(() => {
@@ -37,6 +43,19 @@ const TopNavigation: React.FC = () => {
   const toggleDropdown = () => {
     setIsDropdownOpen(!isDropdownOpen);
   };
+
+  const handleCreateStudy = async (data: StudyCreateRequest) => {
+    try {
+      await studyApi.createStudy(data);
+      setIsCreateModalOpen(false);
+      showToast('스터디가 성공적으로 생성되었습니다.', { type: 'success' });
+      // 스터디 관리 페이지로 이동
+      navigate('/studies');
+    } catch (error) {
+      console.error('Failed to create study:', error);
+      showToast('스터디 생성에 실패했습니다.', { type: 'error' });
+    }
+  };
   
   return (
     <TopNav>
@@ -52,7 +71,7 @@ const TopNavigation: React.FC = () => {
 
           <SearchBar type="text" placeholder="🔍 스터디, 회원, 결제 검색..." />
           
-          <NewStudyButton>+ 새 스터디</NewStudyButton>
+          <NewStudyButton onClick={() => setIsCreateModalOpen(true)}>+ 새 스터디</NewStudyButton>
           
           <NotificationIcon>
             <span>🔔</span>
@@ -77,6 +96,14 @@ const TopNavigation: React.FC = () => {
           </UserProfile>
         </TopNavContent>
       </Container>
+
+      {/* 스터디 생성 모달 */}
+      <StudyCreateModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onCreate={handleCreateStudy}
+        currentUserId={user?.id || user?.username || 'admin'}
+      />
     </TopNav>
   );
 };

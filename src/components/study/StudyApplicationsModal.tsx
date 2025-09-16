@@ -37,12 +37,21 @@ const StudyApplicationsModal: React.FC<StudyApplicationsModalProps> = ({
     try {
       setLoading(true);
       const response = await applicationApi.getApplications(study.id);
-      if (response.data) {
+      if (response?.data?.content) {
         setApplications(response.data.content);
+      } else if (response?.data && Array.isArray(response.data)) {
+        // 배열 형태로 직접 응답이 올 경우 대비
+        setApplications(response.data);
+      } else {
+        setApplications([]);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to load applications:', error);
-      showToast('참여 신청 목록을 불러오는데 실패했습니다.', { type: 'error' });
+      // 404는 참여 신청이 없다는 의미이므로 에러 토스트 표시하지 않음
+      if (error.response?.status !== 404) {
+        showToast('참여 신청 목록을 불러오는데 실패했습니다.', { type: 'error' });
+      }
+      setApplications([]);
     } finally {
       setLoading(false);
     }
@@ -100,9 +109,12 @@ const StudyApplicationsModal: React.FC<StudyApplicationsModalProps> = ({
     }
   };
 
-  const filteredApplications = applications.filter(app => 
-    filter === 'ALL' || app.status === filter
-  );
+  const filteredApplications = (applications || []).filter(app => {
+    if (!app) return false;
+    if (filter === 'ALL') return true;
+    if (filter === 'PENDING') return app.status === ApplicationStatus.PENDING || !app.status;
+    return app.status === filter;
+  });
 
   const getStatusIcon = (status: ApplicationStatus) => {
     switch (status) {
@@ -152,15 +164,15 @@ const StudyApplicationsModal: React.FC<StudyApplicationsModalProps> = ({
           </TitleSection>
           <StatsSummary>
             <StatItem>
-              <StatValue>{applications.length}</StatValue>
+              <StatValue>{applications?.length || 0}</StatValue>
               <StatLabel>전체 신청</StatLabel>
             </StatItem>
             <StatItem>
-              <StatValue>{applications.filter(a => a.status === ApplicationStatus.PENDING).length}</StatValue>
+              <StatValue>{applications?.filter(a => a?.status === ApplicationStatus.PENDING || !a?.status).length || 0}</StatValue>
               <StatLabel>대기 중</StatLabel>
             </StatItem>
             <StatItem>
-              <StatValue>{applications.filter(a => a.status === ApplicationStatus.ACCEPTED).length}</StatValue>
+              <StatValue>{applications?.filter(a => a?.status === ApplicationStatus.ACCEPTED).length || 0}</StatValue>
               <StatLabel>승인됨</StatLabel>
             </StatItem>
           </StatsSummary>
@@ -173,25 +185,25 @@ const StudyApplicationsModal: React.FC<StudyApplicationsModalProps> = ({
               $active={filter === 'ALL'}
               onClick={() => setFilter('ALL')}
             >
-              전체 <TabCount>{applications.length}</TabCount>
+              전체 <TabCount>{applications?.length || 0}</TabCount>
             </FilterTab>
             <FilterTab
               $active={filter === 'PENDING'}
               onClick={() => setFilter('PENDING')}
             >
-              대기 중 <TabCount>{applications.filter(a => a.status === ApplicationStatus.PENDING).length}</TabCount>
+              대기 중 <TabCount>{applications?.filter(a => a?.status === ApplicationStatus.PENDING || !a?.status).length || 0}</TabCount>
             </FilterTab>
             <FilterTab
               $active={filter === 'ACCEPTED'}
               onClick={() => setFilter('ACCEPTED')}
             >
-              승인됨 <TabCount>{applications.filter(a => a.status === ApplicationStatus.ACCEPTED).length}</TabCount>
+              승인됨 <TabCount>{applications?.filter(a => a?.status === ApplicationStatus.ACCEPTED).length || 0}</TabCount>
             </FilterTab>
             <FilterTab
               $active={filter === 'REJECTED'}
               onClick={() => setFilter('REJECTED')}
             >
-              거절됨 <TabCount>{applications.filter(a => a.status === ApplicationStatus.REJECTED).length}</TabCount>
+              거절됨 <TabCount>{applications?.filter(a => a?.status === ApplicationStatus.REJECTED).length || 0}</TabCount>
             </FilterTab>
           </FilterTabs>
         </FilterSection>
@@ -216,28 +228,35 @@ const StudyApplicationsModal: React.FC<StudyApplicationsModalProps> = ({
           ) : (
             <ApplicationList>
               {filteredApplications.map((application) => {
+                if (!application?.id) {
+                  return null; // 유효하지 않은 application은 렌더링하지 않음
+                }
+
                 const isExpanded = expandedApplications.has(application.id);
-                const hasContent = application.answers && Object.keys(application.answers).length > 0;
-                
+                const hasContent = application.answers && typeof application.answers === 'object' && Object.keys(application.answers).length > 0;
+
                 return (
-                  <ApplicationCard key={application.id} $status={application.status}>
+                  <ApplicationCard key={application.id} $status={application.status || ApplicationStatus.PENDING}>
                     <ApplicationHeader>
                       <ApplicantInfo>
                         <UserAvatar>
                           <User size={18} />
                         </UserAvatar>
                         <ApplicantDetails>
-                          <ApplicantName>{application.applicantId}</ApplicantName>
+                          <ApplicantName>{application.applicantId || '알 수 없는 사용자'}</ApplicantName>
                           <ApplicantDate>
-                            {formatDate(application.createdAt, false, 'yyyy년 MM월 dd일 HH:mm')}
+                            {application.createdAt ?
+                              formatDate(application.createdAt, false, 'yyyy년 MM월 dd일 HH:mm') :
+                              '날짜 정보 없음'
+                            }
                           </ApplicantDate>
                         </ApplicantDetails>
                       </ApplicantInfo>
                       <HeaderRight>
-                        <StatusBadge $status={getStatusColor(application.status)}>
-                          {getStatusIcon(application.status)}
+                        <StatusBadge $status={getStatusColor(application.status || ApplicationStatus.PENDING)}>
+                          {getStatusIcon(application.status || ApplicationStatus.PENDING)}
                           <StatusText>
-                            {application.status === ApplicationStatus.PENDING && '대기 중'}
+                            {(application.status === ApplicationStatus.PENDING || !application.status) && '대기 중'}
                             {application.status === ApplicationStatus.ACCEPTED && '승인됨'}
                             {application.status === ApplicationStatus.REJECTED && '거절됨'}
                           </StatusText>
@@ -256,20 +275,20 @@ const StudyApplicationsModal: React.FC<StudyApplicationsModalProps> = ({
                     {hasContent && (
                       <CollapsibleContent $expanded={isExpanded}>
                         <ContentSection>
-                          {Object.entries(application.answers).map(([question, answer]) => (
+                          {Object.entries(application.answers || {}).map(([question, answer]) => (
                             <QuestionAnswer key={question}>
                               <QuestionLabel>
                                 <FileText size={14} />
-                                {question}
+                                {question || '질문'}
                               </QuestionLabel>
-                              <AnswerText>{answer}</AnswerText>
+                              <AnswerText>{answer || '답변 없음'}</AnswerText>
                             </QuestionAnswer>
                           ))}
                         </ContentSection>
                       </CollapsibleContent>
                     )}
 
-                    {application.status === ApplicationStatus.PENDING && (
+                    {(application.status === ApplicationStatus.PENDING || !application.status) && (
                       <ActionSection>
                         <ActionButton
                           $variant="success"
@@ -289,7 +308,7 @@ const StudyApplicationsModal: React.FC<StudyApplicationsModalProps> = ({
                     )}
                   </ApplicationCard>
                 );
-              })}
+              }).filter(Boolean)}
             </ApplicationList>
           )}
         </ScrollableContent>

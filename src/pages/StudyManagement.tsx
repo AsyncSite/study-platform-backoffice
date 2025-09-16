@@ -139,23 +139,40 @@ const StudyManagement: React.FC = () => {
   const handleStart = async (id: string) => {
     const study = studies.find(s => s.id === id);
     if (!study) return;
-    
+
     const confirmed = await showConfirm({
       title: '스터디 시작',
       message: `"${study.title}" 스터디를 시작하시겠습니까?\n\n승인된 스터디가 진행 중 상태로 변경됩니다.`,
       confirmText: '시작',
       variant: 'info'
     });
-    
+
     if (!confirmed) return;
-    
+
     try {
       await studyApi.startStudy(id);
       await loadStudies();
-      showToast('스터디가 시작되었습니다.', { type: 'success' });
+      showToast('스터디가 성공적으로 시작되었습니다.', { type: 'success' });
     } catch (error: any) {
       console.error('Failed to start study:', error);
-      const errorMessage = error.response?.data?.error?.message || '스터디 시작에 실패했습니다.';
+
+      let errorMessage = '스터디 시작에 실패했습니다.';
+
+      // API 에러 응답에서 더 구체적인 메시지 추출
+      if (error.response?.data?.error?.message) {
+        errorMessage = error.response.data.error.message;
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.response?.status === 400) {
+        errorMessage = '스터디 시작 조건을 만족하지 않습니다. 스터디 상태를 확인해주세요.';
+      } else if (error.response?.status === 403) {
+        errorMessage = '스터디를 시작할 권한이 없습니다.';
+      } else if (error.response?.status === 404) {
+        errorMessage = '해당 스터디를 찾을 수 없습니다.';
+      } else if (error.response?.status >= 500) {
+        errorMessage = '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
+      }
+
       showToast(errorMessage, { type: 'error' });
     }
   };
