@@ -82,10 +82,17 @@ const InactiveStudiesTab: React.FC<InactiveStudiesTabProps> = ({
                       재활성화
                     </ActionButton>
                   )}
-                  <ActionButton $danger onClick={() => onDelete(study.id)}>
-                    <Trash2 size={16} />
-                    영구 삭제
-                  </ActionButton>
+                  {!study.deleted ? (
+                    <ActionButton $danger onClick={() => onDelete(study.id)}>
+                      <Trash2 size={16} />
+                      영구 삭제
+                    </ActionButton>
+                  ) : (
+                    <ActionButton disabled style={{ opacity: 0.5, cursor: 'not-allowed' }}>
+                      <Trash2 size={16} />
+                      이미 삭제됨
+                    </ActionButton>
+                  )}
                 </ActionButtons>
               }
             />
