@@ -161,11 +161,12 @@ const Dashboard: React.FC = () => {
 
   // Transform API studies to dashboard format
   const studyData = studies.map((study, index) => ({
+    id: study.id,
     title: study.title,
     schedule: '스케줄 정보 미제공', // API에서 제공하지 않음
-    participants: { 
+    participants: {
       current: Math.floor(Math.random() * 15) + 5, // 임시 데이터
-      max: 20 
+      max: 20
     },
     progress: Math.floor(Math.random() * 60) + 20, // 임시 데이터
     nextMeeting: `D-${Math.floor(Math.random() * 7) + 1}`, // 임시 데이터
@@ -173,8 +174,8 @@ const Dashboard: React.FC = () => {
     status: study.status === StudyStatus.APPROVED ? 'active' as const : 'recruiting' as const,
     iconLetter: study.title.charAt(0).toUpperCase(),
     iconColor: index % 2 === 0 ? '#eff6ff' : '#d1fae5',
-    barColor: index % 2 === 0 
-      ? 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)' 
+    barColor: index % 2 === 0
+      ? 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)'
       : '#10b981',
   }));
 
@@ -216,16 +217,20 @@ const Dashboard: React.FC = () => {
         <SectionLink href="#">모두 보기 →</SectionLink>
       </SectionHeader>
 
-      <StudyGrid>
-        {studyData.length > 0 ? (
-          studyData.map((study, index) => (
-            <StudyCard key={index} {...study} />
-          ))
-        ) : (
-          <EmptyMessage>진행중인 스터디가 없습니다.</EmptyMessage>
-        )}
-        <ActivityCard activities={activities} />
-      </StudyGrid>
+      <StudySection>
+        <StudyGrid>
+          {studyData.length > 0 ? (
+            studyData.map((study, index) => (
+              <StudyCard key={index} {...study} />
+            ))
+          ) : (
+            <EmptyMessage>진행중인 스터디가 없습니다.</EmptyMessage>
+          )}
+        </StudyGrid>
+        <ActivitySide>
+          <ActivityCard activities={activities} />
+        </ActivitySide>
+      </StudySection>
 
       <ChartGrid>
         <WeeklyTrendChart data={weeklyData} />
@@ -277,14 +282,29 @@ const SectionLink = styled.a`
   }
 `;
 
-const StudyGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
+const StudySection = styled.div`
+  display: flex;
   gap: 20px;
   margin-bottom: 20px;
-  
+
   @media (max-width: ${({ theme }) => theme.breakpoints.desktop}) {
-    grid-template-columns: 1fr;
+    flex-direction: column;
+  }
+`;
+
+const StudyGrid = styled.div`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+`;
+
+const ActivitySide = styled.div`
+  flex-shrink: 0;
+  width: 350px;
+
+  @media (max-width: ${({ theme }) => theme.breakpoints.desktop}) {
+    width: 100%;
   }
 `;
 

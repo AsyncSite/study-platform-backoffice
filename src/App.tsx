@@ -9,6 +9,7 @@ import GlobalStyle from './styles/GlobalStyle';
 import theme from './styles/theme';
 import Layout from './components/Layout';
 import PrivateRoute from './components/PrivateRoute';
+import ScrollToTop from './components/ScrollToTop';
 import { AuthProvider } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import NotiManagement from './pages/NotiManagement';
@@ -20,6 +21,7 @@ function App() {
       <Router>
         <NotificationProvider>
           <AuthProvider>
+            <ScrollToTop />
             <Routes>
             <Route path="/login" element={<Login />} />
             <Route

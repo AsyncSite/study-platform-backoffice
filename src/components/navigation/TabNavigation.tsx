@@ -69,16 +69,21 @@ const TabItem = styled.button`
   color: ${({ theme }) => theme.colors.gray[500]};
   transition: ${({ theme }) => theme.transitions.normal};
   background: transparent;
-  
-  &:hover {
+
+  &:hover:not(.active) {
     color: ${({ theme }) => theme.colors.gray[700]};
     background: ${({ theme }) => theme.colors.gray[50]};
   }
-  
+
   &.active {
     background: #eff6ff;
     color: ${({ theme }) => theme.colors.primary};
     font-weight: 600;
+
+    &:hover {
+      background: #dbeafe;
+      color: ${({ theme }) => theme.colors.primary};
+    }
   }
 `;
 

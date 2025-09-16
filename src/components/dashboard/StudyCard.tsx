@@ -1,9 +1,11 @@
 import React from 'react';
 import styled from 'styled-components';
+import { useNavigate } from 'react-router-dom';
 import Card from '../common/Card';
 import Badge, { BadgeVariant } from '../common/Badge';
 
 interface StudyCardProps {
+  id?: string | number;
   title: string;
   schedule: string;
   participants: {
@@ -20,6 +22,7 @@ interface StudyCardProps {
 }
 
 const StudyCard: React.FC<StudyCardProps> = ({
+  id,
   title,
   schedule,
   participants,
@@ -31,8 +34,14 @@ const StudyCard: React.FC<StudyCardProps> = ({
   iconColor,
   barColor,
 }) => {
+  const navigate = useNavigate();
+
+  const handleCardClick = () => {
+    navigate('/studies');
+  };
+
   return (
-    <StyledStudyCard>
+    <StyledStudyCard onClick={handleCardClick}>
       <StudyCardBar $color={barColor} />
       <StudyHeader>
         <StudyIcon $bgColor={iconColor}>
@@ -48,7 +57,7 @@ const StudyCard: React.FC<StudyCardProps> = ({
           </Badge>
         </StudyStatus>
       </StudyHeader>
-      
+
       <StudyStats>
         <StudyStatItem>
           <StudyStatLabel>참여자</StudyStatLabel>
@@ -67,7 +76,7 @@ const StudyCard: React.FC<StudyCardProps> = ({
           <StudyStatValue>{satisfaction}/5.0</StudyStatValue>
         </StudyStatItem>
       </StudyStats>
-      
+
       <ProgressBar>
         <ProgressFill $width={progress} $color={barColor} />
       </ProgressBar>
@@ -78,6 +87,13 @@ const StudyCard: React.FC<StudyCardProps> = ({
 const StyledStudyCard = styled(Card)`
   position: relative;
   overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: ${({ theme }) => theme.shadows.large};
+  }
 `;
 
 const StudyCardBar = styled.div<{ $color: string }>`
