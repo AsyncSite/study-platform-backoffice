@@ -1,7 +1,6 @@
 import React from 'react';
 import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
-import Card from '../common/Card';
 import Badge, { BadgeVariant } from '../common/Badge';
 
 interface StudyCardProps {
@@ -22,7 +21,6 @@ interface StudyCardProps {
 }
 
 const StudyCard: React.FC<StudyCardProps> = ({
-  id,
   title,
   schedule,
   participants,
@@ -84,11 +82,15 @@ const StudyCard: React.FC<StudyCardProps> = ({
   );
 };
 
-const StyledStudyCard = styled(Card)`
+const StyledStudyCard = styled.div`
   position: relative;
   overflow: hidden;
   cursor: pointer;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
+  background: ${({ theme }) => theme.colors.background};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 8px;
+  padding: 20px;
 
   &:hover {
     transform: translateY(-2px);
