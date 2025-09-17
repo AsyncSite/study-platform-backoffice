@@ -197,7 +197,6 @@ const StudyDetailModal: React.FC<StudyDetailModalProps> = ({
           <Section>
             <SectionHeader onClick={() => toggleSection('basic')}>
               <SectionTitle>
-                <SectionNumber>1</SectionNumber>
                 기본 정보
               </SectionTitle>
               <ToggleIcon $expanded={expandedSections.basic}>▼</ToggleIcon>
@@ -302,7 +301,6 @@ const StudyDetailModal: React.FC<StudyDetailModalProps> = ({
           <Section>
             <SectionHeader onClick={() => toggleSection('description')}>
               <SectionTitle>
-                <SectionNumber>2</SectionNumber>
                 스터디 설명
               </SectionTitle>
               <ToggleIcon $expanded={expandedSections.description}>▼</ToggleIcon>
@@ -323,7 +321,6 @@ const StudyDetailModal: React.FC<StudyDetailModalProps> = ({
           <Section>
             <SectionHeader onClick={() => toggleSection('rejection')}>
               <SectionTitle>
-                <SectionNumber>3</SectionNumber>
                 거절 사유
               </SectionTitle>
               <ToggleIcon $expanded={expandedSections.rejection}>▼</ToggleIcon>
@@ -344,7 +341,6 @@ const StudyDetailModal: React.FC<StudyDetailModalProps> = ({
           <Section>
             <SectionHeader onClick={() => toggleSection('sections')}>
               <SectionTitle>
-                <SectionNumber>{study.status === StudyStatus.REJECTED && study.rejectionReason ? '4' : '3'}</SectionNumber>
                 페이지 섹션 ({studyPageData.sections.length}개)
               </SectionTitle>
               <ToggleIcon $expanded={expandedSections.sections}>▼</ToggleIcon>
@@ -455,19 +451,6 @@ const SectionTitle = styled.h3`
   font-weight: 600;
   color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
-`;
-
-const SectionNumber = styled.span`
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  background: ${({ theme }) => theme.colors.primary};
-  color: white;
-  border-radius: 50%;
-  font-size: 12px;
-  font-weight: 700;
 `;
 
 const ToggleIcon = styled.span<{ $expanded: boolean }>`
