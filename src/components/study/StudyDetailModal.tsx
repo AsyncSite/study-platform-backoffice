@@ -30,10 +30,8 @@ const StudyDetailModal: React.FC<StudyDetailModalProps> = ({
   const [loadingProposer, setLoadingProposer] = useState(false);
   const [expandedSections, setExpandedSections] = useState({
     basic: true,
-    schedule: true,
     description: true,
     rejection: true,
-    actions: true,
   });
 
   useEffect(() => {
@@ -203,28 +201,7 @@ const StudyDetailModal: React.FC<StudyDetailModalProps> = ({
                           <InfoValue>{study.generation}기</InfoValue>
                         </InfoRow>
                       )}
-                    </InfoList>
-                  </InfoCard>
-                </ContentGrid>
-              </SectionContent>
-            )}
-          </Section>
-
-          {/* Schedule Information Section */}
-          <Section>
-            <SectionHeader onClick={() => toggleSection('schedule')}>
-              <SectionTitle>
-                <SectionNumber>2</SectionNumber>
-                일정 정보
-              </SectionTitle>
-              <ToggleIcon $expanded={expandedSections.schedule}>▼</ToggleIcon>
-            </SectionHeader>
-            
-            {expandedSections.schedule && (
-              <SectionContent>
-                <ContentGrid>
-                  <InfoCard>
-                    <InfoList>
+                      
                       {study.recruitDeadline && (
                         <InfoRow>
                           <InfoLabel>모집 마감</InfoLabel>
@@ -276,7 +253,7 @@ const StudyDetailModal: React.FC<StudyDetailModalProps> = ({
           <Section>
             <SectionHeader onClick={() => toggleSection('description')}>
               <SectionTitle>
-                <SectionNumber>3</SectionNumber>
+                <SectionNumber>2</SectionNumber>
                 스터디 설명
               </SectionTitle>
               <ToggleIcon $expanded={expandedSections.description}>▼</ToggleIcon>
@@ -297,7 +274,7 @@ const StudyDetailModal: React.FC<StudyDetailModalProps> = ({
           <Section>
             <SectionHeader onClick={() => toggleSection('rejection')}>
               <SectionTitle>
-                <SectionNumber>4</SectionNumber>
+                <SectionNumber>3</SectionNumber>
                 거절 사유
               </SectionTitle>
               <ToggleIcon $expanded={expandedSections.rejection}>▼</ToggleIcon>
@@ -313,48 +290,34 @@ const StudyDetailModal: React.FC<StudyDetailModalProps> = ({
           </Section>
         )}
 
-        {/* Action Buttons Section */}
-        <Section>
-          <SectionHeader onClick={() => toggleSection('actions')}>
-            <SectionTitle>
-              <SectionNumber>5</SectionNumber>
-              관리자 액션
-            </SectionTitle>
-            <ToggleIcon $expanded={expandedSections.actions}>▼</ToggleIcon>
-          </SectionHeader>
-          
-          {expandedSections.actions && (
-            <SectionContent>
-              <ActionSection>
-                <ActionGroup>
-                  {study.status === StudyStatus.PENDING && (
-                    <>
-                      <ActionButton $variant="success" onClick={() => onApprove?.(study.id)}>
-                        승인
-                      </ActionButton>
-                      <ActionButton $variant="danger" onClick={() => onReject?.(study.id)}>
-                        거절
-                      </ActionButton>
-                    </>
-                  )}
-                  {study.status === StudyStatus.APPROVED && (
-                    <ActionButton $variant="danger" onClick={() => onTerminate?.(study.id)}>
-                      종료
-                    </ActionButton>
-                  )}
-                  {study.status === StudyStatus.TERMINATED && (
-                    <ActionButton $variant="primary" onClick={() => onReactivate?.(study.id)}>
-                      재활성화
-                    </ActionButton>
-                  )}
-                </ActionGroup>
-                <ActionButton $variant="secondary" onClick={onClose}>
-                  닫기
+        {/* Footer with Action Buttons */}
+        <ActionSection>
+          <ActionGroup>
+            {study.status === StudyStatus.PENDING && (
+              <>
+                <ActionButton $variant="success" onClick={() => onApprove?.(study.id)}>
+                  승인
                 </ActionButton>
-              </ActionSection>
-            </SectionContent>
-          )}
-        </Section>
+                <ActionButton $variant="danger" onClick={() => onReject?.(study.id)}>
+                  거절
+                </ActionButton>
+              </>
+            )}
+            {study.status === StudyStatus.APPROVED && (
+              <ActionButton $variant="danger" onClick={() => onTerminate?.(study.id)}>
+                종료
+              </ActionButton>
+            )}
+            {study.status === StudyStatus.TERMINATED && (
+              <ActionButton $variant="primary" onClick={() => onReactivate?.(study.id)}>
+                재활성화
+              </ActionButton>
+            )}
+          </ActionGroup>
+          <ActionButton $variant="secondary" onClick={onClose}>
+            닫기
+          </ActionButton>
+        </ActionSection>
       </DetailContainer>
     </Modal>
   );
