@@ -28,6 +28,13 @@ const StudyDetailModal: React.FC<StudyDetailModalProps> = ({
 }) => {
   const [proposerInfo, setProposerInfo] = useState<User | null>(null);
   const [loadingProposer, setLoadingProposer] = useState(false);
+  const [expandedSections, setExpandedSections] = useState({
+    basic: true,
+    schedule: true,
+    description: true,
+    rejection: true,
+    actions: true,
+  });
 
   useEffect(() => {
     if (study?.proposerId && isOpen) {
@@ -50,6 +57,13 @@ const StudyDetailModal: React.FC<StudyDetailModalProps> = ({
   if (!study) return null;
 
   const formatDate = formatDateKorean;
+
+  const toggleSection = (section: keyof typeof expandedSections) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section],
+    }));
+  };
 
   const getStatusColor = (status: StudyStatus) => {
     const colors: Record<StudyStatus, string> = {
@@ -130,121 +144,217 @@ const StudyDetailModal: React.FC<StudyDetailModalProps> = ({
           </QuickStats>
         </HeaderCard>
 
-        {/* Main Content Grid */}
-        <ContentGrid>
-          {/* Left Column - Basic Info */}
-          <InfoCard>
-            <CardTitle>기본 정보</CardTitle>
-            <InfoList>
-              <InfoRow>
-                <InfoLabel>제안자</InfoLabel>
-                <InfoValue>
-                  {loadingProposer ? (
-                    <LoadingText>로딩 중...</LoadingText>
-                  ) : proposerInfo ? (
-                    <ProposerDetails>
-                      <ProposerName>{proposerInfo.name}</ProposerName>
-                      <ProposerEmail>{proposerInfo.email}</ProposerEmail>
-                      <ProposerRole>{proposerInfo.role === 'ROLE_ADMIN' ? '관리자' : '일반회원'}</ProposerRole>
-                    </ProposerDetails>
-                  ) : (
-                    <span>{study.proposerId}</span>
-                  )}
-                </InfoValue>
-              </InfoRow>
-              
-              <InfoRow>
-                <InfoLabel>스터디 ID</InfoLabel>
-                <InfoValue><CodeText>{study.id}</CodeText></InfoValue>
-              </InfoRow>
-              
-              {study.slug && (
-                <InfoRow>
-                  <InfoLabel>URL 식별자</InfoLabel>
-                  <InfoValue><CodeText>{study.slug}</CodeText></InfoValue>
-                </InfoRow>
-              )}
-            </InfoList>
-          </InfoCard>
+        {/* Collapsible Sections */}
+        <SectionContainer>
+          {/* Basic Information Section */}
+          <Section>
+            <SectionHeader onClick={() => toggleSection('basic')}>
+              <SectionTitle>
+                <SectionNumber>1</SectionNumber>
+                기본 정보
+              </SectionTitle>
+              <ToggleIcon $expanded={expandedSections.basic}>▼</ToggleIcon>
+            </SectionHeader>
+            
+            {expandedSections.basic && (
+              <SectionContent>
+                <ContentGrid>
+                  <InfoCard>
+                    <InfoList>
+                      <InfoRow>
+                        <InfoLabel>제안자</InfoLabel>
+                        <InfoValue>
+                          {loadingProposer ? (
+                            <LoadingText>로딩 중...</LoadingText>
+                          ) : proposerInfo ? (
+                            <ProposerDetails>
+                              <ProposerName>{proposerInfo.name}</ProposerName>
+                              <ProposerEmail>{proposerInfo.email}</ProposerEmail>
+                              <ProposerRole>{proposerInfo.role === 'ROLE_ADMIN' ? '관리자' : '일반회원'}</ProposerRole>
+                            </ProposerDetails>
+                          ) : (
+                            <span>{study.proposerId}</span>
+                          )}
+                        </InfoValue>
+                      </InfoRow>
+                      
+                      <InfoRow>
+                        <InfoLabel>스터디 ID</InfoLabel>
+                        <InfoValue><CodeText>{study.id}</CodeText></InfoValue>
+                      </InfoRow>
+                      
+                      {study.slug && (
+                        <InfoRow>
+                          <InfoLabel>URL 식별자</InfoLabel>
+                          <InfoValue><CodeText>{study.slug}</CodeText></InfoValue>
+                        </InfoRow>
+                      )}
+                      
+                      {study.type && (
+                        <InfoRow>
+                          <InfoLabel>스터디 유형</InfoLabel>
+                          <InfoValue>{study.type === 'PARTICIPATORY' ? '참여형' : '교육형'}</InfoValue>
+                        </InfoRow>
+                      )}
+                      
+                      {study.generation && (
+                        <InfoRow>
+                          <InfoLabel>기수</InfoLabel>
+                          <InfoValue>{study.generation}기</InfoValue>
+                        </InfoRow>
+                      )}
+                    </InfoList>
+                  </InfoCard>
+                </ContentGrid>
+              </SectionContent>
+            )}
+          </Section>
 
-          {/* Right Column - Schedule Info */}
-          <InfoCard>
-            <CardTitle>일정 정보</CardTitle>
-            <InfoList>
-              {study.recruitDeadline && (
-                <InfoRow>
-                  <InfoLabel>모집 마감</InfoLabel>
-                  <InfoValue><DateText>{formatDate(study.recruitDeadline, false)}</DateText></InfoValue>
-                </InfoRow>
-              )}
-              {study.startDate && (
-                <InfoRow>
-                  <InfoLabel>시작일</InfoLabel>
-                  <InfoValue><DateText>{formatDate(study.startDate, false)}</DateText></InfoValue>
-                </InfoRow>
-              )}
-              {study.endDate && (
-                <InfoRow>
-                  <InfoLabel>종료일</InfoLabel>
-                  <InfoValue><DateText>{formatDate(study.endDate, false)}</DateText></InfoValue>
-                </InfoRow>
-              )}
-              <InfoRow>
-                <InfoLabel>생성일</InfoLabel>
-                <InfoValue><DateText>{formatDate(study.createdAt)}</DateText></InfoValue>
-              </InfoRow>
-              <InfoRow>
-                <InfoLabel>최종 수정</InfoLabel>
-                <InfoValue><DateText>{formatDate(study.updatedAt)}</DateText></InfoValue>
-              </InfoRow>
-            </InfoList>
-          </InfoCard>
-        </ContentGrid>
+          {/* Schedule Information Section */}
+          <Section>
+            <SectionHeader onClick={() => toggleSection('schedule')}>
+              <SectionTitle>
+                <SectionNumber>2</SectionNumber>
+                일정 정보
+              </SectionTitle>
+              <ToggleIcon $expanded={expandedSections.schedule}>▼</ToggleIcon>
+            </SectionHeader>
+            
+            {expandedSections.schedule && (
+              <SectionContent>
+                <ContentGrid>
+                  <InfoCard>
+                    <InfoList>
+                      {study.recruitDeadline && (
+                        <InfoRow>
+                          <InfoLabel>모집 마감</InfoLabel>
+                          <InfoValue><DateText>{formatDate(study.recruitDeadline, false)}</DateText></InfoValue>
+                        </InfoRow>
+                      )}
+                      {study.startDate && (
+                        <InfoRow>
+                          <InfoLabel>시작일</InfoLabel>
+                          <InfoValue><DateText>{formatDate(study.startDate, false)}</DateText></InfoValue>
+                        </InfoRow>
+                      )}
+                      {study.endDate && (
+                        <InfoRow>
+                          <InfoLabel>종료일</InfoLabel>
+                          <InfoValue><DateText>{formatDate(study.endDate, false)}</DateText></InfoValue>
+                        </InfoRow>
+                      )}
+                      {study.schedule && (
+                        <InfoRow>
+                          <InfoLabel>일정</InfoLabel>
+                          <InfoValue>{study.schedule}</InfoValue>
+                        </InfoRow>
+                      )}
+                      {study.duration && (
+                        <InfoRow>
+                          <InfoLabel>시간</InfoLabel>
+                          <InfoValue>{study.duration}</InfoValue>
+                        </InfoRow>
+                      )}
+                      <InfoRow>
+                        <InfoLabel>생성일</InfoLabel>
+                        <InfoValue><DateText>{formatDate(study.createdAt)}</DateText></InfoValue>
+                      </InfoRow>
+                      <InfoRow>
+                        <InfoLabel>최종 수정</InfoLabel>
+                        <InfoValue><DateText>{formatDate(study.updatedAt)}</DateText></InfoValue>
+                      </InfoRow>
+                    </InfoList>
+                  </InfoCard>
+                </ContentGrid>
+              </SectionContent>
+            )}
+          </Section>
+        </SectionContainer>
 
-        {/* Description */}
+        {/* Description Section */}
         {study.description && (
-          <DescriptionCard>
-            <CardTitle>스터디 설명</CardTitle>
-            <Description>{study.description}</Description>
-          </DescriptionCard>
+          <Section>
+            <SectionHeader onClick={() => toggleSection('description')}>
+              <SectionTitle>
+                <SectionNumber>3</SectionNumber>
+                스터디 설명
+              </SectionTitle>
+              <ToggleIcon $expanded={expandedSections.description}>▼</ToggleIcon>
+            </SectionHeader>
+            
+            {expandedSections.description && (
+              <SectionContent>
+                <DescriptionCard>
+                  <Description>{study.description}</Description>
+                </DescriptionCard>
+              </SectionContent>
+            )}
+          </Section>
         )}
 
-        {/* Rejection Reason */}
+        {/* Rejection Reason Section */}
         {study.status === StudyStatus.REJECTED && study.rejectionReason && (
-          <RejectionCard>
-            <CardTitle>거절 사유</CardTitle>
-            <RejectionReason>{study.rejectionReason}</RejectionReason>
-          </RejectionCard>
+          <Section>
+            <SectionHeader onClick={() => toggleSection('rejection')}>
+              <SectionTitle>
+                <SectionNumber>4</SectionNumber>
+                거절 사유
+              </SectionTitle>
+              <ToggleIcon $expanded={expandedSections.rejection}>▼</ToggleIcon>
+            </SectionHeader>
+            
+            {expandedSections.rejection && (
+              <SectionContent>
+                <RejectionCard>
+                  <RejectionReason>{study.rejectionReason}</RejectionReason>
+                </RejectionCard>
+              </SectionContent>
+            )}
+          </Section>
         )}
 
-        {/* Action Buttons */}
-        <ActionSection>
-          <ActionGroup>
-            {study.status === StudyStatus.PENDING && (
-              <>
-                <ActionButton $variant="success" onClick={() => onApprove?.(study.id)}>
-                  승인
+        {/* Action Buttons Section */}
+        <Section>
+          <SectionHeader onClick={() => toggleSection('actions')}>
+            <SectionTitle>
+              <SectionNumber>5</SectionNumber>
+              관리자 액션
+            </SectionTitle>
+            <ToggleIcon $expanded={expandedSections.actions}>▼</ToggleIcon>
+          </SectionHeader>
+          
+          {expandedSections.actions && (
+            <SectionContent>
+              <ActionSection>
+                <ActionGroup>
+                  {study.status === StudyStatus.PENDING && (
+                    <>
+                      <ActionButton $variant="success" onClick={() => onApprove?.(study.id)}>
+                        승인
+                      </ActionButton>
+                      <ActionButton $variant="danger" onClick={() => onReject?.(study.id)}>
+                        거절
+                      </ActionButton>
+                    </>
+                  )}
+                  {study.status === StudyStatus.APPROVED && (
+                    <ActionButton $variant="danger" onClick={() => onTerminate?.(study.id)}>
+                      종료
+                    </ActionButton>
+                  )}
+                  {study.status === StudyStatus.TERMINATED && (
+                    <ActionButton $variant="primary" onClick={() => onReactivate?.(study.id)}>
+                      재활성화
+                    </ActionButton>
+                  )}
+                </ActionGroup>
+                <ActionButton $variant="secondary" onClick={onClose}>
+                  닫기
                 </ActionButton>
-                <ActionButton $variant="danger" onClick={() => onReject?.(study.id)}>
-                  거절
-                </ActionButton>
-              </>
-            )}
-            {study.status === StudyStatus.APPROVED && (
-              <ActionButton $variant="danger" onClick={() => onTerminate?.(study.id)}>
-                종료
-              </ActionButton>
-            )}
-            {study.status === StudyStatus.TERMINATED && (
-              <ActionButton $variant="primary" onClick={() => onReactivate?.(study.id)}>
-                재활성화
-              </ActionButton>
-            )}
-          </ActionGroup>
-          <ActionButton $variant="secondary" onClick={onClose}>
-            닫기
-          </ActionButton>
-        </ActionSection>
+              </ActionSection>
+            </SectionContent>
+          )}
+        </Section>
       </DetailContainer>
     </Modal>
   );
@@ -254,6 +364,67 @@ const DetailContainer = styled.div`
   padding: 0;
   max-height: 80vh;
   overflow-y: auto;
+`;
+
+const SectionContainer = styled.div`
+  margin-bottom: 24px;
+`;
+
+const Section = styled.div`
+  background: ${({ theme }) => theme.colors.background};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 12px;
+  margin-bottom: 16px;
+  overflow: hidden;
+`;
+
+const SectionHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  background: ${({ theme }) => theme.colors.gray[50]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+  cursor: pointer;
+  transition: all 0.2s;
+  
+  &:hover {
+    background: ${({ theme }) => theme.colors.gray[100]};
+  }
+`;
+
+const SectionTitle = styled.h3`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  color: ${({ theme }) => theme.colors.text.primary};
+  margin: 0;
+`;
+
+const SectionNumber = styled.span`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: ${({ theme }) => theme.colors.primary};
+  color: white;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 700;
+`;
+
+const ToggleIcon = styled.span<{ $expanded: boolean }>`
+  font-size: 14px;
+  color: ${({ theme }) => theme.colors.text.secondary};
+  transform: ${({ $expanded }) => $expanded ? 'rotate(180deg)' : 'rotate(0deg)'};
+  transition: transform 0.2s;
+`;
+
+const SectionContent = styled.div`
+  padding: 20px;
 `;
 
 const HeaderCard = styled.div`
@@ -373,9 +544,8 @@ const StatValue = styled.span`
 
 const ContentGrid = styled.div`
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 24px;
-  margin-bottom: 24px;
   
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
@@ -383,20 +553,12 @@ const ContentGrid = styled.div`
 `;
 
 const InfoCard = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: 12px;
-  padding: 20px;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
 `;
 
-const CardTitle = styled.h3`
-  font-size: 16px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.text.primary};
-  margin-bottom: 16px;
-  padding-bottom: 8px;
-  border-bottom: 2px solid ${({ theme }) => theme.colors.primary}20;
-`;
 
 const InfoList = styled.div`
   display: flex;
@@ -449,9 +611,8 @@ const DateText = styled.span`
 const DescriptionCard = styled.div`
   background: ${({ theme }) => theme.colors.background};
   border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: 12px;
-  padding: 20px;
-  margin-bottom: 24px;
+  border-radius: 8px;
+  padding: 16px;
 `;
 
 const Description = styled.p`
@@ -465,9 +626,8 @@ const Description = styled.p`
 const RejectionCard = styled.div`
   background: ${({ theme }) => theme.colors.error}08;
   border: 1px solid ${({ theme }) => theme.colors.error}30;
-  border-radius: 12px;
-  padding: 20px;
-  margin-bottom: 24px;
+  border-radius: 8px;
+  padding: 16px;
 `;
 
 const RejectionReason = styled.p`
