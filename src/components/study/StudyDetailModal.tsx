@@ -5,12 +5,14 @@ import type { StudyResponse } from '../../types/api';
 import { StudyStatus } from '../../types/api';
 import type { User } from '../../types/user';
 import { usersApi } from '../../api/users';
+import { studyApi } from '../../api/study';
+import { studyPageApi, type StudyDetailPageData, convertSectionTypeToLabel } from '../../api/studyPage';
 import { formatDateKorean } from '../../utils/dateUtils';
 
 interface StudyDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
-  study: StudyResponse | null;
+  studyId: string | null;
   onApprove?: (id: string) => void;
   onReject?: (id: string) => void;
   onTerminate?: (id: string) => void;
@@ -20,25 +22,61 @@ interface StudyDetailModalProps {
 const StudyDetailModal: React.FC<StudyDetailModalProps> = ({
   isOpen,
   onClose,
-  study,
+  studyId,
   onApprove,
   onReject,
   onTerminate,
   onReactivate,
 }) => {
+  const [study, setStudy] = useState<StudyResponse | null>(null);
+  const [studyPageData, setStudyPageData] = useState<StudyDetailPageData | null>(null);
   const [proposerInfo, setProposerInfo] = useState<User | null>(null);
+  const [loading, setLoading] = useState(false);
   const [loadingProposer, setLoadingProposer] = useState(false);
   const [expandedSections, setExpandedSections] = useState({
     basic: true,
     description: true,
     rejection: true,
+    sections: true,
   });
+
+  useEffect(() => {
+    if (studyId && isOpen) {
+      fetchStudyData(studyId);
+    }
+  }, [studyId, isOpen]);
 
   useEffect(() => {
     if (study?.proposerId && isOpen) {
       fetchProposerInfo(study.proposerId);
     }
   }, [study?.proposerId, isOpen]);
+
+  const fetchStudyData = async (id: string) => {
+    try {
+      setLoading(true);
+      
+      // 1. 기본 스터디 정보 가져오기
+      const studyInfo = await studyApi.getStudyById(id);
+      setStudy(studyInfo);
+      
+      // 2. 스터디 페이지 데이터 가져오기 (sections 포함)
+      try {
+        const pageData = await studyPageApi.getPageForEditing(id, studyInfo.slug || '');
+        setStudyPageData(pageData);
+      } catch (pageError) {
+        console.warn('Study page data not found:', pageError);
+        // 페이지 데이터가 없어도 기본 스터디 정보는 표시
+        setStudyPageData(null);
+      }
+    } catch (error) {
+      console.error('Failed to fetch study data:', error);
+      setStudy(null);
+      setStudyPageData(null);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchProposerInfo = async (userId: string) => {
     try {
@@ -52,7 +90,18 @@ const StudyDetailModal: React.FC<StudyDetailModalProps> = ({
     }
   };
 
-  if (!study) return null;
+  if (!study) {
+    if (loading) {
+      return (
+        <Modal isOpen={isOpen} onClose={onClose} title="" size="large">
+          <LoadingContainer>
+            <LoadingText>스터디 정보를 불러오는 중...</LoadingText>
+          </LoadingContainer>
+        </Modal>
+      );
+    }
+    return null;
+  }
 
   const formatDate = formatDateKorean;
 
@@ -285,6 +334,48 @@ const StudyDetailModal: React.FC<StudyDetailModalProps> = ({
                 <RejectionCard>
                   <RejectionReason>{study.rejectionReason}</RejectionReason>
                 </RejectionCard>
+              </SectionContent>
+            )}
+          </Section>
+        )}
+
+        {/* Page Sections */}
+        {studyPageData && studyPageData.sections && studyPageData.sections.length > 0 && (
+          <Section>
+            <SectionHeader onClick={() => toggleSection('sections')}>
+              <SectionTitle>
+                <SectionNumber>{study.status === StudyStatus.REJECTED && study.rejectionReason ? '4' : '3'}</SectionNumber>
+                페이지 섹션 ({studyPageData.sections.length}개)
+              </SectionTitle>
+              <ToggleIcon $expanded={expandedSections.sections}>▼</ToggleIcon>
+            </SectionHeader>
+            
+            {expandedSections.sections && (
+              <SectionContent>
+                <PageSectionsContainer>
+                  {studyPageData.sections
+                    .sort((a, b) => a.order - b.order)
+                    .map((section, index) => (
+                      <PageSectionCard key={section.id}>
+                        <PageSectionHeader>
+                          <PageSectionNumber>{index + 1}</PageSectionNumber>
+                          <PageSectionTitle>
+                            {convertSectionTypeToLabel(section.type) || section.type}
+                          </PageSectionTitle>
+                          <PageSectionType>{section.type}</PageSectionType>
+                        </PageSectionHeader>
+                        <PageSectionContent>
+                          <PageSectionProps>
+                            {section.props && Object.keys(section.props).length > 0 ? (
+                              <pre>{JSON.stringify(section.props, null, 2)}</pre>
+                            ) : (
+                              <EmptyProps>설정된 속성이 없습니다.</EmptyProps>
+                            )}
+                          </PageSectionProps>
+                        </PageSectionContent>
+                      </PageSectionCard>
+                    ))}
+                </PageSectionsContainer>
               </SectionContent>
             )}
           </Section>
@@ -681,8 +772,15 @@ const ActionButton = styled.button<{ $variant: 'primary' | 'success' | 'danger' 
   }
 `;
 
+const LoadingContainer = styled.div`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 60px 20px;
+`;
+
 const LoadingText = styled.span`
-  font-size: 13px;
+  font-size: 16px;
   color: ${({ theme }) => theme.colors.text.secondary};
   font-style: italic;
 `;
@@ -712,6 +810,86 @@ const ProposerRole = styled.span`
   background: ${({ theme }) => theme.colors.primary}15;
   padding: 2px 6px;
   border-radius: 4px;
+`;
+
+const PageSectionsContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+`;
+
+const PageSectionCard = styled.div`
+  background: ${({ theme }) => theme.colors.gray[50]};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 8px;
+  overflow: hidden;
+`;
+
+const PageSectionHeader = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: ${({ theme }) => theme.colors.background};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+`;
+
+const PageSectionNumber = styled.span`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  background: ${({ theme }) => theme.colors.secondary};
+  color: white;
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+`;
+
+const PageSectionTitle = styled.h4`
+  font-size: 14px;
+  font-weight: 600;
+  color: ${({ theme }) => theme.colors.text.primary};
+  margin: 0;
+  flex: 1;
+`;
+
+const PageSectionType = styled.span`
+  font-size: 11px;
+  color: ${({ theme }) => theme.colors.text.secondary};
+  background: ${({ theme }) => theme.colors.gray[100]};
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+`;
+
+const PageSectionContent = styled.div`
+  padding: 16px;
+`;
+
+const PageSectionProps = styled.div`
+  font-size: 12px;
+  
+  pre {
+    background: ${({ theme }) => theme.colors.background};
+    border: 1px solid ${({ theme }) => theme.colors.border};
+    border-radius: 4px;
+    padding: 12px;
+    margin: 0;
+    overflow-x: auto;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    color: ${({ theme }) => theme.colors.text.primary};
+    line-height: 1.4;
+  }
+`;
+
+const EmptyProps = styled.div`
+  color: ${({ theme }) => theme.colors.text.secondary};
+  font-style: italic;
+  text-align: center;
+  padding: 20px;
 `;
 
 export default StudyDetailModal;
