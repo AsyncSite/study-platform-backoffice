@@ -354,7 +354,7 @@ const StudyManagement: React.FC = () => {
           setIsDetailModalOpen(false);
           setSelectedStudy(null);
         }}
-        study={selectedStudy}
+        studyId={selectedStudy?.id}
         onApprove={async (id) => {
           await handleApprove(id);
           setIsDetailModalOpen(false);

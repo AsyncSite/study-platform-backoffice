@@ -12,7 +12,7 @@ import { formatDateKorean } from '../../utils/dateUtils';
 interface StudyDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
-  studyId: string | null;
+  studyId?: string | null;
   onApprove?: (id: string) => void;
   onReject?: (id: string) => void;
   onTerminate?: (id: string) => void;
