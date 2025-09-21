@@ -106,7 +106,7 @@ const QueryDailyManagement: React.FC = () => {
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [showAnswerGuideModal, setShowAnswerGuideModal] = useState(false);
   const [contentTab, setContentTab] = useState<'guides' | 'questions' | 'templates'>('guides');
-  const [guideKeywords, setGuideKeywords] = useState<string[]>(['JWT', 'Stateless', '보안']);
+  const [guideKeywords, setGuideKeywords] = useState<string[]>([]);
   const [keywordInput, setKeywordInput] = useState('');
   const [currentOperator] = useState<string>('르네'); // 현재 로그인한 사용자 (임시)
 
@@ -122,127 +122,10 @@ const QueryDailyManagement: React.FC = () => {
 
   const [operatorFilter, setOperatorFilter] = useState<string>('all');
 
-  // Mock data - 리드/멤버 통합 데이터
-  const [users, setUsers] = useState<User[]>([
-    {
-      id: '1',
-      type: 'MEMBER',
-      name: '김철수',
-      email: 'chulsoo@example.com',
-      applicationDate: '2024-01-20',
-      resumeUrl: '/resumes/kim_chulsoo.pdf',
-      assignedTo: '1', // 르네
-      startDate: '2024-01-21',
-      totalDays: 7,
-      currentDay: 7,
-      memberStatus: '구독중',
-      product: '인터뷰 패스',
-      paymentDate: '2024-01-28',
-      paymentAmount: 99000,
-      notes: '백엔드 3년차, Spring 경험',
-      assignmentHistory: [
-        { changedBy: '지연', changedAt: new Date('2024-01-27T14:20:00'), from: undefined, to: '1' }
-      ]
-    },
-    {
-      id: '2',
-      type: 'LEAD',
-      name: '이영희',
-      email: 'younghee@example.com',
-      applicationDate: '2024-01-20',
-      resumeUrl: '/resumes/lee_younghee.pdf',
-      assignedTo: '1', // 르네
-      startDate: '2024-01-22',
-      totalDays: 7,
-      currentDay: 5,
-      leadStatus: '챌린지진행중',
-      notes: '프론트엔드 신입, React 포트폴리오'
-    },
-    {
-      id: '3',
-      type: 'LEAD',
-      name: '박민수',
-      email: 'minsoo@example.com',
-      applicationDate: '2024-01-21',
-      resumeUrl: '/resumes/park_minsoo.pdf',
-      assignedTo: '1', // 르네
-      startDate: '2024-01-23',
-      totalDays: 7,
-      currentDay: 7,
-      leadStatus: '챌린지완료',
-      notes: '풀스택 5년차, 이직 준비중'
-    },
-    {
-      id: '4',
-      type: 'LEAD',
-      name: '정수진',
-      email: 'soojin@example.com',
-      applicationDate: '2024-01-21',
-      resumeUrl: '/resumes/jung_soojin.pdf',
-      assignedTo: '2', // 현두
-      totalDays: 7,
-      currentDay: 0,
-      leadStatus: '신청완료',
-      notes: '데이터 엔지니어 2년차'
-    },
-    {
-      id: '5',
-      type: 'MEMBER',
-      name: '최동훈',
-      email: 'donghoon@example.com',
-      applicationDate: '2024-01-15',
-      resumeUrl: '/resumes/choi_donghoon.pdf',
-      assignedTo: '2', // 현두
-      startDate: '2024-01-16',
-      totalDays: 7,
-      currentDay: 10,
-      memberStatus: '구독중',
-      product: '예상 질문 50선',
-      paymentDate: '2024-01-23',
-      paymentAmount: 49000,
-      notes: 'DevOps 엔지니어 4년차'
-    }
-  ]);
+  // 실제 데이터는 API에서 가져와야 함
+  const [users, setUsers] = useState<User[]>([]);
 
-  const [scheduledEmails, setScheduledEmails] = useState<ScheduledEmail[]>([
-    {
-      id: '1',
-      userId: '2',
-      userName: '이영희',
-      userEmail: 'younghee@example.com',
-      scheduledDate: todayDate,
-      scheduledTime: '10:00',
-      type: 'daily_question',
-      subject: '[QueryDaily] Day-6 오늘의 면접 질문',
-      content: '오늘의 질문: React의 Virtual DOM은 어떻게 작동하나요?',
-      status: 'scheduled',
-      dayNumber: 6
-    },
-    {
-      id: '2',
-      userId: '3',
-      userName: '박민수',
-      userEmail: 'minsoo@example.com',
-      scheduledDate: todayDate,
-      scheduledTime: '10:00',
-      type: 'conversion_offer',
-      subject: '[QueryDaily] 7일 챌린지를 완료하셨습니다! 🎉',
-      content: '축하합니다! 이제 인터뷰 패스로 더 깊이있는 준비를...',
-      status: 'scheduled'
-    },
-    {
-      id: '3',
-      userId: '1',
-      userName: '김철수',
-      userEmail: 'chulsoo@example.com',
-      scheduledDate: todayDate,
-      scheduledTime: '10:00',
-      type: 'answer_guide',
-      subject: '[인터뷰 패스] 오늘의 질문과 답변 가이드',
-      content: '프리미엄 답변 가이드를 확인하세요...',
-      status: 'scheduled'
-    }
-  ]);
+  const [scheduledEmails, setScheduledEmails] = useState<ScheduledEmail[]>([]);
 
   // 계산된 통계
   const stats = useMemo(() => {
@@ -704,121 +587,25 @@ const QueryDailyManagement: React.FC = () => {
 
       {contentTab === 'guides' && (
         <AnswerGuideSection>
-          <GuideCard>
-            <GuideHeader>
-              <h4>Spring Security JWT 인증 구현 방식</h4>
-              <GuideDate>2024-01-28</GuideDate>
-            </GuideHeader>
-            <GuidePreview>
-              <GuideSection>
-                <SectionLabel>🎯 핵심 키워드</SectionLabel>
-                <KeywordList>
-                  <Keyword>JWT</Keyword>
-                  <Keyword>Stateless</Keyword>
-                  <Keyword>Bearer Token</Keyword>
-                </KeywordList>
-              </GuideSection>
-            </GuidePreview>
-            <GuideActions>
-              <button onClick={() => {
-                setShowAnswerGuideModal(true);
-                alert('Spring Security JWT 답변 가이드를 편집합니다');
-              }}>편집</button>
-              <button onClick={() => alert('답변 가이드 미리보기 창이 열립니다')}>미리보기</button>
-              <button onClick={() => {
-                setShowEmailModal(true);
-                alert('답변 가이드 발송 대상을 선택하세요');
-              }}>발송</button>
-            </GuideActions>
-          </GuideCard>
-
-          <GuideCard>
-            <GuideHeader>
-              <h4>JPA N+1 문제 해결 방법</h4>
-              <GuideDate>2024-01-27</GuideDate>
-            </GuideHeader>
-            <GuidePreview>
-              <GuideSection>
-                <SectionLabel>🎯 핵심 키워드</SectionLabel>
-                <KeywordList>
-                  <Keyword>Fetch Join</Keyword>
-                  <Keyword>@EntityGraph</Keyword>
-                  <Keyword>Batch Size</Keyword>
-                </KeywordList>
-              </GuideSection>
-            </GuidePreview>
-            <GuideActions>
-              <button onClick={() => {
-                setShowAnswerGuideModal(true);
-                alert('JPA N+1 답변 가이드를 편집합니다');
-              }}>편집</button>
-              <button onClick={() => alert('답변 가이드 미리보기 창이 열립니다')}>미리보기</button>
-              <button onClick={() => {
-                setShowEmailModal(true);
-                alert('답변 가이드 발송 대상을 선택하세요');
-              }}>발송</button>
-            </GuideActions>
-          </GuideCard>
+          <p style={{ textAlign: 'center', color: '#999', padding: '40px' }}>
+            등록된 답변 가이드가 없습니다. '+ 답변 가이드 작성' 버튼을 눌러 새로운 가이드를 작성하세요.
+          </p>
         </AnswerGuideSection>
       )}
 
       {contentTab === 'questions' && (
         <QuestionBankSection>
-          <QuestionCard>
-            <QuestionType>경험 연결형</QuestionType>
-            <QuestionText>가장 어려웠던 버그를 해결한 경험을 공유해주세요</QuestionText>
-            <QuestionTags>
-              <Tag>디버깅</Tag>
-              <Tag>문제해결</Tag>
-              <Tag>All Level</Tag>
-            </QuestionTags>
-          </QuestionCard>
-
-          <QuestionCard>
-            <QuestionType>트레이드오프형</QuestionType>
-            <QuestionText>NoSQL vs SQL 데이터베이스 선택 기준은?</QuestionText>
-            <QuestionTags>
-              <Tag>데이터베이스</Tag>
-              <Tag>아키텍처</Tag>
-              <Tag>Senior</Tag>
-            </QuestionTags>
-          </QuestionCard>
+          <p style={{ textAlign: 'center', color: '#999', padding: '40px' }}>
+            등록된 질문이 없습니다.
+          </p>
         </QuestionBankSection>
       )}
 
       {contentTab === 'templates' && (
         <TemplateSection>
-          <TemplateCard>
-            <TemplateHeader>
-              <h4>7일 챌린지 시작 환영 메일</h4>
-              <TemplateType>welcome</TemplateType>
-            </TemplateHeader>
-            <TemplatePreview>
-              안녕하세요 {'{name}'}님! 🎉
-              QueryDaily 7일 챌린지에 오신 것을 환영합니다.
-              내일부터 매일 아침 10시에 맞춤형 면접 질문을...
-            </TemplatePreview>
-            <TemplateActions>
-              <button>편집</button>
-              <button>복사</button>
-            </TemplateActions>
-          </TemplateCard>
-
-          <TemplateCard>
-            <TemplateHeader>
-              <h4>챌린지 완료 축하 메일</h4>
-              <TemplateType>completion</TemplateType>
-            </TemplateHeader>
-            <TemplatePreview>
-              축하합니다 {'{name}'}님! 🏆
-              7일간의 여정을 완주하셨습니다!
-              이제 인터뷰 패스로 더 깊이있는 준비를...
-            </TemplatePreview>
-            <TemplateActions>
-              <button>편집</button>
-              <button>복사</button>
-            </TemplateActions>
-          </TemplateCard>
+          <p style={{ textAlign: 'center', color: '#999', padding: '40px' }}>
+            등록된 템플릿이 없습니다.
+          </p>
         </TemplateSection>
       )}
     </ContentContainer>
