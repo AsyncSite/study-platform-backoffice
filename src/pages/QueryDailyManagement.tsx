@@ -17,6 +17,24 @@ type MemberStatus =
   | '구독만료'
   | '구독취소';
 
+type OperatorName = '르네' | '현두' | '지연' | '동건';
+
+interface Operator {
+  id: string;
+  name: OperatorName;
+  email: string;
+  activeLeads: number;
+  activeMembers: number;
+  totalAssigned: number;
+}
+
+interface ChangeHistory {
+  changedBy: string; // operator name who made the change
+  changedAt: Date;
+  from?: string; // previous operator id
+  to?: string; // new operator id
+}
+
 interface User {
   id: string;
   type: UserType;
@@ -25,6 +43,7 @@ interface User {
   applicationDate: string;
   resumeUrl: string;
   assignedTo?: string;
+  assignmentHistory?: ChangeHistory[];
   startDate?: string;
   totalDays: number;
   currentDay: number;
@@ -89,11 +108,22 @@ const QueryDailyManagement: React.FC = () => {
   const [contentTab, setContentTab] = useState<'guides' | 'questions' | 'templates'>('guides');
   const [guideKeywords, setGuideKeywords] = useState<string[]>(['JWT', 'Stateless', '보안']);
   const [keywordInput, setKeywordInput] = useState('');
+  const [currentOperator, setCurrentOperator] = useState<string>('르네'); // 현재 로그인한 사용자 (임시)
 
   const { date: todayDate } = getCurrentDateTime();
 
+  // Operators data
+  const operators: Operator[] = [
+    { id: '1', name: '르네', email: 'rene@querydaily.com', activeLeads: 2, activeMembers: 1, totalAssigned: 3 },
+    { id: '2', name: '현두', email: 'hyundu@querydaily.com', activeLeads: 1, activeMembers: 1, totalAssigned: 2 },
+    { id: '3', name: '지연', email: 'jiyeon@querydaily.com', activeLeads: 0, activeMembers: 0, totalAssigned: 0 },
+    { id: '4', name: '동건', email: 'donggun@querydaily.com', activeLeads: 0, activeMembers: 0, totalAssigned: 0 },
+  ];
+
+  const [operatorFilter, setOperatorFilter] = useState<string>('all');
+
   // Mock data - 리드/멤버 통합 데이터
-  const [users] = useState<User[]>([
+  const [users, setUsers] = useState<User[]>([
     {
       id: '1',
       type: 'MEMBER',
@@ -101,6 +131,7 @@ const QueryDailyManagement: React.FC = () => {
       email: 'chulsoo@example.com',
       applicationDate: '2024-01-20',
       resumeUrl: '/resumes/kim_chulsoo.pdf',
+      assignedTo: '1', // 르네
       startDate: '2024-01-21',
       totalDays: 7,
       currentDay: 7,
@@ -108,7 +139,10 @@ const QueryDailyManagement: React.FC = () => {
       product: '인터뷰 패스',
       paymentDate: '2024-01-28',
       paymentAmount: 99000,
-      notes: '백엔드 3년차, Spring 경험'
+      notes: '백엔드 3년차, Spring 경험',
+      assignmentHistory: [
+        { changedBy: '지연', changedAt: new Date('2024-01-27T14:20:00'), from: undefined, to: '1' }
+      ]
     },
     {
       id: '2',
@@ -117,6 +151,7 @@ const QueryDailyManagement: React.FC = () => {
       email: 'younghee@example.com',
       applicationDate: '2024-01-20',
       resumeUrl: '/resumes/lee_younghee.pdf',
+      assignedTo: '1', // 르네
       startDate: '2024-01-22',
       totalDays: 7,
       currentDay: 5,
@@ -130,6 +165,7 @@ const QueryDailyManagement: React.FC = () => {
       email: 'minsoo@example.com',
       applicationDate: '2024-01-21',
       resumeUrl: '/resumes/park_minsoo.pdf',
+      assignedTo: '1', // 르네
       startDate: '2024-01-23',
       totalDays: 7,
       currentDay: 7,
@@ -143,6 +179,7 @@ const QueryDailyManagement: React.FC = () => {
       email: 'soojin@example.com',
       applicationDate: '2024-01-21',
       resumeUrl: '/resumes/jung_soojin.pdf',
+      assignedTo: '2', // 현두
       totalDays: 7,
       currentDay: 0,
       leadStatus: '신청완료',
@@ -155,6 +192,7 @@ const QueryDailyManagement: React.FC = () => {
       email: 'donghoon@example.com',
       applicationDate: '2024-01-15',
       resumeUrl: '/resumes/choi_donghoon.pdf',
+      assignedTo: '2', // 현두
       startDate: '2024-01-16',
       totalDays: 7,
       currentDay: 10,
@@ -245,6 +283,27 @@ const QueryDailyManagement: React.FC = () => {
   }, [users]);
 
   // 다음 액션 결정 함수
+  const getTimeAgo = (date: Date) => {
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+
+    if (days > 0) return `${days}일 전`;
+    if (hours > 0) return `${hours}시간 전`;
+    if (minutes > 0) return `${minutes}분 전`;
+    return '방금 전';
+  };
+
+  const getLatestChange = (user: User) => {
+    if (!user.assignmentHistory || user.assignmentHistory.length === 0) {
+      return null;
+    }
+    const latest = user.assignmentHistory[user.assignmentHistory.length - 1];
+    return latest;
+  };
+
   const getNextAction = (user: User) => {
     if (user.type === 'LEAD') {
       switch(user.leadStatus) {
@@ -265,6 +324,26 @@ const QueryDailyManagement: React.FC = () => {
       }
       return null;
     }
+  };
+
+  const handleOperatorChange = (userId: string, operatorId: string) => {
+    setUsers(prevUsers => prevUsers.map(u => {
+      if (u.id === userId) {
+        const newHistory: ChangeHistory = {
+          changedBy: currentOperator,
+          changedAt: new Date(),
+          from: u.assignedTo,
+          to: operatorId || undefined
+        };
+
+        return {
+          ...u,
+          assignedTo: operatorId || undefined,
+          assignmentHistory: [...(u.assignmentHistory || []), newHistory]
+        };
+      }
+      return u;
+    }));
   };
 
   const handleUserAction = (user: User, action: string) => {
@@ -385,6 +464,43 @@ const QueryDailyManagement: React.FC = () => {
         </MetricsGrid>
       </MetricsSection>
 
+      {/* 담당자별 현황 */}
+      <OperatorSection>
+        <SectionTitle>
+          <h3>👥 담당자별 현황</h3>
+        </SectionTitle>
+
+        <OperatorGrid>
+          {operators.map(op => {
+            const assignedUsers = users.filter(u => u.assignedTo === op.id);
+            const activeLeads = assignedUsers.filter(u => u.type === 'LEAD' && u.leadStatus === '챌린지진행중').length;
+            const activeMembers = assignedUsers.filter(u => u.type === 'MEMBER' && u.memberStatus === '구독중').length;
+            const totalAssigned = assignedUsers.length;
+
+            return (
+              <OperatorCard key={op.id}>
+                <OperatorName>{op.name}</OperatorName>
+                <OperatorStats>
+                  <OperatorStat>
+                    <OperatorStatLabel>총 담당</OperatorStatLabel>
+                    <OperatorStatValue>{totalAssigned}명</OperatorStatValue>
+                  </OperatorStat>
+                  <OperatorStat>
+                    <OperatorStatLabel>활성 리드</OperatorStatLabel>
+                    <OperatorStatValue>{activeLeads}명</OperatorStatValue>
+                  </OperatorStat>
+                  <OperatorStat>
+                    <OperatorStatLabel>구독 멤버</OperatorStatLabel>
+                    <OperatorStatValue>{activeMembers}명</OperatorStatValue>
+                  </OperatorStat>
+                </OperatorStats>
+                <OperatorEmail>{op.email}</OperatorEmail>
+              </OperatorCard>
+            );
+          })}
+        </OperatorGrid>
+      </OperatorSection>
+
       {/* 오늘 발송 예정 */}
       <EmailSection>
         <SectionTitle>
@@ -430,6 +546,17 @@ const QueryDailyManagement: React.FC = () => {
           <FilterButton className="active">전체</FilterButton>
           <FilterButton>리드</FilterButton>
           <FilterButton>멤버</FilterButton>
+          <OperatorSelect
+            value={operatorFilter}
+            onChange={(e) => setOperatorFilter(e.target.value)}
+            style={{ marginLeft: '10px' }}
+          >
+            <option value="all">담당자: 전체</option>
+            {operators.map(op => (
+              <option key={op.id} value={op.id}>{op.name}</option>
+            ))}
+            <option value="unassigned">미지정</option>
+          </OperatorSelect>
         </FilterGroup>
       </Header>
 
@@ -439,6 +566,7 @@ const QueryDailyManagement: React.FC = () => {
             <th>타입</th>
             <th>이름</th>
             <th>이메일</th>
+            <th>담당자</th>
             <th>신청일</th>
             <th>상태</th>
             <th>진행상황</th>
@@ -447,8 +575,13 @@ const QueryDailyManagement: React.FC = () => {
           </tr>
         </thead>
         <tbody>
-          {users.map(user => {
-            const nextAction = getNextAction(user);
+          {users
+            .filter(user => {
+              if (operatorFilter === 'all') return true;
+              if (operatorFilter === 'unassigned') return !user.assignedTo;
+              return user.assignedTo === operatorFilter;
+            })
+            .map(user => {
             return (
               <tr key={user.id}>
                 <td>
@@ -458,6 +591,53 @@ const QueryDailyManagement: React.FC = () => {
                 </td>
                 <td>{user.name}</td>
                 <td>{user.email}</td>
+                <td>
+                  <OperatorCell>
+                    <OperatorSelect
+                      value={user.assignedTo || ''}
+                      onChange={(e) => handleOperatorChange(user.id, e.target.value)}
+                    >
+                      <option value="">미지정</option>
+                      {operators.map(op => (
+                        <option key={op.id} value={op.id}>{op.name}</option>
+                      ))}
+                    </OperatorSelect>
+                    {(() => {
+                      const latestChange = getLatestChange(user);
+                      if (latestChange) {
+                        return (
+                          <ChangeInfoWrapper>
+                            <ChangeInfo>
+                              ({latestChange.changedBy}가 {getTimeAgo(latestChange.changedAt)} 변경)
+                            </ChangeInfo>
+                            {user.assignmentHistory && user.assignmentHistory.length > 0 && (
+                              <HistoryTooltip className="history-tooltip">
+                                <div style={{ fontWeight: 600, marginBottom: '8px', borderBottom: '1px solid #e5e7eb', paddingBottom: '4px' }}>
+                                  변경 이력
+                                </div>
+                                {user.assignmentHistory.map((history, idx) => (
+                                  <div key={idx} style={{ fontSize: '12px', marginBottom: '4px' }}>
+                                    {history.changedAt.toLocaleDateString('ko-KR')} {history.changedAt.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+                                    - {history.changedBy}가 {
+                                      history.from
+                                        ? operators.find(op => op.id === history.from)?.name || '알 수 없음'
+                                        : '미지정'
+                                    }→{
+                                      history.to
+                                        ? operators.find(op => op.id === history.to)?.name || '알 수 없음'
+                                        : '미지정'
+                                    }으로 변경
+                                  </div>
+                                )).reverse()}
+                              </HistoryTooltip>
+                            )}
+                          </ChangeInfoWrapper>
+                        );
+                      }
+                      return null;
+                    })()}
+                  </OperatorCell>
+                </td>
                 <td>{user.applicationDate}</td>
                 <td>
                   <StatusBadge userType={user.type}>
@@ -477,19 +657,12 @@ const QueryDailyManagement: React.FC = () => {
                 </td>
                 <td>{user.lastEmailSentAt || '-'}</td>
                 <td>
-                  <ActionButtons>
-                    <ActionButton onClick={() => {
-                      setSelectedUser(user);
-                      setShowUserDetailModal(true);
-                    }}>
-                      상세
-                    </ActionButton>
-                    {nextAction && (
-                      <ActionButton primary onClick={() => handleUserAction(user, nextAction.action)}>
-                        {nextAction.label}
-                      </ActionButton>
-                    )}
-                  </ActionButtons>
+                  <ActionButton onClick={() => {
+                    setSelectedUser(user);
+                    setShowUserDetailModal(true);
+                  }}>
+                    상세
+                  </ActionButton>
                 </td>
               </tr>
             );
@@ -864,6 +1037,34 @@ const QueryDailyManagement: React.FC = () => {
               </DetailSection>
 
               <DetailSection>
+                <DetailLabel>담당자 관리</DetailLabel>
+                <DetailContent>
+                  <DetailRow>
+                    <span>현재 담당자:</span>
+                    <OperatorSelect
+                      value={selectedUser.assignedTo || ''}
+                      onChange={(e) => {
+                        handleOperatorChange(selectedUser.id, e.target.value);
+                        setSelectedUser({...selectedUser, assignedTo: e.target.value || undefined});
+                      }}
+                      style={{ marginLeft: '10px' }}
+                    >
+                      <option value="">미지정</option>
+                      {operators.map(op => (
+                        <option key={op.id} value={op.id}>{op.name}</option>
+                      ))}
+                    </OperatorSelect>
+                  </DetailRow>
+                  {selectedUser.assignedTo && (
+                    <DetailRow>
+                      <span>담당자 정보:</span>
+                      {operators.find(op => op.id === selectedUser.assignedTo)?.email}
+                    </DetailRow>
+                  )}
+                </DetailContent>
+              </DetailSection>
+
+              <DetailSection>
                 <DetailLabel>상태 관리</DetailLabel>
                 <DetailContent>
                   <DetailRow>
@@ -917,25 +1118,6 @@ const QueryDailyManagement: React.FC = () => {
                   </PaymentForm>
                 </PaymentSection>
               )}
-
-              <DetailSection>
-                <DetailLabel>다음 액션</DetailLabel>
-                <NextActionBox>
-                  {getNextAction(selectedUser) ? (
-                    <ActionButton primary large onClick={() => {
-                      const action = getNextAction(selectedUser);
-                      if (action) {
-                        handleUserAction(selectedUser, action.action);
-                        setShowUserDetailModal(false);
-                      }
-                    }}>
-                      {getNextAction(selectedUser)?.label}
-                    </ActionButton>
-                  ) : (
-                    <span>현재 가능한 액션이 없습니다</span>
-                  )}
-                </NextActionBox>
-              </DetailSection>
             </ModalBody>
           </ModalContent>
         </Modal>
@@ -1045,12 +1227,12 @@ const QueryDailyManagement: React.FC = () => {
                   <Label>4. 페르소나별 답변 예시</Label>
                   <PersonaGrid>
                     <div>
-                      <SubLabel>신입 개발자 관점</SubLabel>
-                      <Textarea rows={4} />
+                      <SubLabel>네카라쿠배 지원자</SubLabel>
+                      <Textarea rows={4} placeholder="대규모 트래픽 처리, 안정성 중심의 답변" />
                     </div>
                     <div>
-                      <SubLabel>경력 개발자 관점</SubLabel>
-                      <Textarea rows={4} />
+                      <SubLabel>당근/토스 (유니콘 스타트업) 지원자</SubLabel>
+                      <Textarea rows={4} placeholder="빠른 실행력, 주도적 문제 해결 중심의 답변" />
                     </div>
                   </PersonaGrid>
                 </FormGroup>
@@ -1379,6 +1561,120 @@ const FilterGroup = styled.div`
   gap: 8px;
 `;
 
+const OperatorSection = styled.section`
+  margin-top: 32px;
+`;
+
+const OperatorGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+
+  @media (max-width: 1200px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const OperatorCard = styled.div`
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  border: 1px solid ${({ theme }) => theme.colors.gray[200]};
+`;
+
+const OperatorName = styled.div`
+  font-size: 18px;
+  font-weight: 600;
+  color: ${({ theme }) => theme.colors.text.primary};
+  margin-bottom: 12px;
+`;
+
+const OperatorStats = styled.div`
+  display: flex;
+  gap: 16px;
+  margin-bottom: 12px;
+`;
+
+const OperatorStat = styled.div``;
+
+const OperatorStatLabel = styled.div`
+  font-size: 11px;
+  color: ${({ theme }) => theme.colors.text.secondary};
+  margin-bottom: 4px;
+`;
+
+const OperatorStatValue = styled.div`
+  font-size: 16px;
+  font-weight: 600;
+  color: ${({ theme }) => theme.colors.text.primary};
+`;
+
+const OperatorEmail = styled.div`
+  font-size: 12px;
+  color: ${({ theme }) => theme.colors.text.secondary};
+  padding-top: 8px;
+  border-top: 1px solid ${({ theme }) => theme.colors.gray[200]};
+`;
+
+const OperatorCell = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+`;
+
+const ChangeInfoWrapper = styled.div`
+  position: relative;
+
+  &:hover .history-tooltip {
+    display: block;
+  }
+`;
+
+const ChangeInfo = styled.div`
+  font-size: 11px;
+  color: ${({ theme }) => theme.colors.text.secondary};
+  font-style: italic;
+  cursor: help;
+`;
+
+const HistoryTooltip = styled.div`
+  display: none;
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  background: white;
+  border: 1px solid ${({ theme }) => theme.colors.gray[300]};
+  border-radius: 8px;
+  padding: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  min-width: 300px;
+  margin-bottom: 8px;
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 20px;
+    border: 8px solid transparent;
+    border-top-color: white;
+  }
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 20px;
+    border: 8px solid transparent;
+    border-top-color: ${({ theme }) => theme.colors.gray[300]};
+    margin-top: 1px;
+  }
+`;
+
 const FilterButton = styled.button`
   padding: 8px 16px;
   background: white;
@@ -1396,6 +1692,26 @@ const FilterButton = styled.button`
     background: ${({ theme }) => theme.colors.primary};
     color: white;
     border-color: ${({ theme }) => theme.colors.primary};
+  }
+`;
+
+const OperatorSelect = styled.select`
+  padding: 6px 10px;
+  border: 1px solid ${({ theme }) => theme.colors.gray[300]};
+  border-radius: 4px;
+  font-size: 13px;
+  background: white;
+  cursor: pointer;
+  min-width: 80px;
+
+  &:hover {
+    border-color: ${({ theme }) => theme.colors.primary};
+  }
+
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.primary};
+    box-shadow: 0 0 0 3px ${({ theme }) => theme.colors.primary}20;
   }
 `;
 
