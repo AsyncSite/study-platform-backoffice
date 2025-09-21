@@ -53,25 +53,25 @@ interface ScheduledEmail {
   error?: string;
 }
 
-interface AnswerGuide {
-  id: string;
-  questionId: string;
-  questionAnalysis: string;
-  coreKeywords: string[];
-  starStructure: {
-    situation: string;
-    task: string;
-    action: string;
-    result: string;
-  };
-  personaExamples: {
-    junior: string;
-    senior: string;
-  };
-  followUpQuestions: string[];
-  createdAt: string;
-  updatedAt: string;
-}
+// interface AnswerGuide {
+//   id: string;
+//   questionId: string;
+//   questionAnalysis: string;
+//   coreKeywords: string[];
+//   starStructure: {
+//     situation: string;
+//     task: string;
+//     action: string;
+//     result: string;
+//   };
+//   personaExamples: {
+//     junior: string;
+//     senior: string;
+//   };
+//   followUpQuestions: string[];
+//   createdAt: string;
+//   updatedAt: string;
+// }
 
 const getCurrentDateTime = () => {
   const now = new Date();
@@ -84,7 +84,7 @@ const QueryDailyManagement: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'emails' | 'content' | 'analytics'>('dashboard');
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [showUserDetailModal, setShowUserDetailModal] = useState(false);
-  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [showEmailModal, setShowEmailModal] = useState(false); // Used in handleUserAction
   const [showAnswerGuideModal, setShowAnswerGuideModal] = useState(false);
   const [contentTab, setContentTab] = useState<'guides' | 'questions' | 'templates'>('guides');
   const [guideKeywords, setGuideKeywords] = useState<string[]>(['JWT', 'Stateless', '보안']);
