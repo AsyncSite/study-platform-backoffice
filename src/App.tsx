@@ -13,6 +13,7 @@ import ScrollToTop from './components/ScrollToTop';
 import { AuthProvider } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import NotiManagement from './pages/NotiManagement';
+import QueryDailyManagement from './pages/QueryDailyManagement';
 
 function App() {
   return (
@@ -50,6 +51,16 @@ function App() {
                 <PrivateRoute>
                   <Layout>
                     <StudyManagement />
+                  </Layout>
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/query-daily"
+              element={
+                <PrivateRoute>
+                  <Layout>
+                    <QueryDailyManagement />
                   </Layout>
                 </PrivateRoute>
               }
