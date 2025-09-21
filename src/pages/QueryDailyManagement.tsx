@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import styled from 'styled-components';
+import { EmailSendModal } from '../components/QueryDailyEmailModal';
 
 // Types
 type UserType = 'LEAD' | 'MEMBER';
@@ -104,6 +105,7 @@ const QueryDailyManagement: React.FC = () => {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [showUserDetailModal, setShowUserDetailModal] = useState(false);
   const [showEmailModal, setShowEmailModal] = useState(false);
+  const [emailModalType, setEmailModalType] = useState<'question' | 'answerGuide'>('question');
   const [showAnswerGuideModal, setShowAnswerGuideModal] = useState(false);
   const [contentTab, setContentTab] = useState<'guides' | 'questions' | 'templates'>('guides');
   const [guideKeywords, setGuideKeywords] = useState<string[]>([]);
@@ -288,14 +290,14 @@ const QueryDailyManagement: React.FC = () => {
             </TaskAction>
           </TaskCard>
 
-          <TaskCard highlight>
+          <TaskCard $highlight>
             <TaskIcon>🎯</TaskIcon>
             <TaskInfo>
               <TaskLabel>전환 제안 대상</TaskLabel>
               <TaskCount>{todayTasks.conversionTargets}명</TaskCount>
               <TaskDescription>7일 챌린지 완료자</TaskDescription>
             </TaskInfo>
-            <TaskAction primary onClick={() => setActiveTab('users')}>
+            <TaskAction $primary onClick={() => setActiveTab('users')}>
               전환 제안 →
             </TaskAction>
           </TaskCard>
@@ -339,7 +341,7 @@ const QueryDailyManagement: React.FC = () => {
             <MetricBadge type="member">MEMBER</MetricBadge>
           </MetricCard>
 
-          <MetricCard highlight>
+          <MetricCard $highlight>
             <MetricLabel>전환율</MetricLabel>
             <MetricValue>{stats.conversionRate}%</MetricValue>
             <MetricSubtext>리드→멤버</MetricSubtext>
@@ -388,7 +390,7 @@ const QueryDailyManagement: React.FC = () => {
       <EmailSection>
         <SectionTitle>
           <h3>✉️ 오늘 발송 예정</h3>
-          <Badge isEmpty={scheduledEmails.filter(e => e.scheduledDate === todayDate && e.status === 'scheduled').length === 0}>
+          <Badge $isEmpty={scheduledEmails.filter(e => e.scheduledDate === todayDate && e.status === 'scheduled').length === 0}>
             {scheduledEmails.filter(e => e.scheduledDate === todayDate && e.status === 'scheduled').length}건
           </Badge>
         </SectionTitle>
@@ -410,7 +412,7 @@ const QueryDailyManagement: React.FC = () => {
                    email.type === 'answer_guide' ? '답변가이드' :
                    email.type === 'conversion_offer' ? '전환제안' : email.type}
                 </EmailType>
-                <ActionButton primary onClick={() => handleEmailStatusChange(email.id, 'sent')}>
+                <ActionButton $primary onClick={() => handleEmailStatusChange(email.id, 'sent')}>
                   발송완료
                 </ActionButton>
               </EmailCard>
@@ -626,7 +628,7 @@ const QueryDailyManagement: React.FC = () => {
         <Section>
           <SectionTitle>
             <h3>📅 오늘 발송 예정</h3>
-            <Badge isEmpty={scheduledEmails.filter(e => e.scheduledDate === todayDate && e.status === 'scheduled').length === 0}>
+            <Badge $isEmpty={scheduledEmails.filter(e => e.scheduledDate === todayDate && e.status === 'scheduled').length === 0}>
             {scheduledEmails.filter(e => e.scheduledDate === todayDate && e.status === 'scheduled').length}건
           </Badge>
           </SectionTitle>
@@ -652,7 +654,7 @@ const QueryDailyManagement: React.FC = () => {
                     <ActionButton onClick={() => handleEmailStatusChange(email.id, 'cancelled')}>
                       취소
                     </ActionButton>
-                    <ActionButton primary onClick={() => handleEmailStatusChange(email.id, 'sent')}>
+                    <ActionButton $primary onClick={() => handleEmailStatusChange(email.id, 'sent')}>
                       발송 완료
                     </ActionButton>
                   </EmailFooter>
@@ -912,35 +914,12 @@ const QueryDailyManagement: React.FC = () => {
 
       {/* 이메일 발송 모달 */}
       {showEmailModal && (
-        <Modal>
-          <ModalContent>
-            <ModalHeader>
-              <h3>메일 발송</h3>
-              <CloseButton onClick={() => setShowEmailModal(false)}>✕</CloseButton>
-            </ModalHeader>
-            <ModalBody>
-              <FormGroup>
-                <Label>수신자</Label>
-                <Input placeholder="이메일 주소" value={selectedUser?.email || ''} readOnly />
-              </FormGroup>
-              <FormGroup>
-                <Label>제목</Label>
-                <Input placeholder="메일 제목을 입력하세요" />
-              </FormGroup>
-              <FormGroup>
-                <Label>내용</Label>
-                <Textarea rows={10} placeholder="메일 내용을 입력하세요" />
-              </FormGroup>
-              <ModalActions>
-                <CancelButton onClick={() => setShowEmailModal(false)}>취소</CancelButton>
-                <SaveButton onClick={() => {
-                  alert('메일이 발송되었습니다!');
-                  setShowEmailModal(false);
-                }}>발송하기</SaveButton>
-              </ModalActions>
-            </ModalBody>
-          </ModalContent>
-        </Modal>
+        <EmailSendModal
+          showEmailModal={showEmailModal}
+          setShowEmailModal={setShowEmailModal}
+          emailModalType={emailModalType}
+          selectedUserEmail={selectedUser?.email}
+        />
       )}
 
       {/* 답변 가이드 작성 모달 */}
@@ -1149,12 +1128,12 @@ const TasksGrid = styled.div`
   }
 `;
 
-const TaskCard = styled.div<{ highlight?: boolean }>`
+const TaskCard = styled.div<{ $highlight?: boolean }>`
   background: white;
   border-radius: 12px;
   padding: 24px;
-  border: 2px solid ${({ highlight, theme }) =>
-    highlight ? theme.colors.primary : theme.colors.gray[200]};
+  border: 2px solid ${({ $highlight, theme }) =>
+    $highlight ? theme.colors.primary : theme.colors.gray[200]};
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -1191,13 +1170,13 @@ const TaskDescription = styled.div`
   color: ${({ theme }) => theme.colors.text.tertiary};
 `;
 
-const TaskAction = styled.button<{ primary?: boolean }>`
+const TaskAction = styled.button<{ $primary?: boolean }>`
   width: 100%;
   padding: 10px;
-  background: ${({ primary, theme }) =>
-    primary ? theme.colors.primary : 'white'};
-  color: ${({ primary, theme }) =>
-    primary ? 'white' : theme.colors.primary};
+  background: ${({ $primary, theme }) =>
+    $primary ? theme.colors.primary : 'white'};
+  color: ${({ $primary, theme }) =>
+    $primary ? 'white' : theme.colors.primary};
   border: 1px solid ${({ theme }) => theme.colors.primary};
   border-radius: 8px;
   font-size: 14px;
@@ -1222,12 +1201,12 @@ const MetricsGrid = styled.div`
   }
 `;
 
-const MetricCard = styled.div<{ highlight?: boolean }>`
+const MetricCard = styled.div<{ $highlight?: boolean }>`
   background: white;
   border-radius: 8px;
   padding: 20px;
-  border: 1px solid ${({ highlight, theme }) =>
-    highlight ? theme.colors.primary : theme.colors.gray[200]};
+  border: 1px solid ${({ $highlight, theme }) =>
+    $highlight ? theme.colors.primary : theme.colors.gray[200]};
 `;
 
 const MetricLabel = styled.div`
@@ -1262,9 +1241,9 @@ const MetricBadge = styled.span<{ type: 'lead' | 'member' }>`
 
 const EmailSection = styled.section``;
 
-const Badge = styled.span<{ isEmpty?: boolean }>`
-  background: ${({ theme, isEmpty }) => isEmpty ? theme.colors.gray[200] : theme.colors.primary};
-  color: ${({ theme, isEmpty }) => isEmpty ? theme.colors.text.secondary : 'white'};
+const Badge = styled.span<{ $isEmpty?: boolean }>`
+  background: ${({ theme, $isEmpty }) => $isEmpty ? theme.colors.gray[200] : theme.colors.primary};
+  color: ${({ theme, $isEmpty }) => $isEmpty ? theme.colors.text.secondary : 'white'};
   padding: 4px 12px;
   border-radius: 12px;
   font-size: 12px;
@@ -1603,19 +1582,19 @@ const ProductBadge = styled.span`
 //   gap: 4px;
 // `;
 
-const ActionButton = styled.button<{ primary?: boolean; large?: boolean }>`
-  padding: ${({ large }) => large ? '12px 24px' : '6px 10px'};
+const ActionButton = styled.button<{ $primary?: boolean; $large?: boolean }>`
+  padding: ${({ $large }) => $large ? '12px 24px' : '6px 10px'};
   border-radius: 4px;
-  font-size: ${({ large }) => large ? '14px' : '12px'};
+  font-size: ${({ $large }) => $large ? '14px' : '12px'};
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
   border: 1px solid ${({ theme }) => theme.colors.gray[300]};
-  background: ${({ primary, theme }) => primary ? theme.colors.primary : 'white'};
-  color: ${({ primary, theme }) => primary ? 'white' : theme.colors.text.primary};
+  background: ${({ $primary, theme }) => $primary ? theme.colors.primary : 'white'};
+  color: ${({ $primary, theme }) => $primary ? 'white' : theme.colors.text.primary};
 
   &:hover {
-    background: ${({ primary, theme }) => primary ? theme.colors.primaryDark : theme.colors.gray[50]};
+    background: ${({ $primary, theme }) => $primary ? theme.colors.primaryDark : theme.colors.gray[50]};
   }
 `;
 

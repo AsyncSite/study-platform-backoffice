@@ -1,6 +1,5 @@
 import axios, { type AxiosInstance, type AxiosRequestConfig, type AxiosResponse } from 'axios';
 import type { ApiResponse } from '../types/api';
-
 import { env } from '../config/environment';
 
 // Create axios instance
@@ -34,16 +33,16 @@ apiClient.interceptors.response.use(
   },
   async (error) => {
     const originalRequest = error.config;
-    
+
     // Handle 403 Forbidden - User doesn't have permission
     if (error.response?.status === 403) {
-      const event = new CustomEvent('auth:forbidden', { 
+      const event = new CustomEvent('auth:forbidden', {
         detail: { message: '권한이 없습니다. 관리자에게 문의하세요.' }
       });
       window.dispatchEvent(event);
       return Promise.reject(error);
     }
-    
+
     // Handle 401 Unauthorized - Token invalid or expired
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;

@@ -46,7 +46,7 @@ const Login: React.FC = () => {
         
         <LoginForm onSubmit={handleSubmit}>
           <FormTitle>관리자 로그인</FormTitle>
-          
+
           {error && <ErrorMessage>{error}</ErrorMessage>}
           
           <FormGroup>

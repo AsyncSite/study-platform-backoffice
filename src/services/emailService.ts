@@ -1,7 +1,4 @@
-import axios from 'axios';
-
-// TODO: Get this from environment variable
-const API_BASE_URL = 'http://localhost:8089'; // noti-service port
+import apiClient from '../api/client';
 
 export interface EmailPayload {
   templateId: string;
@@ -18,28 +15,34 @@ export interface BulkEmailPayload {
 }
 
 class EmailService {
-  private axiosInstance = axios.create({
-    baseURL: API_BASE_URL,
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  });
-
   /**
    * Send a single email using the noti-service
    */
   async sendEmail(payload: EmailPayload): Promise<void> {
     try {
-      await this.axiosInstance.post('/api/noti/send', {
+      const requestData = {
+        userId: payload.to, // Use email as userId
         templateId: payload.templateId,
         channelType: 'EMAIL',
         eventType: 'NOTI',
-        to: payload.to,
+        recipientContact: payload.to,
         variables: payload.variables,
+      };
+
+      console.log('🚀 Sending email request:', JSON.stringify(requestData, null, 2));
+
+      const response = await apiClient.post('/api/noti', requestData);
+
+      console.log('✅ Email sent successfully:', response.data);
+    } catch (error: any) {
+      console.error('❌ Failed to send email:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        url: error.config?.url,
+        data: error.config?.data
       });
-    } catch (error) {
-      console.error('Failed to send email:', error);
-      throw new Error('Failed to send email');
+      throw error;
     }
   }
 
@@ -70,7 +73,10 @@ class EmailService {
     email: string,
     question: string,
     hint: string,
-    referenceUrl?: string
+    userName: string = '개발자',
+    currentDay: number = 1,
+    totalDays: number = 3,
+    tomorrowTopic: string = '다음 주제'
   ): Promise<void> {
     return this.sendEmail({
       templateId: 'querydaily-question',
@@ -78,7 +84,10 @@ class EmailService {
       variables: {
         question,
         hint,
-        referenceUrl: referenceUrl || 'https://asyncsite.com/querydaily',
+        userName,
+        currentDay: currentDay.toString(),
+        totalDays: totalDays.toString(),
+        tomorrowTopic
       },
     });
   }
@@ -109,10 +118,14 @@ class EmailService {
       variables: {
         question,
         analysis,
-        keywords,
-        starStructure,
-        personaAnswers,
-        followUpQuestions,
+        keywords: keywords.join(', '),
+        'starStructure.situation': starStructure.situation,
+        'starStructure.task': starStructure.task,
+        'starStructure.action': starStructure.action,
+        'starStructure.result': starStructure.result,
+        'personaAnswers.bigTech': personaAnswers.bigTech,
+        'personaAnswers.unicorn': personaAnswers.unicorn,
+        followUpQuestions: followUpQuestions.join(' / '),
       },
     });
   }
