@@ -104,7 +104,7 @@ const QueryDailyManagement: React.FC = () => {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [showUserDetailModal, setShowUserDetailModal] = useState(false);
   const [showEmailModal, setShowEmailModal] = useState(false);
-  // const [showAnswerGuideModal, setShowAnswerGuideModal] = useState(false); // 사용 안 함 - 발송 센터에서만 발송
+  const [showAnswerGuideModal, setShowAnswerGuideModal] = useState(false);
   const [contentTab, setContentTab] = useState<'guides' | 'questions' | 'templates'>('guides');
   const [guideKeywords, setGuideKeywords] = useState<string[]>([]);
   const [keywordInput, setKeywordInput] = useState('');
@@ -388,7 +388,9 @@ const QueryDailyManagement: React.FC = () => {
       <EmailSection>
         <SectionTitle>
           <h3>✉️ 오늘 발송 예정</h3>
-          <Badge>{scheduledEmails.filter(e => e.scheduledDate === todayDate && e.status === 'scheduled').length}건</Badge>
+          <Badge isEmpty={scheduledEmails.filter(e => e.scheduledDate === todayDate && e.status === 'scheduled').length === 0}>
+            {scheduledEmails.filter(e => e.scheduledDate === todayDate && e.status === 'scheduled').length}건
+          </Badge>
         </SectionTitle>
 
         <EmailList>
@@ -624,7 +626,9 @@ const QueryDailyManagement: React.FC = () => {
         <Section>
           <SectionTitle>
             <h3>📅 오늘 발송 예정</h3>
-            <Badge>{scheduledEmails.filter(e => e.scheduledDate === todayDate && e.status === 'scheduled').length}건</Badge>
+            <Badge isEmpty={scheduledEmails.filter(e => e.scheduledDate === todayDate && e.status === 'scheduled').length === 0}>
+            {scheduledEmails.filter(e => e.scheduledDate === todayDate && e.status === 'scheduled').length}건
+          </Badge>
           </SectionTitle>
           <EmailGrid>
             {scheduledEmails
@@ -733,7 +737,7 @@ const QueryDailyManagement: React.FC = () => {
 
   const handleGuideSave = () => {
     alert('답변 가이드가 저장되었습니다!\n키워드: ' + guideKeywords.join(', '));
-    // setShowAnswerGuideModal(false);
+    setShowAnswerGuideModal(false);
   };
 
   return (
@@ -939,8 +943,8 @@ const QueryDailyManagement: React.FC = () => {
         </Modal>
       )}
 
-      {/* 답변 가이드 작성 모달 - 사용 안 함 */}
-      {false && showAnswerGuideModal && (
+      {/* 답변 가이드 작성 모달 */}
+      {showAnswerGuideModal && (
         <Modal>
           <ModalContent large>
             <ModalHeader>
@@ -1258,9 +1262,9 @@ const MetricBadge = styled.span<{ type: 'lead' | 'member' }>`
 
 const EmailSection = styled.section``;
 
-const Badge = styled.span`
-  background: ${({ theme }) => theme.colors.primary};
-  color: white;
+const Badge = styled.span<{ isEmpty?: boolean }>`
+  background: ${({ theme, isEmpty }) => isEmpty ? theme.colors.gray[200] : theme.colors.primary};
+  color: ${({ theme, isEmpty }) => isEmpty ? theme.colors.text.secondary : 'white'};
   padding: 4px 12px;
   border-radius: 12px;
   font-size: 12px;
