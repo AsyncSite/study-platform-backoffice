@@ -104,7 +104,7 @@ const QueryDailyManagement: React.FC = () => {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [showUserDetailModal, setShowUserDetailModal] = useState(false);
   const [showEmailModal, setShowEmailModal] = useState(false);
-  const [showAnswerGuideModal, setShowAnswerGuideModal] = useState(false);
+  // const [showAnswerGuideModal, setShowAnswerGuideModal] = useState(false); // 사용 안 함 - 발송 센터에서만 발송
   const [contentTab, setContentTab] = useState<'guides' | 'questions' | 'templates'>('guides');
   const [guideKeywords, setGuideKeywords] = useState<string[]>([]);
   const [keywordInput, setKeywordInput] = useState('');
@@ -284,7 +284,7 @@ const QueryDailyManagement: React.FC = () => {
               <TaskDescription>챌린지 진행중 + 구독 멤버</TaskDescription>
             </TaskInfo>
             <TaskAction onClick={() => setActiveTab('emails')}>
-              발송 관리 →
+              발송 센터 →
             </TaskAction>
           </TaskCard>
 
@@ -559,9 +559,7 @@ const QueryDailyManagement: React.FC = () => {
     <ContentContainer>
       <Header>
         <h2>콘텐츠 관리</h2>
-        <AddButton onClick={() => setShowAnswerGuideModal(true)}>
-          + 답변 가이드 작성
-        </AddButton>
+        <Subtitle>QueryDaily 콘텐츠를 관리합니다. 발송은 📮 발송 센터에서 진행하세요.</Subtitle>
       </Header>
 
       <ContentTabs>
@@ -576,12 +574,6 @@ const QueryDailyManagement: React.FC = () => {
           onClick={() => setContentTab('questions')}
         >
           질문 은행
-        </ContentTab>
-        <ContentTab
-          className={contentTab === 'templates' ? 'active' : ''}
-          onClick={() => setContentTab('templates')}
-        >
-          템플릿
         </ContentTab>
       </ContentTabs>
 
@@ -601,13 +593,6 @@ const QueryDailyManagement: React.FC = () => {
         </QuestionBankSection>
       )}
 
-      {contentTab === 'templates' && (
-        <TemplateSection>
-          <p style={{ textAlign: 'center', color: '#999', padding: '40px' }}>
-            등록된 템플릿이 없습니다.
-          </p>
-        </TemplateSection>
-      )}
     </ContentContainer>
   );
 
@@ -615,12 +600,23 @@ const QueryDailyManagement: React.FC = () => {
     <EmailsContainer>
       <Header>
         <div>
-          <h2>메일 발송 관리</h2>
-          <Subtitle>예약 메일과 발송 이력을 관리합니다</Subtitle>
+          <h2>📮 발송 센터</h2>
+          <Subtitle>모든 QueryDaily 메일 발송을 여기서 관리합니다</Subtitle>
         </div>
-        <AddButton onClick={() => setShowEmailModal(true)}>
-          + 메일 예약
-        </AddButton>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <AddButton onClick={() => {
+            setEmailModalType('question');
+            setShowEmailModal(true);
+          }}>
+            📧 질문 발송
+          </AddButton>
+          <AddButton onClick={() => {
+            setEmailModalType('answerGuide');
+            setShowEmailModal(true);
+          }} style={{ background: '#667eea' }}>
+            📚 답변 가이드 발송
+          </AddButton>
+        </div>
       </Header>
 
       <EmailSections>
@@ -737,7 +733,7 @@ const QueryDailyManagement: React.FC = () => {
 
   const handleGuideSave = () => {
     alert('답변 가이드가 저장되었습니다!\n키워드: ' + guideKeywords.join(', '));
-    setShowAnswerGuideModal(false);
+    // setShowAnswerGuideModal(false);
   };
 
   return (
@@ -769,7 +765,7 @@ const QueryDailyManagement: React.FC = () => {
           className={activeTab === 'emails' ? 'active' : ''}
           onClick={() => setActiveTab('emails')}
         >
-          ✉️ 메일 발송
+          📮 발송 센터
         </Tab>
         <Tab
           className={activeTab === 'content' ? 'active' : ''}
@@ -943,8 +939,8 @@ const QueryDailyManagement: React.FC = () => {
         </Modal>
       )}
 
-      {/* 답변 가이드 작성 모달 */}
-      {showAnswerGuideModal && (
+      {/* 답변 가이드 작성 모달 - 사용 안 함 */}
+      {false && showAnswerGuideModal && (
         <Modal>
           <ModalContent large>
             <ModalHeader>
