@@ -84,7 +84,7 @@ const QueryDailyManagement: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'emails' | 'content' | 'analytics'>('dashboard');
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [showUserDetailModal, setShowUserDetailModal] = useState(false);
-  const [showEmailModal, setShowEmailModal] = useState(false); // Used in handleUserAction
+  const [showEmailModal, setShowEmailModal] = useState(false);
   const [showAnswerGuideModal, setShowAnswerGuideModal] = useState(false);
   const [contentTab, setContentTab] = useState<'guides' | 'questions' | 'templates'>('guides');
   const [guideKeywords, setGuideKeywords] = useState<string[]>(['JWT', 'Stateless', '보안']);
@@ -936,6 +936,39 @@ const QueryDailyManagement: React.FC = () => {
                   )}
                 </NextActionBox>
               </DetailSection>
+            </ModalBody>
+          </ModalContent>
+        </Modal>
+      )}
+
+      {/* 이메일 발송 모달 */}
+      {showEmailModal && (
+        <Modal>
+          <ModalContent>
+            <ModalHeader>
+              <h3>메일 발송</h3>
+              <CloseButton onClick={() => setShowEmailModal(false)}>✕</CloseButton>
+            </ModalHeader>
+            <ModalBody>
+              <FormGroup>
+                <Label>수신자</Label>
+                <Input placeholder="이메일 주소" value={selectedUser?.email || ''} readOnly />
+              </FormGroup>
+              <FormGroup>
+                <Label>제목</Label>
+                <Input placeholder="메일 제목을 입력하세요" />
+              </FormGroup>
+              <FormGroup>
+                <Label>내용</Label>
+                <Textarea rows={10} placeholder="메일 내용을 입력하세요" />
+              </FormGroup>
+              <ModalActions>
+                <CancelButton onClick={() => setShowEmailModal(false)}>취소</CancelButton>
+                <SaveButton onClick={() => {
+                  alert('메일이 발송되었습니다!');
+                  setShowEmailModal(false);
+                }}>발송하기</SaveButton>
+              </ModalActions>
             </ModalBody>
           </ModalContent>
         </Modal>
