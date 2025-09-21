@@ -108,7 +108,7 @@ const QueryDailyManagement: React.FC = () => {
   const [contentTab, setContentTab] = useState<'guides' | 'questions' | 'templates'>('guides');
   const [guideKeywords, setGuideKeywords] = useState<string[]>(['JWT', 'Stateless', '보안']);
   const [keywordInput, setKeywordInput] = useState('');
-  const [currentOperator, setCurrentOperator] = useState<string>('르네'); // 현재 로그인한 사용자 (임시)
+  const [currentOperator] = useState<string>('르네'); // 현재 로그인한 사용자 (임시)
 
   const { date: todayDate } = getCurrentDateTime();
 
@@ -304,27 +304,27 @@ const QueryDailyManagement: React.FC = () => {
     return latest;
   };
 
-  const getNextAction = (user: User) => {
-    if (user.type === 'LEAD') {
-      switch(user.leadStatus) {
-        case '신청완료':
-          return { label: '챌린지 시작하기', action: 'start_challenge' };
-        case '챌린지진행중':
-          return { label: `Day ${user.currentDay + 1} 질문 발송하기`, action: 'send_question' };
-        case '챌린지완료':
-          return { label: '인터뷰 패스 제안하기', action: 'send_conversion' };
-        case '전환제안발송':
-          return { label: '입금 확인하기', action: 'confirm_payment' };
-        default:
-          return null;
-      }
-    } else {
-      if (user.memberStatus === '구독중') {
-        return { label: '오늘의 질문+답변 발송', action: 'send_premium_content' };
-      }
-      return null;
-    }
-  };
+  // const getNextAction = (user: User) => {
+  //   if (user.type === 'LEAD') {
+  //     switch(user.leadStatus) {
+  //       case '신청완료':
+  //         return { label: '챌린지 시작하기', action: 'start_challenge' };
+  //       case '챌린지진행중':
+  //         return { label: `Day ${user.currentDay + 1} 질문 발송하기`, action: 'send_question' };
+  //       case '챌린지완료':
+  //         return { label: '인터뷰 패스 제안하기', action: 'send_conversion' };
+  //       case '전환제안발송':
+  //         return { label: '입금 확인하기', action: 'confirm_payment' };
+  //       default:
+  //         return null;
+  //     }
+  //   } else {
+  //     if (user.memberStatus === '구독중') {
+  //       return { label: '오늘의 질문+답변 발송', action: 'send_premium_content' };
+  //     }
+  //     return null;
+  //   }
+  // };
 
   const handleOperatorChange = (userId: string, operatorId: string) => {
     setUsers(prevUsers => prevUsers.map(u => {
@@ -346,35 +346,35 @@ const QueryDailyManagement: React.FC = () => {
     }));
   };
 
-  const handleUserAction = (user: User, action: string) => {
-    switch(action) {
-      case 'start_challenge':
-        alert(`${user.name}님의 7일 챌린지를 시작합니다!`);
-        // 상태를 '챌린지진행중'으로 변경
-        break;
-      case 'send_question':
-        setSelectedUser(user);
-        setShowEmailModal(true);
-        // 질문 발송 모달 오픈
-        break;
-      case 'send_conversion':
-        alert(`${user.name}님에게 인터뷰 패스 전환 제안 메일을 발송합니다!`);
-        // 전환 제안 메일 발송
-        break;
-      case 'confirm_payment':
-        setSelectedUser(user);
-        setShowUserDetailModal(true);
-        // 결제 확인 모달 오픈
-        break;
-      case 'send_premium_content':
-        setSelectedUser(user);
-        setShowEmailModal(true);
-        // 프리미엄 콘텐츠 발송 모달
-        break;
-      default:
-        break;
-    }
-  };
+  // const handleUserAction = (user: User, action: string) => {
+  //   switch(action) {
+  //     case 'start_challenge':
+  //       alert(`${user.name}님의 7일 챌린지를 시작합니다!`);
+  //       // 상태를 '챌린지진행중'으로 변경
+  //       break;
+  //     case 'send_question':
+  //       setSelectedUser(user);
+  //       setShowEmailModal(true);
+  //       // 질문 발송 모달 오픈
+  //       break;
+  //     case 'send_conversion':
+  //       alert(`${user.name}님에게 인터뷰 패스 전환 제안 메일을 발송합니다!`);
+  //       // 전환 제안 메일 발송
+  //       break;
+  //     case 'confirm_payment':
+  //       setSelectedUser(user);
+  //       setShowUserDetailModal(true);
+  //       // 결제 확인 모달 오픈
+  //       break;
+  //     case 'send_premium_content':
+  //       setSelectedUser(user);
+  //       setShowEmailModal(true);
+  //       // 프리미엄 콘텐츠 발송 모달
+  //       break;
+  //     default:
+  //       break;
+  //   }
+  // };
 
   const handleUserTypeConversion = (userId: string) => {
     // 리드를 멤버로 전환하는 로직
@@ -1811,10 +1811,10 @@ const ProductBadge = styled.span`
   color: ${({ theme }) => theme.colors.text.primary};
 `;
 
-const ActionButtons = styled.div`
-  display: flex;
-  gap: 4px;
-`;
+// const ActionButtons = styled.div`
+//   display: flex;
+//   gap: 4px;
+// `;
 
 const ActionButton = styled.button<{ primary?: boolean; large?: boolean }>`
   padding: ${({ large }) => large ? '12px 24px' : '6px 10px'};
@@ -2365,12 +2365,12 @@ const ConversionButton = styled.button`
   }
 `;
 
-const NextActionBox = styled.div`
-  padding: 16px;
-  background: ${({ theme }) => theme.colors.gray[50]};
-  border-radius: 8px;
-  text-align: center;
-`;
+// const NextActionBox = styled.div`
+//   padding: 16px;
+//   background: ${({ theme }) => theme.colors.gray[50]};
+//   border-radius: 8px;
+//   text-align: center;
+// `;
 
 const GuideEditorSection = styled.div``;
 
