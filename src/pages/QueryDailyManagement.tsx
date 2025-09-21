@@ -86,6 +86,9 @@ const QueryDailyManagement: React.FC = () => {
   const [showUserDetailModal, setShowUserDetailModal] = useState(false);
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [showAnswerGuideModal, setShowAnswerGuideModal] = useState(false);
+  const [contentTab, setContentTab] = useState<'guides' | 'questions' | 'templates'>('guides');
+  const [guideKeywords, setGuideKeywords] = useState<string[]>(['JWT', 'Stateless', '보안']);
+  const [keywordInput, setKeywordInput] = useState('');
 
   const { date: todayDate } = getCurrentDateTime();
 
@@ -264,9 +267,41 @@ const QueryDailyManagement: React.FC = () => {
     }
   };
 
+  const handleUserAction = (user: User, action: string) => {
+    switch(action) {
+      case 'start_challenge':
+        alert(`${user.name}님의 7일 챌린지를 시작합니다!`);
+        // 상태를 '챌린지진행중'으로 변경
+        break;
+      case 'send_question':
+        setSelectedUser(user);
+        setShowEmailModal(true);
+        // 질문 발송 모달 오픈
+        break;
+      case 'send_conversion':
+        alert(`${user.name}님에게 인터뷰 패스 전환 제안 메일을 발송합니다!`);
+        // 전환 제안 메일 발송
+        break;
+      case 'confirm_payment':
+        setSelectedUser(user);
+        setShowUserDetailModal(true);
+        // 결제 확인 모달 오픈
+        break;
+      case 'send_premium_content':
+        setSelectedUser(user);
+        setShowEmailModal(true);
+        // 프리미엄 콘텐츠 발송 모달
+        break;
+      default:
+        break;
+    }
+  };
+
   const handleUserTypeConversion = (userId: string) => {
     // 리드를 멤버로 전환하는 로직
     console.log('Converting user', userId, 'from LEAD to MEMBER');
+    alert('입금이 확인되어 멤버로 전환되었습니다!');
+    setShowUserDetailModal(false);
   };
 
   const renderDashboard = () => (
@@ -450,7 +485,9 @@ const QueryDailyManagement: React.FC = () => {
                       상세
                     </ActionButton>
                     {nextAction && (
-                      <ActionButton primary>{nextAction.label}</ActionButton>
+                      <ActionButton primary onClick={() => handleUserAction(user, nextAction.action)}>
+                        {nextAction.label}
+                      </ActionButton>
                     )}
                   </ActionButtons>
                 </td>
@@ -472,35 +509,225 @@ const QueryDailyManagement: React.FC = () => {
       </Header>
 
       <ContentTabs>
-        <ContentTab className="active">답변 가이드</ContentTab>
-        <ContentTab>질문 은행</ContentTab>
-        <ContentTab>템플릿</ContentTab>
+        <ContentTab
+          className={contentTab === 'guides' ? 'active' : ''}
+          onClick={() => setContentTab('guides')}
+        >
+          답변 가이드
+        </ContentTab>
+        <ContentTab
+          className={contentTab === 'questions' ? 'active' : ''}
+          onClick={() => setContentTab('questions')}
+        >
+          질문 은행
+        </ContentTab>
+        <ContentTab
+          className={contentTab === 'templates' ? 'active' : ''}
+          onClick={() => setContentTab('templates')}
+        >
+          템플릿
+        </ContentTab>
       </ContentTabs>
 
-      <AnswerGuideSection>
-        <GuideCard>
-          <GuideHeader>
-            <h4>Spring Security JWT 인증 구현 방식</h4>
-            <GuideDate>2024-01-28</GuideDate>
-          </GuideHeader>
-          <GuidePreview>
-            <GuideSection>
-              <SectionLabel>🎯 핵심 키워드</SectionLabel>
-              <KeywordList>
-                <Keyword>JWT</Keyword>
-                <Keyword>Stateless</Keyword>
-                <Keyword>Bearer Token</Keyword>
-              </KeywordList>
-            </GuideSection>
-          </GuidePreview>
-          <GuideActions>
-            <button>편집</button>
-            <button>미리보기</button>
-            <button>발송</button>
-          </GuideActions>
-        </GuideCard>
-      </AnswerGuideSection>
+      {contentTab === 'guides' && (
+        <AnswerGuideSection>
+          <GuideCard>
+            <GuideHeader>
+              <h4>Spring Security JWT 인증 구현 방식</h4>
+              <GuideDate>2024-01-28</GuideDate>
+            </GuideHeader>
+            <GuidePreview>
+              <GuideSection>
+                <SectionLabel>🎯 핵심 키워드</SectionLabel>
+                <KeywordList>
+                  <Keyword>JWT</Keyword>
+                  <Keyword>Stateless</Keyword>
+                  <Keyword>Bearer Token</Keyword>
+                </KeywordList>
+              </GuideSection>
+            </GuidePreview>
+            <GuideActions>
+              <button onClick={() => {
+                setShowAnswerGuideModal(true);
+                alert('Spring Security JWT 답변 가이드를 편집합니다');
+              }}>편집</button>
+              <button onClick={() => alert('답변 가이드 미리보기 창이 열립니다')}>미리보기</button>
+              <button onClick={() => {
+                setShowEmailModal(true);
+                alert('답변 가이드 발송 대상을 선택하세요');
+              }}>발송</button>
+            </GuideActions>
+          </GuideCard>
+
+          <GuideCard>
+            <GuideHeader>
+              <h4>JPA N+1 문제 해결 방법</h4>
+              <GuideDate>2024-01-27</GuideDate>
+            </GuideHeader>
+            <GuidePreview>
+              <GuideSection>
+                <SectionLabel>🎯 핵심 키워드</SectionLabel>
+                <KeywordList>
+                  <Keyword>Fetch Join</Keyword>
+                  <Keyword>@EntityGraph</Keyword>
+                  <Keyword>Batch Size</Keyword>
+                </KeywordList>
+              </GuideSection>
+            </GuidePreview>
+            <GuideActions>
+              <button onClick={() => {
+                setShowAnswerGuideModal(true);
+                alert('JPA N+1 답변 가이드를 편집합니다');
+              }}>편집</button>
+              <button onClick={() => alert('답변 가이드 미리보기 창이 열립니다')}>미리보기</button>
+              <button onClick={() => {
+                setShowEmailModal(true);
+                alert('답변 가이드 발송 대상을 선택하세요');
+              }}>발송</button>
+            </GuideActions>
+          </GuideCard>
+        </AnswerGuideSection>
+      )}
+
+      {contentTab === 'questions' && (
+        <QuestionBankSection>
+          <QuestionCard>
+            <QuestionType>경험 연결형</QuestionType>
+            <QuestionText>가장 어려웠던 버그를 해결한 경험을 공유해주세요</QuestionText>
+            <QuestionTags>
+              <Tag>디버깅</Tag>
+              <Tag>문제해결</Tag>
+              <Tag>All Level</Tag>
+            </QuestionTags>
+          </QuestionCard>
+
+          <QuestionCard>
+            <QuestionType>트레이드오프형</QuestionType>
+            <QuestionText>NoSQL vs SQL 데이터베이스 선택 기준은?</QuestionText>
+            <QuestionTags>
+              <Tag>데이터베이스</Tag>
+              <Tag>아키텍처</Tag>
+              <Tag>Senior</Tag>
+            </QuestionTags>
+          </QuestionCard>
+        </QuestionBankSection>
+      )}
+
+      {contentTab === 'templates' && (
+        <TemplateSection>
+          <TemplateCard>
+            <TemplateHeader>
+              <h4>7일 챌린지 시작 환영 메일</h4>
+              <TemplateType>welcome</TemplateType>
+            </TemplateHeader>
+            <TemplatePreview>
+              안녕하세요 {'{name}'}님! 🎉
+              QueryDaily 7일 챌린지에 오신 것을 환영합니다.
+              내일부터 매일 아침 10시에 맞춤형 면접 질문을...
+            </TemplatePreview>
+            <TemplateActions>
+              <button>편집</button>
+              <button>복사</button>
+            </TemplateActions>
+          </TemplateCard>
+
+          <TemplateCard>
+            <TemplateHeader>
+              <h4>챌린지 완료 축하 메일</h4>
+              <TemplateType>completion</TemplateType>
+            </TemplateHeader>
+            <TemplatePreview>
+              축하합니다 {'{name}'}님! 🏆
+              7일간의 여정을 완주하셨습니다!
+              이제 인터뷰 패스로 더 깊이있는 준비를...
+            </TemplatePreview>
+            <TemplateActions>
+              <button>편집</button>
+              <button>복사</button>
+            </TemplateActions>
+          </TemplateCard>
+        </TemplateSection>
+      )}
     </ContentContainer>
+  );
+
+  const renderEmails = () => (
+    <EmailsContainer>
+      <Header>
+        <div>
+          <h2>메일 발송 관리</h2>
+          <Subtitle>예약 메일과 발송 이력을 관리합니다</Subtitle>
+        </div>
+        <AddButton onClick={() => setShowEmailModal(true)}>
+          + 메일 예약
+        </AddButton>
+      </Header>
+
+      <EmailSections>
+        {/* 오늘 발송 예정 */}
+        <Section>
+          <SectionTitle>
+            <h3>📅 오늘 발송 예정</h3>
+            <Badge>{scheduledEmails.filter(e => e.scheduledDate === todayDate && e.status === 'scheduled').length}건</Badge>
+          </SectionTitle>
+          <EmailGrid>
+            {scheduledEmails
+              .filter(e => e.scheduledDate === todayDate && e.status === 'scheduled')
+              .map(email => (
+                <EmailDetailCard key={email.id}>
+                  <EmailHeader>
+                    <EmailTime>{email.scheduledTime}</EmailTime>
+                    <EmailType type={email.type}>
+                      {email.type === 'daily_question' ? '일일질문' :
+                       email.type === 'answer_guide' ? '답변가이드' :
+                       email.type === 'conversion_offer' ? '전환제안' : email.type}
+                    </EmailType>
+                  </EmailHeader>
+                  <EmailBody>
+                    <EmailTo>To: {email.userName} ({email.userEmail})</EmailTo>
+                    <EmailSubjectLine>{email.subject}</EmailSubjectLine>
+                    <EmailPreview>{email.content}</EmailPreview>
+                  </EmailBody>
+                  <EmailFooter>
+                    <ActionButton onClick={() => handleEmailStatusChange(email.id, 'cancelled')}>
+                      취소
+                    </ActionButton>
+                    <ActionButton primary onClick={() => handleEmailStatusChange(email.id, 'sent')}>
+                      발송 완료
+                    </ActionButton>
+                  </EmailFooter>
+                </EmailDetailCard>
+              ))}
+          </EmailGrid>
+        </Section>
+
+        {/* 발송 완료 */}
+        <Section>
+          <SectionTitle>
+            <h3>✅ 최근 발송 완료</h3>
+          </SectionTitle>
+          <EmailGrid>
+            {scheduledEmails
+              .filter(e => e.status === 'sent')
+              .map(email => (
+                <EmailDetailCard key={email.id} sent>
+                  <EmailHeader>
+                    <EmailTime>{email.scheduledTime}</EmailTime>
+                    <EmailStatus sent>발송완료</EmailStatus>
+                  </EmailHeader>
+                  <EmailBody>
+                    <EmailTo>To: {email.userName} ({email.userEmail})</EmailTo>
+                    <EmailSubjectLine>{email.subject}</EmailSubjectLine>
+                  </EmailBody>
+                  <EmailFooter>
+                    <EmailSentTime>발송: {email.sentAt}</EmailSentTime>
+                  </EmailFooter>
+                </EmailDetailCard>
+              ))}
+          </EmailGrid>
+        </Section>
+      </EmailSections>
+    </EmailsContainer>
   );
 
   const renderAnalytics = () => (
@@ -535,6 +762,22 @@ const QueryDailyManagement: React.FC = () => {
           : email
       )
     );
+  };
+
+  const handleKeywordAdd = () => {
+    if (keywordInput.trim() && !guideKeywords.includes(keywordInput.trim())) {
+      setGuideKeywords([...guideKeywords, keywordInput.trim()]);
+      setKeywordInput('');
+    }
+  };
+
+  const handleKeywordRemove = (keyword: string) => {
+    setGuideKeywords(guideKeywords.filter(k => k !== keyword));
+  };
+
+  const handleGuideSave = () => {
+    alert('답변 가이드가 저장되었습니다!\n키워드: ' + guideKeywords.join(', '));
+    setShowAnswerGuideModal(false);
   };
 
   return (
@@ -585,6 +828,7 @@ const QueryDailyManagement: React.FC = () => {
       <Content>
         {activeTab === 'dashboard' && renderDashboard()}
         {activeTab === 'users' && renderUsers()}
+        {activeTab === 'emails' && renderEmails()}
         {activeTab === 'content' && renderContent()}
         {activeTab === 'analytics' && renderAnalytics()}
       </Content>
@@ -678,7 +922,13 @@ const QueryDailyManagement: React.FC = () => {
                 <DetailLabel>다음 액션</DetailLabel>
                 <NextActionBox>
                   {getNextAction(selectedUser) ? (
-                    <ActionButton primary large>
+                    <ActionButton primary large onClick={() => {
+                      const action = getNextAction(selectedUser);
+                      if (action) {
+                        handleUserAction(selectedUser, action.action);
+                        setShowUserDetailModal(false);
+                      }
+                    }}>
                       {getNextAction(selectedUser)?.label}
                     </ActionButton>
                   ) : (
@@ -714,11 +964,24 @@ const QueryDailyManagement: React.FC = () => {
                 <FormGroup>
                   <Label>2. 핵심 키워드</Label>
                   <KeywordInput>
-                    <Input placeholder="키워드를 입력 후 Enter" />
+                    <Input
+                      placeholder="키워드를 입력 후 Enter"
+                      value={keywordInput}
+                      onChange={(e) => setKeywordInput(e.target.value)}
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleKeywordAdd();
+                        }
+                      }}
+                    />
                     <KeywordList>
-                      <Keyword>JWT</Keyword>
-                      <Keyword>Stateless</Keyword>
-                      <Keyword>보안</Keyword>
+                      {guideKeywords.map((keyword, index) => (
+                        <Keyword key={index} style={{ cursor: 'pointer' }}
+                          onClick={() => handleKeywordRemove(keyword)}>
+                          {keyword} ✕
+                        </Keyword>
+                      ))}
                     </KeywordList>
                   </KeywordInput>
                 </FormGroup>
@@ -767,7 +1030,7 @@ const QueryDailyManagement: React.FC = () => {
 
               <ModalActions>
                 <CancelButton onClick={() => setShowAnswerGuideModal(false)}>취소</CancelButton>
-                <SaveButton>저장하기</SaveButton>
+                <SaveButton onClick={handleGuideSave}>저장하기</SaveButton>
               </ModalActions>
             </ModalBody>
           </ModalContent>
@@ -1344,6 +1607,201 @@ const GuideActions = styled.div`
       background: ${({ theme }) => theme.colors.gray[50]};
     }
   }
+`;
+
+// Question Bank Components
+const QuestionBankSection = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  gap: 20px;
+`;
+
+const QuestionCard = styled.div`
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  border: 1px solid ${({ theme }) => theme.colors.gray[200]};
+`;
+
+const QuestionType = styled.div`
+  display: inline-block;
+  padding: 4px 10px;
+  background: #e0f2fe;
+  color: #0369a1;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 12px;
+`;
+
+const QuestionText = styled.h4`
+  font-size: 16px;
+  font-weight: 600;
+  color: ${({ theme }) => theme.colors.text.primary};
+  margin-bottom: 12px;
+  line-height: 1.4;
+`;
+
+const QuestionTags = styled.div`
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+`;
+
+const Tag = styled.span`
+  padding: 4px 10px;
+  background: ${({ theme }) => theme.colors.gray[100]};
+  border-radius: 4px;
+  font-size: 12px;
+  color: ${({ theme }) => theme.colors.text.secondary};
+`;
+
+// Template Components
+const TemplateSection = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  gap: 20px;
+`;
+
+const TemplateCard = styled.div`
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  border: 1px solid ${({ theme }) => theme.colors.gray[200]};
+`;
+
+const TemplateHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+
+  h4 {
+    font-size: 16px;
+    font-weight: 600;
+  }
+`;
+
+const TemplateType = styled.span`
+  padding: 4px 10px;
+  background: #f0fdf4;
+  color: #166534;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+`;
+
+const TemplatePreview = styled.div`
+  font-size: 14px;
+  color: ${({ theme }) => theme.colors.text.secondary};
+  line-height: 1.5;
+  margin-bottom: 16px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+`;
+
+const TemplateActions = styled.div`
+  display: flex;
+  gap: 8px;
+
+  button {
+    flex: 1;
+    padding: 8px;
+    background: white;
+    border: 1px solid ${({ theme }) => theme.colors.gray[300]};
+    border-radius: 4px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:hover {
+      background: ${({ theme }) => theme.colors.gray[50]};
+    }
+  }
+`;
+
+// Email Tab Components
+const EmailsContainer = styled.div``;
+
+const EmailSections = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+`;
+
+const Section = styled.section``;
+
+const EmailGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 20px;
+`;
+
+const EmailDetailCard = styled.div<{ sent?: boolean }>`
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  border: 1px solid ${({ theme, sent }) =>
+    sent ? theme.colors.gray[200] : theme.colors.primary};
+  opacity: ${({ sent }) => sent ? 0.7 : 1};
+`;
+
+const EmailHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+`;
+
+const EmailBody = styled.div`
+  margin-bottom: 16px;
+`;
+
+const EmailTo = styled.div`
+  font-size: 13px;
+  color: ${({ theme }) => theme.colors.text.secondary};
+  margin-bottom: 8px;
+`;
+
+const EmailSubjectLine = styled.div`
+  font-size: 15px;
+  font-weight: 600;
+  color: ${({ theme }) => theme.colors.text.primary};
+  margin-bottom: 8px;
+`;
+
+const EmailPreview = styled.div`
+  font-size: 13px;
+  color: ${({ theme }) => theme.colors.text.secondary};
+  line-height: 1.5;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+`;
+
+const EmailFooter = styled.div`
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+`;
+
+const EmailStatus = styled.span<{ sent?: boolean }>`
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  background: ${({ sent }) => sent ? '#e0f2fe' : '#fef3c7'};
+  color: ${({ sent }) => sent ? '#0369a1' : '#a16207'};
+`;
+
+const EmailSentTime = styled.span`
+  font-size: 12px;
+  color: ${({ theme }) => theme.colors.text.tertiary};
 `;
 
 // Analytics Components
