@@ -2202,80 +2202,80 @@ const SaveButton = styled.button`
   }
 `;
 
-const EmailTypeSelector = styled.div`
-  display: flex;
-  gap: 12px;
-  margin-bottom: 24px;
-`;
+// const EmailTypeSelector = styled.div`
+//   display: flex;
+//   gap: 12px;
+//   margin-bottom: 24px;
+// `;
 
-const EmailTypeButton = styled.button<{ active: boolean }>`
-  flex: 1;
-  padding: 12px;
-  background: ${({ active, theme }) => active ? theme.colors.primary : 'white'};
-  color: ${({ active, theme }) => active ? 'white' : theme.colors.text.primary};
-  border: 1px solid ${({ theme }) => theme.colors.primary};
-  border-radius: 6px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
+// const EmailTypeButton = styled.button<{ active: boolean }>`
+//   flex: 1;
+//   padding: 12px;
+//   background: ${({ active, theme }) => active ? theme.colors.primary : 'white'};
+//   color: ${({ active, theme }) => active ? 'white' : theme.colors.text.primary};
+//   border: 1px solid ${({ theme }) => theme.colors.primary};
+//   border-radius: 6px;
+//   font-size: 14px;
+//   font-weight: 500;
+//   cursor: pointer;
+//   transition: all 0.2s;
+//
+//   &:hover {
+//     opacity: 0.9;
+//   }
+// `;
 
-  &:hover {
-    opacity: 0.9;
-  }
-`;
+// const RecipientsList = styled.div`
+//   max-height: 200px;
+//   overflow-y: auto;
+//   border: 1px solid ${({ theme }) => theme.colors.gray[200]};
+//   border-radius: 6px;
+//   padding: 12px;
+//
+//   label {
+//     display: flex;
+//     align-items: center;
+//     gap: 8px;
+//     padding: 8px;
+//     cursor: pointer;
+//     font-size: 14px;
+//
+//     &:hover {
+//       background: ${({ theme }) => theme.colors.gray[50]};
+//     }
+//
+//     input[type="checkbox"] {
+//       cursor: pointer;
+//     }
+//   }
+// `;
 
-const RecipientsList = styled.div`
-  max-height: 200px;
-  overflow-y: auto;
-  border: 1px solid ${({ theme }) => theme.colors.gray[200]};
-  border-radius: 6px;
-  padding: 12px;
+// const ErrorMessage = styled.div`
+//   padding: 12px;
+//   background: #fef2f2;
+//   border: 1px solid #fecaca;
+//   border-radius: 6px;
+//   color: #dc2626;
+//   font-size: 14px;
+//   margin-top: 16px;
+// `;
 
-  label {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px;
-    cursor: pointer;
-    font-size: 14px;
+// const SuccessMessage = styled.div`
+//   padding: 12px;
+//   background: #f0fdf4;
+//   border: 1px solid #86efac;
+//   border-radius: 6px;
+//   color: #16a34a;
+//   font-size: 14px;
+//   margin-top: 16px;
+// `;
 
-    &:hover {
-      background: ${({ theme }) => theme.colors.gray[50]};
-    }
-
-    input[type="checkbox"] {
-      cursor: pointer;
-    }
-  }
-`;
-
-const ErrorMessage = styled.div`
-  padding: 12px;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  border-radius: 6px;
-  color: #dc2626;
-  font-size: 14px;
-  margin-top: 16px;
-`;
-
-const SuccessMessage = styled.div`
-  padding: 12px;
-  background: #f0fdf4;
-  border: 1px solid #86efac;
-  border-radius: 6px;
-  color: #16a34a;
-  font-size: 14px;
-  margin-top: 16px;
-`;
-
-const ModalFooter = styled.div`
-  display: flex;
-  gap: 12px;
-  justify-content: flex-end;
-  padding: 20px;
-  border-top: 1px solid ${({ theme }) => theme.colors.gray[200]};
-`;
+// const ModalFooter = styled.div`
+//   display: flex;
+//   gap: 12px;
+//   justify-content: flex-end;
+//   padding: 20px;
+//   border-top: 1px solid ${({ theme }) => theme.colors.gray[200]};
+// `;
 
 export default QueryDailyManagement;
