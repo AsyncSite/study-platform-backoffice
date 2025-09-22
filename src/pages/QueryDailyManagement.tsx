@@ -1651,14 +1651,15 @@ const AnswerGuideSection = styled.div`
   gap: 20px;
 `;
 
-const GuideCard = styled.div`
+// Unused styled components - commented for future use
+// const GuideCard = styled.div`
   background: white;
   border-radius: 8px;
   padding: 20px;
   border: 1px solid ${({ theme }) => theme.colors.gray[200]};
 `;
 
-const GuideHeader = styled.div`
+// const GuideHeader = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: start;
@@ -1670,20 +1671,20 @@ const GuideHeader = styled.div`
   }
 `;
 
-const GuideDate = styled.span`
+// const GuideDate = styled.span`
   font-size: 12px;
   color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
-const GuidePreview = styled.div`
+// const GuidePreview = styled.div`
   margin-bottom: 16px;
 `;
 
-const GuideSection = styled.div`
+// const GuideSection = styled.div`
   margin-bottom: 12px;
 `;
 
-const SectionLabel = styled.div`
+// const SectionLabel = styled.div`
   font-size: 13px;
   font-weight: 600;
   color: ${({ theme }) => theme.colors.text.secondary};
@@ -1704,7 +1705,7 @@ const Keyword = styled.span`
   color: ${({ theme }) => theme.colors.text.primary};
 `;
 
-const GuideActions = styled.div`
+// const GuideActions = styled.div`
   display: flex;
   gap: 8px;
 
@@ -1731,14 +1732,14 @@ const QuestionBankSection = styled.div`
   gap: 20px;
 `;
 
-const QuestionCard = styled.div`
+// const QuestionCard = styled.div`
   background: white;
   border-radius: 8px;
   padding: 20px;
   border: 1px solid ${({ theme }) => theme.colors.gray[200]};
 `;
 
-const QuestionType = styled.div`
+// const QuestionType = styled.div`
   display: inline-block;
   padding: 4px 10px;
   background: #e0f2fe;
@@ -1749,7 +1750,7 @@ const QuestionType = styled.div`
   margin-bottom: 12px;
 `;
 
-const QuestionText = styled.h4`
+// const QuestionText = styled.h4`
   font-size: 16px;
   font-weight: 600;
   color: ${({ theme }) => theme.colors.text.primary};
@@ -1757,13 +1758,13 @@ const QuestionText = styled.h4`
   line-height: 1.4;
 `;
 
-const QuestionTags = styled.div`
+// const QuestionTags = styled.div`
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
 `;
 
-const Tag = styled.span`
+// const Tag = styled.span`
   padding: 4px 10px;
   background: ${({ theme }) => theme.colors.gray[100]};
   border-radius: 4px;
@@ -1772,20 +1773,20 @@ const Tag = styled.span`
 `;
 
 // Template Components
-const TemplateSection = styled.div`
+// const TemplateSection = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
   gap: 20px;
 `;
 
-const TemplateCard = styled.div`
+// const TemplateCard = styled.div`
   background: white;
   border-radius: 8px;
   padding: 20px;
   border: 1px solid ${({ theme }) => theme.colors.gray[200]};
 `;
 
-const TemplateHeader = styled.div`
+// const TemplateHeader = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -1797,7 +1798,7 @@ const TemplateHeader = styled.div`
   }
 `;
 
-const TemplateType = styled.span`
+// const TemplateType = styled.span`
   padding: 4px 10px;
   background: #f0fdf4;
   color: #166534;
@@ -1806,7 +1807,7 @@ const TemplateType = styled.span`
   font-weight: 500;
 `;
 
-const TemplatePreview = styled.div`
+// const TemplatePreview = styled.div`
   font-size: 14px;
   color: ${({ theme }) => theme.colors.text.secondary};
   line-height: 1.5;
@@ -1818,7 +1819,7 @@ const TemplatePreview = styled.div`
   -webkit-box-orient: vertical;
 `;
 
-const TemplateActions = styled.div`
+// const TemplateActions = styled.div`
   display: flex;
   gap: 8px;
 
