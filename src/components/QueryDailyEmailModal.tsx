@@ -23,6 +23,49 @@ export const EmailSendModal = memo(({
   const [scheduledDate, setScheduledDate] = useState('');
   const [scheduledTime, setScheduledTime] = useState('');
 
+  // Helper function to set quick schedule times
+  const setQuickSchedule = (minutes: number) => {
+    const now = new Date();
+    const scheduled = new Date(now.getTime() + minutes * 60000);
+
+    // Format date as YYYY-MM-DD
+    const dateStr = scheduled.toISOString().split('T')[0];
+
+    // Format time as HH:MM (rounded to nearest 15 minutes)
+    const roundedMinutes = Math.ceil(scheduled.getMinutes() / 15) * 15;
+    scheduled.setMinutes(roundedMinutes);
+    scheduled.setSeconds(0);
+
+    const hours = scheduled.getHours().toString().padStart(2, '0');
+    const mins = scheduled.getMinutes().toString().padStart(2, '0');
+    const timeStr = `${hours}:${mins}`;
+
+    setScheduledDate(dateStr);
+    setScheduledTime(timeStr);
+    setIsScheduled(true);
+  };
+
+  // Get relative time string
+  const getRelativeTime = (dateStr: string, timeStr: string): string => {
+    if (!dateStr || !timeStr) return '';
+
+    const scheduled = new Date(`${dateStr}T${timeStr}:00`);
+    const now = new Date();
+    const diffMs = scheduled.getTime() - now.getTime();
+    const diffMins = Math.round(diffMs / 60000);
+
+    if (diffMins < 60) {
+      return `(${diffMins}분 후)`;
+    } else if (diffMins < 1440) {
+      const hours = Math.floor(diffMins / 60);
+      const mins = diffMins % 60;
+      return mins > 0 ? `(${hours}시간 ${mins}분 후)` : `(${hours}시간 후)`;
+    } else {
+      const days = Math.floor(diffMins / 1440);
+      return `(${days}일 후)`;
+    }
+  };
+
   const [questionData, setQuestionData] = useState({
     question: '',
     hint: '',
@@ -63,6 +106,7 @@ export const EmailSendModal = memo(({
         return;
       }
 
+      // Parse as KST time
       const scheduledDateTime = new Date(`${scheduledDate}T${scheduledTime}:00`);
       const now = new Date();
 
@@ -71,7 +115,9 @@ export const EmailSendModal = memo(({
         return;
       }
 
-      scheduledAt = scheduledDateTime.toISOString();
+      // Convert to ISO string (will be handled as KST on server)
+      // Add timezone information comment for clarity
+      scheduledAt = scheduledDateTime.toISOString(); // Note: Server should interpret this as KST
     }
 
     setSendingEmail(true);
@@ -97,7 +143,7 @@ export const EmailSendModal = memo(({
           scheduledAt
         );
         const successMessage = isScheduled
-          ? `${recipientEmail}로 ${scheduledDate} ${scheduledTime}에 발송 예약되었습니다.`
+          ? `${recipientEmail}로 ${scheduledDate} ${scheduledTime} ${getRelativeTime(scheduledDate, scheduledTime)} KST에 발송 예약되었습니다.`
           : `${recipientEmail}로 질문을 발송했습니다.`;
         setEmailSuccess(successMessage);
       } else {
@@ -118,7 +164,7 @@ export const EmailSendModal = memo(({
           scheduledAt
         );
         const successMessage = isScheduled
-          ? `${recipientEmail}로 ${scheduledDate} ${scheduledTime}에 발송 예약되었습니다.`
+          ? `${recipientEmail}로 ${scheduledDate} ${scheduledTime} ${getRelativeTime(scheduledDate, scheduledTime)} KST에 발송 예약되었습니다.`
           : `${recipientEmail}로 답변 가이드를 발송했습니다.`;
         setEmailSuccess(successMessage);
       }
@@ -210,25 +256,51 @@ export const EmailSendModal = memo(({
           </FormGroup>
 
           {isScheduled && (
-            <FormRow>
+            <>
               <FormGroup>
-                <Label>발송 날짜 *</Label>
-                <Input
-                  type="date"
-                  value={scheduledDate}
-                  onChange={e => setScheduledDate(e.target.value)}
-                  min={new Date().toISOString().split('T')[0]}
-                />
+                <Label>빠른 선택</Label>
+                <QuickSelectButtons>
+                  <QuickButton onClick={() => setQuickSchedule(30)}>30분 후</QuickButton>
+                  <QuickButton onClick={() => setQuickSchedule(60)}>1시간 후</QuickButton>
+                  <QuickButton onClick={() => setQuickSchedule(120)}>2시간 후</QuickButton>
+                  <QuickButton onClick={() => {
+                    const tomorrow = new Date();
+                    tomorrow.setDate(tomorrow.getDate() + 1);
+                    tomorrow.setHours(9, 0, 0, 0);
+                    const now = new Date();
+                    const diffMinutes = Math.floor((tomorrow.getTime() - now.getTime()) / 60000);
+                    setQuickSchedule(diffMinutes);
+                  }}>내일 오전 9시</QuickButton>
+                </QuickSelectButtons>
               </FormGroup>
-              <FormGroup>
-                <Label>발송 시간 *</Label>
-                <Input
-                  type="time"
-                  value={scheduledTime}
-                  onChange={e => setScheduledTime(e.target.value)}
-                />
-              </FormGroup>
-            </FormRow>
+
+              <FormRow>
+                <FormGroup>
+                  <Label>발송 날짜 * (KST)</Label>
+                  <Input
+                    type="date"
+                    value={scheduledDate}
+                    onChange={e => setScheduledDate(e.target.value)}
+                    min={new Date().toISOString().split('T')[0]}
+                  />
+                </FormGroup>
+                <FormGroup>
+                  <Label>발송 시간 * (KST) {getRelativeTime(scheduledDate, scheduledTime)}</Label>
+                  <Input
+                    type="time"
+                    value={scheduledTime}
+                    onChange={e => {
+                      // Round to nearest 15 minutes
+                      const [hours, minutes] = e.target.value.split(':');
+                      const roundedMinutes = Math.round(parseInt(minutes) / 15) * 15;
+                      const formattedTime = `${hours}:${roundedMinutes.toString().padStart(2, '0')}`;
+                      setScheduledTime(formattedTime);
+                    }}
+                    step="900"  // 15 minutes in seconds
+                  />
+                </FormGroup>
+              </FormRow>
+            </>
           )}
 
           {emailModalType === 'question' && (
@@ -665,5 +737,28 @@ const ToggleOption = styled.label<{ selected: boolean }>`
     font-size: 14px;
     font-weight: ${({ selected }) => selected ? '500' : '400'};
     color: ${({ theme, selected }) => selected ? theme.colors.primary : theme.colors.text.primary};
+  }
+`;
+
+const QuickSelectButtons = styled.div`
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+`;
+
+const QuickButton = styled.button`
+  padding: 8px 16px;
+  border: 1px solid ${({ theme }) => theme.colors.primary};
+  border-radius: 6px;
+  background: white;
+  color: ${({ theme }) => theme.colors.primary};
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: ${({ theme }) => theme.colors.primary};
+    color: white;
   }
 `;
