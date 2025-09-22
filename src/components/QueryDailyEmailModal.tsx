@@ -1,6 +1,8 @@
-import { useState, memo } from 'react';
+import { useState, memo, useEffect } from 'react';
 import styled from 'styled-components';
 import emailService from '../services/emailService';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday, addMonths, subMonths, getDay, isBefore, startOfToday } from 'date-fns';
+import { ko } from 'date-fns/locale';
 
 interface EmailSendModalProps {
   showEmailModal: boolean;
@@ -22,6 +24,27 @@ export const EmailSendModal = memo(({
   const [isScheduled, setIsScheduled] = useState(false);
   const [scheduledDate, setScheduledDate] = useState('');
   const [scheduledTime, setScheduledTime] = useState('');
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as Element;
+      if (!target.closest('.date-picker-wrapper')) {
+        setShowCalendar(false);
+      }
+      if (!target.closest('.time-picker-wrapper')) {
+        setShowTimePicker(false);
+      }
+    };
+
+    if (showCalendar || showTimePicker) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [showCalendar, showTimePicker]);
 
   // Helper function to set quick schedule times
   const setQuickSchedule = (minutes: number) => {
@@ -64,6 +87,61 @@ export const EmailSendModal = memo(({
       const days = Math.floor(diffMins / 1440);
       return `(${days}일 후)`;
     }
+  };
+
+  // Generate calendar days
+  const generateCalendarDays = () => {
+    const start = startOfMonth(currentMonth);
+    const end = endOfMonth(currentMonth);
+    const days = eachDayOfInterval({ start, end });
+
+    // Add empty cells for alignment
+    const startDayOfWeek = getDay(start);
+    const emptyDays = Array(startDayOfWeek).fill(null);
+
+    return [...emptyDays, ...days];
+  };
+
+  // Generate time options (15-minute intervals)
+  const generateTimeOptions = () => {
+    const times = [];
+    for (let hour = 0; hour < 24; hour++) {
+      for (let minute = 0; minute < 60; minute += 15) {
+        const h = hour.toString().padStart(2, '0');
+        const m = minute.toString().padStart(2, '0');
+        times.push(`${h}:${m}`);
+      }
+    }
+    return times;
+  };
+
+  // Handle date selection
+  const handleDateSelect = (date: Date) => {
+    setScheduledDate(format(date, 'yyyy-MM-dd'));
+    setShowCalendar(false);
+  };
+
+  // Handle time selection
+  const handleTimeSelect = (time: string) => {
+    setScheduledTime(time);
+    setShowTimePicker(false);
+  };
+
+  // Format display date
+  const getDisplayDate = () => {
+    if (!scheduledDate) return '날짜를 선택하세요';
+    const date = new Date(scheduledDate);
+    return format(date, 'M월 d일 (EEEE)', { locale: ko });
+  };
+
+  // Format display time
+  const getDisplayTime = () => {
+    if (!scheduledTime) return '시간을 선택하세요';
+    const [hours, minutes] = scheduledTime.split(':');
+    const hour = parseInt(hours);
+    const period = hour < 12 ? '오전' : '오후';
+    const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+    return `${period} ${displayHour}:${minutes}`;
   };
 
   const [questionData, setQuestionData] = useState({
@@ -277,27 +355,82 @@ export const EmailSendModal = memo(({
               <FormRow>
                 <FormGroup>
                   <Label>발송 날짜 * (KST)</Label>
-                  <Input
-                    type="date"
-                    value={scheduledDate}
-                    onChange={e => setScheduledDate(e.target.value)}
-                    min={new Date().toISOString().split('T')[0]}
-                  />
+                  <DatePickerWrapper className="date-picker-wrapper">
+                    <DateDisplay onClick={() => setShowCalendar(!showCalendar)}>
+                      <CalendarIcon>📅</CalendarIcon>
+                      <span>{getDisplayDate()}</span>
+                      {scheduledDate && <TimeInfo>{getRelativeTime(scheduledDate, scheduledTime)}</TimeInfo>}
+                    </DateDisplay>
+
+                    {showCalendar && (
+                      <CalendarDropdown>
+                        <CalendarHeader>
+                          <NavButton onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}>‹</NavButton>
+                          <MonthTitle>{format(currentMonth, 'yyyy년 M월', { locale: ko })}</MonthTitle>
+                          <NavButton onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}>›</NavButton>
+                        </CalendarHeader>
+
+                        <WeekDaysRow>
+                          {['일', '월', '화', '수', '목', '금', '토'].map(day => (
+                            <WeekDay key={day}>{day}</WeekDay>
+                          ))}
+                        </WeekDaysRow>
+
+                        <DaysGrid>
+                          {generateCalendarDays().map((day, index) => {
+                            if (!day) return <EmptyDay key={`empty-${index}`} />;
+
+                            const dateStr = format(day, 'yyyy-MM-dd');
+                            const isSelected = scheduledDate === dateStr;
+                            const isPast = isBefore(day, startOfToday());
+                            const isCurrentDay = isToday(day);
+
+                            return (
+                              <DayCell
+                                key={dateStr}
+                                onClick={() => !isPast && handleDateSelect(day)}
+                                $isSelected={isSelected}
+                                $isToday={isCurrentDay}
+                                $isPast={isPast}
+                                disabled={isPast}
+                              >
+                                {format(day, 'd')}
+                              </DayCell>
+                            );
+                          })}
+                        </DaysGrid>
+                      </CalendarDropdown>
+                    )}
+                  </DatePickerWrapper>
                 </FormGroup>
+
                 <FormGroup>
-                  <Label>발송 시간 * (KST) {getRelativeTime(scheduledDate, scheduledTime)}</Label>
-                  <Input
-                    type="time"
-                    value={scheduledTime}
-                    onChange={e => {
-                      // Round to nearest 15 minutes
-                      const [hours, minutes] = e.target.value.split(':');
-                      const roundedMinutes = Math.round(parseInt(minutes) / 15) * 15;
-                      const formattedTime = `${hours}:${roundedMinutes.toString().padStart(2, '0')}`;
-                      setScheduledTime(formattedTime);
-                    }}
-                    step="900"  // 15 minutes in seconds
-                  />
+                  <Label>발송 시간 * (KST)</Label>
+                  <TimePickerWrapper className="time-picker-wrapper">
+                    <DateDisplay onClick={() => setShowTimePicker(!showTimePicker)}>
+                      <CalendarIcon>🕐</CalendarIcon>
+                      <span>{getDisplayTime()}</span>
+                    </DateDisplay>
+
+                    {showTimePicker && (
+                      <TimeDropdown>
+                        <TimeGrid>
+                          {generateTimeOptions().map(time => {
+                            const isSelected = scheduledTime === time;
+                            return (
+                              <TimeOption
+                                key={time}
+                                onClick={() => handleTimeSelect(time)}
+                                $isSelected={isSelected}
+                              >
+                                {time.replace(':', ' : ')}
+                              </TimeOption>
+                            );
+                          })}
+                        </TimeGrid>
+                      </TimeDropdown>
+                    )}
+                  </TimePickerWrapper>
                 </FormGroup>
               </FormRow>
             </>
@@ -747,18 +880,224 @@ const QuickSelectButtons = styled.div`
 `;
 
 const QuickButton = styled.button`
-  padding: 8px 16px;
-  border: 1px solid ${({ theme }) => theme.colors.primary};
-  border-radius: 6px;
+  padding: 10px 18px;
+  border: 2px solid ${({ theme }) => theme.colors.gray[200]};
+  border-radius: 10px;
   background: white;
-  color: ${({ theme }) => theme.colors.primary};
+  color: ${({ theme }) => theme.colors.text.primary};
   font-size: 13px;
   font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 0;
+    height: 100%;
+    background: ${({ theme }) => theme.colors.primary};
+    transition: width 0.3s ease;
+    z-index: -1;
+  }
+
+  &:hover {
+    border-color: ${({ theme }) => theme.colors.primary};
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px ${({ theme }) => theme.colors.primary}20;
+
+    &::before {
+      width: 100%;
+    }
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+`;
+
+const DatePickerWrapper = styled.div`
+  position: relative;
+`;
+
+const TimePickerWrapper = styled.div`
+  position: relative;
+`;
+
+const DateDisplay = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid ${({ theme }) => theme.colors.gray[300]};
+  border-radius: 8px;
+  background: white;
   cursor: pointer;
   transition: all 0.2s;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.primary};
-    color: white;
+    border-color: ${({ theme }) => theme.colors.primary};
+    background: ${({ theme }) => theme.colors.gray[50]};
+  }
+
+  span {
+    font-size: 14px;
+    color: ${({ theme }) => theme.colors.text.primary};
+    flex: 1;
+  }
+`;
+
+const CalendarIcon = styled.span`
+  font-size: 16px;
+`;
+
+const TimeInfo = styled.span`
+  color: ${({ theme }) => theme.colors.primary};
+  font-size: 12px;
+  font-weight: 500;
+`;
+
+const CalendarDropdown = styled.div`
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  width: 320px;
+  background: white;
+  border: 1px solid ${({ theme }) => theme.colors.gray[200]};
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+  z-index: 1001;
+  padding: 16px;
+`;
+
+const CalendarHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+`;
+
+const NavButton = styled.button`
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: ${({ theme }) => theme.colors.gray[100]};
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 18px;
+  color: ${({ theme }) => theme.colors.text.secondary};
+  transition: all 0.2s;
+
+  &:hover {
+    background: ${({ theme }) => theme.colors.gray[200]};
+  }
+`;
+
+const MonthTitle = styled.h4`
+  font-size: 16px;
+  font-weight: 600;
+  color: ${({ theme }) => theme.colors.text.primary};
+`;
+
+const WeekDaysRow = styled.div`
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  margin-bottom: 8px;
+`;
+
+const WeekDay = styled.div`
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: ${({ theme }) => theme.colors.text.secondary};
+  padding: 4px;
+`;
+
+const DaysGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+`;
+
+const EmptyDay = styled.div``;
+
+const DayCell = styled.button<{ $isSelected: boolean; $isToday: boolean; $isPast: boolean }>`
+  aspect-ratio: 1;
+  border: none;
+  border-radius: 8px;
+  background: ${({ $isSelected, $isToday, theme }) =>
+    $isSelected ? theme.colors.primary : $isToday ? theme.colors.gray[100] : 'white'};
+  color: ${({ $isSelected, $isPast, theme }) =>
+    $isSelected ? 'white' : $isPast ? theme.colors.text.tertiary : theme.colors.text.primary};
+  cursor: ${({ $isPast }) => ($isPast ? 'not-allowed' : 'pointer')};
+  font-size: 14px;
+  font-weight: ${({ $isToday }) => ($isToday ? '600' : '400')};
+  transition: all 0.2s;
+
+  &:hover:not(:disabled) {
+    background: ${({ $isSelected, theme }) =>
+      $isSelected ? theme.colors.primaryDark : theme.colors.gray[100]};
+  }
+`;
+
+const TimeDropdown = styled.div`
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  max-height: 300px;
+  overflow-y: auto;
+  background: white;
+  border: 1px solid ${({ theme }) => theme.colors.gray[200]};
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+  z-index: 1001;
+  padding: 8px;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: ${({ theme }) => theme.colors.gray[100]};
+    border-radius: 3px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: ${({ theme }) => theme.colors.gray[400]};
+    border-radius: 3px;
+
+    &:hover {
+      background: ${({ theme }) => theme.colors.gray[500]};
+    }
+  }
+`;
+
+const TimeGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+`;
+
+const TimeOption = styled.button<{ $isSelected: boolean }>`
+  padding: 8px 4px;
+  border: none;
+  border-radius: 6px;
+  background: ${({ $isSelected, theme }) =>
+    $isSelected ? theme.colors.primary : theme.colors.gray[50]};
+  color: ${({ $isSelected, theme }) => ($isSelected ? 'white' : theme.colors.text.primary)};
+  font-size: 12px;
+  font-weight: ${({ $isSelected }) => ($isSelected ? '500' : '400')};
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: ${({ $isSelected, theme }) =>
+      $isSelected ? theme.colors.primaryDark : theme.colors.gray[100]};
   }
 `;
