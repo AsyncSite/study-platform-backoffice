@@ -19,6 +19,9 @@ export const EmailSendModal = memo(({
   const [sendingEmail, setSendingEmail] = useState(false);
   const [emailError, setEmailError] = useState<string | null>(null);
   const [emailSuccess, setEmailSuccess] = useState<string | null>(null);
+  const [isScheduled, setIsScheduled] = useState(false);
+  const [scheduledDate, setScheduledDate] = useState('');
+  const [scheduledTime, setScheduledTime] = useState('');
 
   const [questionData, setQuestionData] = useState({
     question: '',
@@ -52,6 +55,25 @@ export const EmailSendModal = memo(({
       return;
     }
 
+    // Validate scheduled date/time if scheduling is enabled
+    let scheduledAt: string | undefined;
+    if (isScheduled) {
+      if (!scheduledDate || !scheduledTime) {
+        setEmailError('예약 날짜와 시간을 모두 선택해주세요.');
+        return;
+      }
+
+      const scheduledDateTime = new Date(`${scheduledDate}T${scheduledTime}:00`);
+      const now = new Date();
+
+      if (scheduledDateTime <= now) {
+        setEmailError('예약 시간은 현재 시간 이후여야 합니다.');
+        return;
+      }
+
+      scheduledAt = scheduledDateTime.toISOString();
+    }
+
     setSendingEmail(true);
     setEmailError(null);
     setEmailSuccess(null);
@@ -71,9 +93,13 @@ export const EmailSendModal = memo(({
           questionData.userName || recipientEmail.split('@')[0],
           questionData.currentDay,
           questionData.totalDays,
-          questionData.tomorrowTopic || '다음 주제'
+          questionData.tomorrowTopic || '다음 주제',
+          scheduledAt
         );
-        setEmailSuccess(`${recipientEmail}로 질문을 발송했습니다.`);
+        const successMessage = isScheduled
+          ? `${recipientEmail}로 ${scheduledDate} ${scheduledTime}에 발송 예약되었습니다.`
+          : `${recipientEmail}로 질문을 발송했습니다.`;
+        setEmailSuccess(successMessage);
       } else {
         if (!answerGuideData.question || !answerGuideData.analysis) {
           setEmailError('질문과 질문 해부는 필수 항목입니다.');
@@ -88,9 +114,13 @@ export const EmailSendModal = memo(({
           answerGuideData.keywords.filter(k => k),
           answerGuideData.starStructure,
           answerGuideData.personaAnswers,
-          answerGuideData.followUpQuestions.filter(q => q)
+          answerGuideData.followUpQuestions.filter(q => q),
+          scheduledAt
         );
-        setEmailSuccess(`${recipientEmail}로 답변 가이드를 발송했습니다.`);
+        const successMessage = isScheduled
+          ? `${recipientEmail}로 ${scheduledDate} ${scheduledTime}에 발송 예약되었습니다.`
+          : `${recipientEmail}로 답변 가이드를 발송했습니다.`;
+        setEmailSuccess(successMessage);
       }
 
       // Clear form data only on success
@@ -156,6 +186,50 @@ export const EmailSendModal = memo(({
               placeholder="example@email.com"
             />
           </FormGroup>
+
+          <FormGroup>
+            <Label>발송 방식</Label>
+            <ScheduleToggle>
+              <ToggleOption selected={!isScheduled} onClick={() => setIsScheduled(false)}>
+                <input
+                  type="radio"
+                  checked={!isScheduled}
+                  onChange={() => setIsScheduled(false)}
+                />
+                <span>즉시 발송</span>
+              </ToggleOption>
+              <ToggleOption selected={isScheduled} onClick={() => setIsScheduled(true)}>
+                <input
+                  type="radio"
+                  checked={isScheduled}
+                  onChange={() => setIsScheduled(true)}
+                />
+                <span>예약 발송</span>
+              </ToggleOption>
+            </ScheduleToggle>
+          </FormGroup>
+
+          {isScheduled && (
+            <FormRow>
+              <FormGroup>
+                <Label>발송 날짜 *</Label>
+                <Input
+                  type="date"
+                  value={scheduledDate}
+                  onChange={e => setScheduledDate(e.target.value)}
+                  min={new Date().toISOString().split('T')[0]}
+                />
+              </FormGroup>
+              <FormGroup>
+                <Label>발송 시간 *</Label>
+                <Input
+                  type="time"
+                  value={scheduledTime}
+                  onChange={e => setScheduledTime(e.target.value)}
+                />
+              </FormGroup>
+            </FormRow>
+          )}
 
           {emailModalType === 'question' && (
             <>
@@ -555,5 +629,41 @@ const SaveButton = styled.button`
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+  }
+`;
+
+const ScheduleToggle = styled.div`
+  display: flex;
+  gap: 16px;
+  padding: 8px;
+  background: ${({ theme }) => theme.colors.gray[50]};
+  border-radius: 8px;
+`;
+
+const ToggleOption = styled.label<{ selected: boolean }>`
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  border: 2px solid ${({ theme, selected }) =>
+    selected ? theme.colors.primary : theme.colors.gray[300]};
+  border-radius: 6px;
+  background: ${({ selected }) => selected ? 'rgba(99, 102, 241, 0.05)' : 'white'};
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: ${({ theme }) => theme.colors.primary};
+  }
+
+  input[type="radio"] {
+    margin: 0;
+  }
+
+  span {
+    font-size: 14px;
+    font-weight: ${({ selected }) => selected ? '500' : '400'};
+    color: ${({ theme, selected }) => selected ? theme.colors.primary : theme.colors.text.primary};
   }
 `;

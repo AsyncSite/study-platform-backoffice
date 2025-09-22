@@ -53,7 +53,8 @@ apiClient.interceptors.response.use(
       if (refreshToken) {
         try {
           // Try to refresh the token
-          const response = await axios.post(`${env.authApiUrl}/refresh`, {
+          // Use apiBaseUrl since authApiUrl already contains /api/auth
+          const response = await axios.post(`${env.apiBaseUrl}/api/auth/refresh`, {
             refreshToken
           });
           
@@ -64,29 +65,41 @@ apiClient.interceptors.response.use(
           originalRequest.headers.Authorization = `Bearer ${accessToken}`;
           return apiClient(originalRequest);
         } catch (refreshError) {
-          // Refresh failed, show notification and redirect to login
+          // Refresh failed, immediately clear everything and redirect
           localStorage.removeItem('authToken');
           localStorage.removeItem('refreshToken');
           localStorage.removeItem('user');
-          
-          const event = new CustomEvent('auth:expired', { 
+
+          // Dispatch event for notification
+          const event = new CustomEvent('auth:expired', {
             detail: { message: '세션이 만료되었습니다. 다시 로그인해주세요.' }
           });
           window.dispatchEvent(event);
-          
+
+          // Force redirect to login page immediately
+          setTimeout(() => {
+            window.location.href = '/login';
+          }, 1000);
+
           // Don't retry the request
           return Promise.reject(refreshError);
         }
       } else {
-        // No refresh token, notify and redirect
+        // No refresh token, immediately clear and redirect
         localStorage.removeItem('authToken');
+        localStorage.removeItem('refreshToken');
         localStorage.removeItem('user');
-        
-        const event = new CustomEvent('auth:expired', { 
+
+        const event = new CustomEvent('auth:expired', {
           detail: { message: '인증이 필요합니다. 로그인 페이지로 이동합니다.' }
         });
         window.dispatchEvent(event);
-        
+
+        // Force redirect to login page immediately
+        setTimeout(() => {
+          window.location.href = '/login';
+        }, 1000);
+
         // Don't retry the request
         return Promise.reject(error);
       }

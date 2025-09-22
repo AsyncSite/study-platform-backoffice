@@ -37,9 +37,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Check if token looks like a JWT (has 3 parts separated by dots)
       const parts = token.split('.');
       if (parts.length !== 3) {
-        // Not a JWT token, but we'll keep it for now
-        // Let the API calls determine if it's valid
-        return true;
+        // Invalid token format, remove it
+        console.warn('Invalid token format detected, removing...');
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('user');
+        return false;
       }
 
       // Decode JWT to check expiration
@@ -137,20 +140,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     window.addEventListener('api:notfound', handleApiNotFound as EventListener);
     window.addEventListener('network:error', handleNetworkError as EventListener);
     
-    // Optional: Set up periodic token validation (disabled for now)
-    // Uncomment if you want periodic checks
-    /*
+    // Set up periodic token validation (check every 10 minutes)
     const intervalId = setInterval(async () => {
       if (user) {
         const isValid = await validateSession();
         if (!isValid) {
-          showToast('세션이 만료되었습니다. 다시 로그인해주세요.', { type: 'error' });
+          showToast('세션이 만료되었습니다. 다시 로그인해주세요.', { type: 'warning' });
           setUser(null);
           navigate('/login');
         }
       }
-    }, 300000); // Check every 5 minutes
-    */
+    }, 600000); // Check every 10 minutes
     
     return () => {
       window.removeEventListener('auth:expired', handleAuthExpired as EventListener);
@@ -158,7 +158,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       window.removeEventListener('server:error', handleServerError as EventListener);
       window.removeEventListener('api:notfound', handleApiNotFound as EventListener);
       window.removeEventListener('network:error', handleNetworkError as EventListener);
-      // clearInterval(intervalId);
+      clearInterval(intervalId);
     };
   }, [showToast, navigate]);
 

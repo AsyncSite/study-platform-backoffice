@@ -4,6 +4,7 @@ export interface EmailPayload {
   templateId: string;
   to: string;
   variables: Record<string, any>;
+  scheduledAt?: string; // ISO 8601 datetime string for scheduled sending
 }
 
 export interface BulkEmailPayload {
@@ -27,6 +28,7 @@ class EmailService {
         eventType: 'NOTI',
         recipientContact: payload.to,
         variables: payload.variables,
+        ...(payload.scheduledAt && { scheduledAt: payload.scheduledAt })
       };
 
       console.log('🚀 Sending email request:', JSON.stringify(requestData, null, 2));
@@ -76,7 +78,8 @@ class EmailService {
     userName: string = '개발자',
     currentDay: number = 1,
     totalDays: number = 3,
-    tomorrowTopic: string = '다음 주제'
+    tomorrowTopic: string = '다음 주제',
+    scheduledAt?: string
   ): Promise<void> {
     return this.sendEmail({
       templateId: 'querydaily-question',
@@ -89,6 +92,7 @@ class EmailService {
         totalDays: totalDays.toString(),
         tomorrowTopic
       },
+      ...(scheduledAt && { scheduledAt })
     });
   }
 
@@ -110,7 +114,8 @@ class EmailService {
       bigTech: string;
       unicorn: string;
     },
-    followUpQuestions: string[]
+    followUpQuestions: string[],
+    scheduledAt?: string
   ): Promise<void> {
     return this.sendEmail({
       templateId: 'querydaily-answer-guide',
@@ -127,6 +132,7 @@ class EmailService {
         'personaAnswers.unicorn': personaAnswers.unicorn,
         followUpQuestions: followUpQuestions.join(' / '),
       },
+      ...(scheduledAt && { scheduledAt })
     });
   }
 }
