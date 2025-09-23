@@ -155,7 +155,7 @@ const QueryDailyManagement: React.FC = () => {
             minute: '2-digit',
             second: '2-digit',
             hour12: false
-          }) + ' (KST)',
+          }),
           resumeUrl: queryDailyService.getAssetDownloadUrl(app.resumeAssetId),
           resumeAssetId: app.resumeAssetId,
           resumeFileName: app.resumeFileName,
@@ -503,7 +503,7 @@ const QueryDailyManagement: React.FC = () => {
             <th>이름</th>
             <th>이메일</th>
             <th>담당자</th>
-            <th>신청일</th>
+            <th>신청일 (KST)</th>
             <th>상태</th>
             <th>진행상황</th>
             <th>최근 발송</th>
