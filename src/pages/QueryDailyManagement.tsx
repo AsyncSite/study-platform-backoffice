@@ -919,7 +919,7 @@ const QueryDailyManagement: React.FC = () => {
                 <DetailContent>
                   <DetailRow>
                     <span>현재 상태:</span>
-                    <StatusBadge userType={selectedUser.type}>
+                    <StatusBadge $userType={selectedUser.type}>
                       {selectedUser.type === 'LEAD' ? selectedUser.leadStatus : selectedUser.memberStatus}
                     </StatusBadge>
                   </DetailRow>

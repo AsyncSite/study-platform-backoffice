@@ -1,7 +1,7 @@
 import { useState, memo, useEffect } from 'react';
 import styled from 'styled-components';
 import emailService from '../services/emailService';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday, addMonths, subMonths, getDay, isBefore, startOfToday } from 'date-fns';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isToday, addMonths, subMonths, getDay, isBefore, startOfToday } from 'date-fns';
 import { ko } from 'date-fns/locale';
 
 interface EmailSendModalProps {
