@@ -137,12 +137,17 @@ const QueryDailyManagement: React.FC = () => {
         const applications = await queryDailyService.getAllApplications();
 
         // API 데이터를 User 타입으로 변환
-        const mappedUsers: User[] = applications.map(app => ({
+        const mappedUsers: User[] = applications.map(app => {
+          // UTC를 KST로 변환 (UTC+9)
+          const utcDate = new Date(app.createdAt);
+          const kstDate = new Date(utcDate.getTime() + (9 * 60 * 60 * 1000));
+
+          return {
           id: String(app.id),
           type: 'LEAD', // 신규 신청자는 모두 LEAD로 시작
           name: app.name || '익명',
           email: app.email,
-          applicationDate: new Date(app.createdAt).toLocaleString('ko-KR', {
+          applicationDate: kstDate.toLocaleString('ko-KR', {
             year: 'numeric',
             month: '2-digit',
             day: '2-digit',
@@ -150,7 +155,7 @@ const QueryDailyManagement: React.FC = () => {
             minute: '2-digit',
             second: '2-digit',
             hour12: false
-          }),
+          }) + ' (KST)',
           resumeUrl: queryDailyService.getAssetDownloadUrl(app.resumeAssetId),
           resumeAssetId: app.resumeAssetId,
           resumeFileName: app.resumeFileName,
@@ -158,7 +163,7 @@ const QueryDailyManagement: React.FC = () => {
           totalDays: 7,
           currentDay: 0,
           notes: `이력서: ${app.resumeFileName}`
-        }));
+        }});
 
         setUsers(mappedUsers);
         console.log('✅ Loaded', mappedUsers.length, 'applications');
