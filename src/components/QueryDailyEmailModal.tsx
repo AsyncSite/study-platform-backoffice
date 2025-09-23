@@ -280,7 +280,18 @@ export const EmailSendModal = memo(({
       }, 2000);
     } catch (error: any) {
       console.error('🔥 Email send error in component:', error);
-      setEmailError(`이메일 발송 중 오류가 발생했습니다: ${error.message || 'Unknown error'}`);
+
+      // Check if it's a notification disabled error (422)
+      if (error.response?.status === 422 && error.response?.data?.error === 'Notification Disabled') {
+        const userId = error.response.data.userId;
+        setEmailError(`❌ ${userId}님이 이메일 알림을 비활성화했습니다. 해당 사용자는 이메일을 받지 않도록 설정했습니다.`);
+      } else if (error.response?.data?.message) {
+        // Use server's error message if available
+        setEmailError(error.response.data.message);
+      } else {
+        // Fallback to generic error
+        setEmailError(`이메일 발송 중 오류가 발생했습니다: ${error.message || 'Unknown error'}`);
+      }
     } finally {
       setSendingEmail(false);
     }
