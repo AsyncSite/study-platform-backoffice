@@ -33,7 +33,11 @@ class EmailService {
 
       console.log('🚀 Sending email request:', JSON.stringify(requestData, null, 2));
 
-      const response = await apiClient.post('/api/noti', requestData);
+      // QueryDaily 메일은 force endpoint 사용 (알림 설정 무시)
+      const endpoint = payload.templateId?.startsWith('querydaily') ? '/api/noti/force' : '/api/noti';
+      console.log(`📮 Using endpoint: ${endpoint} for template: ${payload.templateId}`);
+
+      const response = await apiClient.post(endpoint, requestData);
 
       console.log('✅ Email sent successfully:', response.data);
     } catch (error: any) {
