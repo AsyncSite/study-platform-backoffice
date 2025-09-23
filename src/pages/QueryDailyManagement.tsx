@@ -142,7 +142,15 @@ const QueryDailyManagement: React.FC = () => {
           type: 'LEAD', // 신규 신청자는 모두 LEAD로 시작
           name: app.name || '익명',
           email: app.email,
-          applicationDate: new Date(app.createdAt).toLocaleDateString('ko-KR'),
+          applicationDate: new Date(app.createdAt).toLocaleString('ko-KR', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+          }),
           resumeUrl: queryDailyService.getAssetDownloadUrl(app.resumeAssetId),
           resumeAssetId: app.resumeAssetId,
           resumeFileName: app.resumeFileName,
