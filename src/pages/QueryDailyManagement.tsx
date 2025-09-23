@@ -1,6 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import styled from 'styled-components';
 import { EmailSendModal } from '../components/QueryDailyEmailModal';
+import queryDailyService from '../services/queryDailyService';
 
 // Types
 type UserType = 'LEAD' | 'MEMBER';
@@ -43,6 +44,8 @@ interface User {
   email: string;
   applicationDate: string;
   resumeUrl: string;
+  resumeAssetId?: string;
+  resumeFileName?: string;
   assignedTo?: string;
   assignmentHistory?: ChangeHistory[];
   startDate?: string;
@@ -126,6 +129,39 @@ const QueryDailyManagement: React.FC = () => {
 
   // 실제 데이터는 API에서 가져와야 함
   const [users, setUsers] = useState<User[]>([]);
+
+  // 실제 API에서 데이터 로드
+  useEffect(() => {
+    const loadApplications = async () => {
+      try {
+        const applications = await queryDailyService.getAllApplications();
+
+        // API 데이터를 User 타입으로 변환
+        const mappedUsers: User[] = applications.map(app => ({
+          id: String(app.id),
+          type: 'LEAD', // 신규 신청자는 모두 LEAD로 시작
+          name: app.name || '익명',
+          email: app.email,
+          applicationDate: new Date(app.createdAt).toLocaleDateString('ko-KR'),
+          resumeUrl: queryDailyService.getAssetDownloadUrl(app.resumeAssetId),
+          resumeAssetId: app.resumeAssetId,
+          resumeFileName: app.resumeFileName,
+          leadStatus: '신청완료',
+          totalDays: 7,
+          currentDay: 0,
+          notes: `이력서: ${app.resumeFileName}`
+        }));
+
+        setUsers(mappedUsers);
+        console.log('✅ Loaded', mappedUsers.length, 'applications');
+      } catch (error) {
+        console.error('Failed to load applications:', error);
+        // 에러 시 더미 데이터로 fallback (개발용)
+      }
+    };
+
+    loadApplications();
+  }, []);
 
   const [scheduledEmails, setScheduledEmails] = useState<ScheduledEmail[]>([]);
 
@@ -527,7 +563,7 @@ const QueryDailyManagement: React.FC = () => {
                 </td>
                 <td>{user.applicationDate}</td>
                 <td>
-                  <StatusBadge userType={user.type}>
+                  <StatusBadge $userType={user.type}>
                     {user.type === 'LEAD' ? user.leadStatus : user.memberStatus}
                   </StatusBadge>
                 </td>
@@ -818,9 +854,34 @@ const QueryDailyManagement: React.FC = () => {
                   </DetailRow>
                   <DetailRow>
                     <span>이력서:</span>
-                    <a href={selectedUser.resumeUrl} target="_blank" rel="noreferrer">
-                      📄 보기
-                    </a>
+                    <button
+                      style={{
+                        display: 'inline-flex',
+                        gap: '8px',
+                        padding: '4px 8px',
+                        backgroundColor: '#f3f4f6',
+                        borderRadius: '4px',
+                        border: 'none',
+                        color: '#374151',
+                        cursor: 'pointer'
+                      }}
+                      onClick={async () => {
+                        if (!selectedUser.resumeAssetId) {
+                          alert('이력서 파일을 불러올 수 없습니다.');
+                          return;
+                        }
+                        try {
+                          await queryDailyService.downloadAsset(
+                            selectedUser.resumeAssetId,
+                            selectedUser.resumeFileName || 'resume.pdf'
+                          );
+                        } catch (error) {
+                          alert('이력서 다운로드 중 오류가 발생했습니다.');
+                        }
+                      }}
+                    >
+                      📄 이력서 다운로드
+                    </button>
                   </DetailRow>
                 </DetailContent>
               </DetailSection>
@@ -1528,7 +1589,7 @@ const UserTypeBadge = styled.span<{ type: 'LEAD' | 'MEMBER' }>`
     type === 'LEAD' ? '#a16207' : '#1e40af'};
 `;
 
-const StatusBadge = styled.span<{ userType: 'LEAD' | 'MEMBER' }>`
+const StatusBadge = styled.span<{ $userType: 'LEAD' | 'MEMBER' }>`
   display: inline-block;
   padding: 4px 12px;
   border-radius: 12px;
