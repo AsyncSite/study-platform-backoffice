@@ -21,11 +21,7 @@ class QueryDailyService {
       return response.data.data || [];
     } catch (error: any) {
       console.error('❌ Failed to fetch applications:', error);
-      // 인증 실패 시 빈 배열 반환 (개발 중)
-      if (error.response?.status === 401) {
-        console.warn('⚠️ Authentication required - returning empty array for development');
-        return [];
-      }
+      // 401 에러는 apiClient interceptor에서 처리하도록 그대로 throw
       throw error;
     }
   }

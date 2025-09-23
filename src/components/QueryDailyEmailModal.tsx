@@ -1,6 +1,8 @@
 import { useState, memo, useEffect } from 'react';
 import styled from 'styled-components';
 import emailService from '../services/emailService';
+import queryDailyService from '../services/queryDailyService';
+import type { QueryApplication } from '../services/queryDailyService';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isToday, addMonths, subMonths, getDay, isBefore, startOfToday } from 'date-fns';
 import { ko } from 'date-fns/locale';
 
@@ -27,6 +29,30 @@ export const EmailSendModal = memo(({
   const [showCalendar, setShowCalendar] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [applicants, setApplicants] = useState<QueryApplication[]>([]);
+  const [selectedApplicantId, setSelectedApplicantId] = useState<string>('');
+  const [showApplicantDropdown, setShowApplicantDropdown] = useState(false);
+
+  // Fetch applicants on component mount
+  useEffect(() => {
+    if (showEmailModal) {
+      const loadApplicants = async () => {
+        try {
+          const applications = await queryDailyService.getAllApplications();
+          setApplicants(applications);
+          console.log('✅ Loaded applicants for dropdown:', applications.length);
+        } catch (error: any) {
+          console.error('Failed to load applicants:', error);
+          // 401 에러는 apiClient에서 자동으로 리다이렉트 처리됨
+          // 다른 에러의 경우 빈 배열로 fallback
+          if (error.response?.status !== 401) {
+            setApplicants([]);
+          }
+        }
+      };
+      loadApplicants();
+    }
+  }, [showEmailModal]);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -38,13 +64,30 @@ export const EmailSendModal = memo(({
       if (!target.closest('.time-picker-wrapper')) {
         setShowTimePicker(false);
       }
+      if (!target.closest('.applicant-dropdown-wrapper')) {
+        setShowApplicantDropdown(false);
+      }
     };
 
-    if (showCalendar || showTimePicker) {
+    if (showCalendar || showTimePicker || showApplicantDropdown) {
       document.addEventListener('click', handleClickOutside);
       return () => document.removeEventListener('click', handleClickOutside);
     }
-  }, [showCalendar, showTimePicker]);
+  }, [showCalendar, showTimePicker, showApplicantDropdown]);
+
+  // Handle applicant selection
+  const handleApplicantSelect = (applicant: QueryApplication) => {
+    setSelectedApplicantId(String(applicant.id));
+    setRecipientEmail(applicant.email);
+    if (emailModalType === 'question') {
+      setQuestionData(prev => ({
+        ...prev,
+        userName: applicant.name || applicant.email.split('@')[0]
+      }));
+    }
+    setShowApplicantDropdown(false);
+    console.log('✅ Selected applicant:', applicant.name, applicant.email);
+  };
 
   // Helper function to set quick schedule times
   const setQuickSchedule = (minutes: number) => {
@@ -313,13 +356,69 @@ export const EmailSendModal = memo(({
 
         <ModalBody>
           <FormGroup>
+            <Label>신청자 선택 (선택사항)</Label>
+            <ApplicantDropdownWrapper className="applicant-dropdown-wrapper">
+              <ApplicantSelectButton
+                onClick={() => setShowApplicantDropdown(!showApplicantDropdown)}
+                $hasSelection={!!selectedApplicantId}
+              >
+                {selectedApplicantId
+                  ? applicants.find(a => String(a.id) === selectedApplicantId)?.name || '선택된 신청자'
+                  : '신청자 목록에서 선택하기'}
+                <DropdownArrow>▼</DropdownArrow>
+              </ApplicantSelectButton>
+
+              {showApplicantDropdown && (
+                <ApplicantDropdown>
+                  {applicants.length === 0 ? (
+                    <ApplicantOption disabled>신청자가 없습니다</ApplicantOption>
+                  ) : (
+                    <>
+                      <ApplicantOption
+                        onClick={() => {
+                          setSelectedApplicantId('');
+                          setRecipientEmail('');
+                          setQuestionData(prev => ({ ...prev, userName: '' }));
+                          setShowApplicantDropdown(false);
+                        }}
+                        className="clear-option"
+                      >
+                        선택 해제
+                      </ApplicantOption>
+                      {applicants.map(applicant => (
+                        <ApplicantOption
+                          key={applicant.id}
+                          onClick={() => handleApplicantSelect(applicant)}
+                          selected={String(applicant.id) === selectedApplicantId}
+                        >
+                          <ApplicantName>{applicant.name}</ApplicantName>
+                          <ApplicantEmail>{applicant.email}</ApplicantEmail>
+                        </ApplicantOption>
+                      ))}
+                    </>
+                  )}
+                </ApplicantDropdown>
+              )}
+            </ApplicantDropdownWrapper>
+            {selectedApplicantId && (
+              <SelectedInfo>
+                ✅ {applicants.find(a => String(a.id) === selectedApplicantId)?.name} ({applicants.find(a => String(a.id) === selectedApplicantId)?.email}) 선택됨
+              </SelectedInfo>
+            )}
+          </FormGroup>
+
+          <FormGroup>
             <Label>받는 사람 이메일 *</Label>
             <Input
               type="email"
               value={recipientEmail}
               onChange={e => setRecipientEmail(e.target.value)}
               placeholder="example@email.com"
+              disabled={!!selectedApplicantId}
             />
+            {selectedApplicantId && (
+              <HelperText>신청자를 선택하면 이메일이 자동으로 입력됩니다</HelperText>
+            )}
           </FormGroup>
 
           <FormGroup>
@@ -1111,4 +1210,109 @@ const TimeOption = styled.button<{ $isSelected: boolean }>`
     background: ${({ $isSelected, theme }) =>
       $isSelected ? theme.colors.primaryDark : theme.colors.gray[100]};
   }
+`;
+
+// Applicant Dropdown Styled Components
+const ApplicantDropdownWrapper = styled.div`
+  position: relative;
+`;
+
+const ApplicantSelectButton = styled.button<{ $hasSelection: boolean }>`
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid ${({ theme, $hasSelection }) =>
+    $hasSelection ? theme.colors.primary : theme.colors.gray[300]};
+  border-radius: 8px;
+  background: ${({ $hasSelection }) => $hasSelection ? 'rgba(99, 102, 241, 0.05)' : 'white'};
+  color: ${({ theme }) => theme.colors.text.primary};
+  font-size: 14px;
+  font-weight: ${({ $hasSelection }) => $hasSelection ? '500' : '400'};
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: ${({ theme }) => theme.colors.primary};
+    background: ${({ $hasSelection }) => $hasSelection ? 'rgba(99, 102, 241, 0.08)' : '#f9fafb'};
+  }
+`;
+
+const DropdownArrow = styled.span`
+  color: ${({ theme }) => theme.colors.text.secondary};
+  font-size: 12px;
+  transition: transform 0.2s;
+`;
+
+const ApplicantDropdown = styled.div`
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  max-height: 300px;
+  overflow-y: auto;
+  background: white;
+  border: 1px solid ${({ theme }) => theme.colors.gray[200]};
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+`;
+
+const ApplicantOption = styled.div<{ selected?: boolean; disabled?: boolean }>`
+  padding: 12px 16px;
+  background: ${({ selected }) => selected ? 'rgba(99, 102, 241, 0.1)' : 'white'};
+  cursor: ${({ disabled }) => disabled ? 'default' : 'pointer'};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.gray[100]};
+  transition: background 0.2s;
+  opacity: ${({ disabled }) => disabled ? 0.5 : 1};
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &:hover {
+    background: ${({ disabled, selected }) =>
+      disabled ? 'white' : selected ? 'rgba(99, 102, 241, 0.15)' : '#f9fafb'};
+  }
+
+  &.clear-option {
+    background: #fef2f2;
+    color: #dc2626;
+    font-weight: 500;
+
+    &:hover {
+      background: #fee2e2;
+    }
+  }
+`;
+
+const ApplicantName = styled.div`
+  font-size: 14px;
+  font-weight: 500;
+  color: ${({ theme }) => theme.colors.text.primary};
+  margin-bottom: 4px;
+`;
+
+const ApplicantEmail = styled.div`
+  font-size: 12px;
+  color: ${({ theme }) => theme.colors.text.secondary};
+`;
+
+const SelectedInfo = styled.div`
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: #f0fdf4;
+  border: 1px solid #86efac;
+  border-radius: 6px;
+  color: #16a34a;
+  font-size: 13px;
+`;
+
+const HelperText = styled.div`
+  margin-top: 6px;
+  font-size: 12px;
+  color: ${({ theme }) => theme.colors.text.secondary};
+  font-style: italic;
 `;

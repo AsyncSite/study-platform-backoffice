@@ -107,13 +107,41 @@ apiClient.interceptors.response.use(
     
     // Handle 500 Internal Server Error
     if (error.response?.status === 500) {
-      const event = new CustomEvent('server:error', { 
-        detail: { 
-          message: '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.',
-          shouldReauth: true // 500 에러도 종종 인증 문제일 수 있음
-        }
-      });
-      window.dispatchEvent(event);
+      // 500 에러 응답 내용 확인
+      const errorMessage = error.response?.data?.message || '';
+      const errorCode = error.response?.data?.code || '';
+
+      // JWT, token, auth, unauthorized 등의 키워드가 있으면 인증 문제로 판단
+      const authRelatedKeywords = ['jwt', 'token', 'auth', 'unauthorized', 'expired', 'invalid token'];
+      const isAuthError = authRelatedKeywords.some(keyword =>
+        errorMessage.toLowerCase().includes(keyword) ||
+        errorCode.toLowerCase().includes(keyword)
+      );
+
+      if (isAuthError) {
+        // 인증 관련 500 에러만 리다이렉트
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('user');
+
+        const event = new CustomEvent('auth:expired', {
+          detail: { message: '인증 오류가 발생했습니다. 다시 로그인해주세요.' }
+        });
+        window.dispatchEvent(event);
+
+        setTimeout(() => {
+          window.location.href = '/login';
+        }, 1000);
+      } else {
+        // 일반 서버 에러는 알림만
+        const event = new CustomEvent('server:error', {
+          detail: {
+            message: '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'
+          }
+        });
+        window.dispatchEvent(event);
+      }
+
       return Promise.reject(error);
     }
     
