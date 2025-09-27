@@ -139,6 +139,90 @@ class EmailService {
       ...(scheduledAt && { scheduledAt })
     });
   }
+
+  /**
+   * Send QueryDaily challenge welcome email
+   */
+  async sendQueryDailyChallengeWelcome(
+    email: string,
+    userName: string = '개발자',
+    challengeStartDate?: string,
+    scheduledAt?: string
+  ): Promise<void> {
+    // Format the start date for display
+    let challengeStartAt = '오늘부터';
+    if (challengeStartDate) {
+      const startDate = new Date(challengeStartDate);
+      const today = new Date();
+      const diffTime = startDate.getTime() - today.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+      if (diffDays === 0) {
+        challengeStartAt = '오늘부터';
+      } else if (diffDays === 1) {
+        challengeStartAt = '내일부터';
+      } else if (diffDays > 1) {
+        challengeStartAt = `${startDate.getMonth() + 1}월 ${startDate.getDate()}일부터`;
+      } else {
+        challengeStartAt = `${startDate.getMonth() + 1}월 ${startDate.getDate()}일부터`;
+      }
+    }
+
+    return this.sendEmail({
+      templateId: 'querydaily-challenge-start',
+      to: email,
+      variables: {
+        userName,
+        challengeName: 'QueryDaily 3-Day Challenge',
+        challengeStartAt,
+        queryDailyBaseUrl: 'https://querydaily.asyncsite.com'
+      },
+      ...(scheduledAt && { scheduledAt })
+    });
+  }
+
+  /**
+   * Send QueryDaily challenge mid-feedback email
+   */
+  async sendQueryDailyChallengeMidFeedback(
+    email: string,
+    userName: string = '개발자',
+    scheduledAt?: string
+  ): Promise<void> {
+    return this.sendEmail({
+      templateId: 'querydaily-mid-feedback',
+      to: email,
+      variables: {
+        userName,
+        challengeName: 'QueryDaily 3-Day Challenge',
+        midFeedbackTime: '2일차 중간',
+        surveyUrl: 'https://forms.gle/querydaily-mid',
+        kakaoChannelUrl: 'https://pf.kakao.com/_querydaily'
+      },
+      ...(scheduledAt && { scheduledAt })
+    });
+  }
+
+  /**
+   * Send QueryDaily challenge completion email
+   */
+  async sendQueryDailyChallengeComplete(
+    email: string,
+    userName: string = '개발자',
+    scheduledAt?: string
+  ): Promise<void> {
+    return this.sendEmail({
+      templateId: 'querydaily-challenge-complete',
+      to: email,
+      variables: {
+        userName,
+        challengeName: 'QueryDaily 3-Day Challenge',
+        surveyUrl: 'https://forms.gle/querydaily-survey',
+        queryDailyBaseUrl: 'https://querydaily.asyncsite.com'
+      },
+      ...(scheduledAt && { scheduledAt })
+    });
+  }
 }
 
 export default new EmailService();

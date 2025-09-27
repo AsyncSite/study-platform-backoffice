@@ -9,7 +9,7 @@ import { ko } from 'date-fns/locale';
 interface EmailSendModalProps {
   showEmailModal: boolean;
   setShowEmailModal: (show: boolean) => void;
-  emailModalType: 'question' | 'answerGuide';
+  emailModalType: 'question' | 'answerGuide' | 'welcome' | 'midFeedback' | 'complete';
   selectedUserEmail?: string;
 }
 
@@ -166,6 +166,8 @@ export const EmailSendModal = memo(({
     tomorrowTopic: ''
   });
 
+  const [challengeStartDate, setChallengeStartDate] = useState('');
+
   const [answerGuideData, setAnswerGuideData] = useState({
     question: '',
     analysis: '',
@@ -237,7 +239,7 @@ export const EmailSendModal = memo(({
           ? `${recipientEmail}로 ${scheduledDate} ${scheduledTime} ${getRelativeTime(scheduledDate, scheduledTime)} KST에 발송 예약되었습니다.`
           : `${recipientEmail}로 질문을 발송했습니다.`;
         setEmailSuccess(successMessage);
-      } else {
+      } else if (emailModalType === 'answerGuide') {
         if (!answerGuideData.question || !answerGuideData.analysis) {
           setEmailError('질문과 질문 해부는 필수 항목입니다.');
           setSendingEmail(false);
@@ -257,6 +259,37 @@ export const EmailSendModal = memo(({
         const successMessage = isScheduled
           ? `${recipientEmail}로 ${scheduledDate} ${scheduledTime} ${getRelativeTime(scheduledDate, scheduledTime)} KST에 발송 예약되었습니다.`
           : `${recipientEmail}로 답변 가이드를 발송했습니다.`;
+        setEmailSuccess(successMessage);
+      } else if (emailModalType === 'welcome') {
+        await emailService.sendQueryDailyChallengeWelcome(
+          recipientEmail,
+          questionData.userName || recipientEmail.split('@')[0],
+          challengeStartDate,
+          scheduledAt
+        );
+        const successMessage = isScheduled
+          ? `${recipientEmail}로 ${scheduledDate} ${scheduledTime} ${getRelativeTime(scheduledDate, scheduledTime)} KST에 환영 메일 발송 예약되었습니다.`
+          : `${recipientEmail}로 환영 메일을 발송했습니다.`;
+        setEmailSuccess(successMessage);
+      } else if (emailModalType === 'midFeedback') {
+        await emailService.sendQueryDailyChallengeMidFeedback(
+          recipientEmail,
+          questionData.userName || recipientEmail.split('@')[0],
+          scheduledAt
+        );
+        const successMessage = isScheduled
+          ? `${recipientEmail}로 ${scheduledDate} ${scheduledTime} ${getRelativeTime(scheduledDate, scheduledTime)} KST에 중간 피드백 메일 발송 예약되었습니다.`
+          : `${recipientEmail}로 중간 피드백 메일을 발송했습니다.`;
+        setEmailSuccess(successMessage);
+      } else if (emailModalType === 'complete') {
+        await emailService.sendQueryDailyChallengeComplete(
+          recipientEmail,
+          questionData.userName || recipientEmail.split('@')[0],
+          scheduledAt
+        );
+        const successMessage = isScheduled
+          ? `${recipientEmail}로 ${scheduledDate} ${scheduledTime} ${getRelativeTime(scheduledDate, scheduledTime)} KST에 완료 메일 발송 예약되었습니다.`
+          : `${recipientEmail}로 완료 메일을 발송했습니다.`;
         setEmailSuccess(successMessage);
       }
 
@@ -316,7 +349,13 @@ export const EmailSendModal = memo(({
     <Modal>
       <ModalContent>
         <ModalHeader>
-          <h3>{emailModalType === 'question' ? 'QueryDaily 질문 발송' : 'QueryDaily 답변 가이드 발송'}</h3>
+          <h3>
+            {emailModalType === 'question' ? 'QueryDaily 질문 발송' :
+             emailModalType === 'answerGuide' ? 'QueryDaily 답변 가이드 발송' :
+             emailModalType === 'welcome' ? 'QueryDaily 환영 메일 발송' :
+             emailModalType === 'midFeedback' ? 'QueryDaily 중간 피드백 메일 발송' :
+             emailModalType === 'complete' ? 'QueryDaily 완료 메일 발송' : 'QueryDaily 메일 발송'}
+          </h3>
           <CloseButton onClick={() => {
             setShowEmailModal(false);
             setEmailError(null);
@@ -563,6 +602,37 @@ export const EmailSendModal = memo(({
                 </FormGroup>
               </FormRow>
             </>
+          )}
+
+          {(emailModalType === 'welcome' || emailModalType === 'midFeedback' || emailModalType === 'complete') && (
+            <FormGroup>
+              <Label>사용자 이름</Label>
+              <Input
+                value={questionData.userName}
+                onChange={e => setQuestionData({...questionData, userName: e.target.value})}
+                placeholder="홍길동 (기본: 이메일 앞부분)"
+              />
+              <HelperText>
+                {emailModalType === 'welcome' && '환영 메일에 표시될 사용자 이름입니다.'}
+                {emailModalType === 'midFeedback' && '중간 피드백 메일에 표시될 사용자 이름입니다.'}
+                {emailModalType === 'complete' && '완료 메일에 표시될 사용자 이름입니다.'}
+              </HelperText>
+            </FormGroup>
+          )}
+
+          {emailModalType === 'welcome' && (
+            <FormGroup>
+              <Label>챌린지 시작일</Label>
+              <Input
+                type="date"
+                value={challengeStartDate}
+                onChange={e => setChallengeStartDate(e.target.value)}
+                min={format(new Date(), 'yyyy-MM-dd')}
+              />
+              <HelperText>
+                챌린지가 시작될 날짜를 선택하세요. 비어있으면 "오늘부터"로 표시됩니다.
+              </HelperText>
+            </FormGroup>
           )}
 
           {emailModalType === 'answerGuide' && (

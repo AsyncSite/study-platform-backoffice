@@ -108,7 +108,7 @@ const QueryDailyManagement: React.FC = () => {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [showUserDetailModal, setShowUserDetailModal] = useState(false);
   const [showEmailModal, setShowEmailModal] = useState(false);
-  const [emailModalType, setEmailModalType] = useState<'question' | 'answerGuide'>('question');
+  const [emailModalType, setEmailModalType] = useState<'question' | 'answerGuide' | 'welcome' | 'midFeedback' | 'complete'>('question');
   const [showAnswerGuideModal, setShowAnswerGuideModal] = useState(false);
   const [contentTab, setContentTab] = useState<'guides' | 'questions' | 'templates'>('guides');
   const [guideKeywords, setGuideKeywords] = useState<string[]>([]);
@@ -668,6 +668,24 @@ const QueryDailyManagement: React.FC = () => {
             setShowEmailModal(true);
           }} style={{ background: '#667eea' }}>
             📚 답변 가이드 발송
+          </AddButton>
+          <AddButton onClick={() => {
+            setEmailModalType('welcome');
+            setShowEmailModal(true);
+          }} style={{ background: '#10b981' }}>
+            🎉 환영 메일 발송
+          </AddButton>
+          <AddButton onClick={() => {
+            setEmailModalType('midFeedback');
+            setShowEmailModal(true);
+          }} style={{ background: '#f59e0b' }}>
+            📝 중간 메일 발송
+          </AddButton>
+          <AddButton onClick={() => {
+            setEmailModalType('complete');
+            setShowEmailModal(true);
+          }} style={{ background: '#8b5cf6' }}>
+            🏆 완료 메일 발송
           </AddButton>
         </div>
       </Header>
