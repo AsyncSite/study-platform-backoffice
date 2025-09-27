@@ -139,15 +139,24 @@ const NotiDashboard: React.FC = () => {
     setPreviewNotification(notification);
     setShowPreviewModal(true);
 
+    // 초기화
+    setPreviewContent('');
+
     try {
       // 백엔드에서 렌더링된 HTML 가져오기
       const response = await notiApi.getNotificationPreview(notification.notificationId);
       if (response.success && response.data) {
         setPreviewContent(response.data.htmlContent);
+      } else {
+        console.error('Preview response not successful:', response);
+        showToast('미리보기 데이터를 가져올 수 없습니다.', { type: 'error' });
+        setPreviewContent('<div style="padding: 20px; text-align: center; color: #666;">미리보기를 생성할 수 없습니다.</div>');
       }
     } catch (error: any) {
-      // 실패 시 기본 콘텐츠 표시
-      setPreviewContent(notification.content || '미리보기를 불러올 수 없습니다.');
+      // 실패 시 에러 로깅 및 사용자 알림
+      console.error('Failed to fetch preview:', error);
+      showToast('미리보기 로드 중 오류가 발생했습니다.', { type: 'error' });
+      setPreviewContent('<div style="padding: 20px; text-align: center; color: #666;">미리보기를 불러올 수 없습니다.<br/>오류: ' + (error.message || 'Unknown error') + '</div>');
     }
   };
 
