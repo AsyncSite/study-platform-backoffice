@@ -229,5 +229,28 @@ export const notiApi = {
       method: 'GET',
       url: `${NOTI_API_PATH}/${notificationId}/preview`
     });
+  },
+
+  getNotificationStats: async (): Promise<ApiResponse<{
+    total: number;
+    sent: number;
+    failed: number;
+    pending: number;
+    scheduled: number;
+    retry: number;
+    cancelled: number;
+  }>> => {
+    return request<{
+      total: number;
+      sent: number;
+      failed: number;
+      pending: number;
+      scheduled: number;
+      retry: number;
+      cancelled: number;
+    }>({
+      method: 'GET',
+      url: `${NOTI_API_PATH}/admin/stats`
+    });
   }
 };

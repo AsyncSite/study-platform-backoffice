@@ -67,17 +67,16 @@ const NotiDashboard: React.FC = () => {
   // 전체 통계를 가져오는 별도 함수
   const fetchTotalStats = async () => {
     try {
-      // 전체 데이터를 가져와서 통계 계산 (첫 100개만 샘플링)
-      const response = await notiApi.getAllNotifications(0, 100);
+      // 백엔드 통계 API 사용 - 단일 쿼리로 효율적으로 집계
+      const response = await notiApi.getNotificationStats();
 
       if (response.success && response.data) {
-        const allData = response.data.content;
         const newStats = {
-          total: response.data.totalElements, // 전체 개수 사용
-          sent: allData.filter((n: NotificationResponse) => n.status === 'SENT').length,
-          failed: allData.filter((n: NotificationResponse) => n.status === 'FAILED').length,
-          pending: allData.filter((n: NotificationResponse) => n.status === 'PENDING').length,
-          scheduled: allData.filter((n: NotificationResponse) => n.status === 'SCHEDULED').length
+          total: response.data.total,
+          sent: response.data.sent,
+          failed: response.data.failed,
+          pending: response.data.pending,
+          scheduled: response.data.scheduled
         };
         setTotalStats(newStats);
       }
