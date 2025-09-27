@@ -1,6 +1,7 @@
 import { request } from './client';
 import type {
   ApiResponse,
+  PageResponse
 } from '../types/api';
 
 const NOTI_API_PATH = '/api/noti';
@@ -15,6 +16,49 @@ export interface NotiSetting {
   timezone: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export type NotificationStatus =
+  | 'PENDING'
+  | 'SENT'
+  | 'FAILED'
+  | 'SCHEDULED'
+  | 'CANCELLED';
+
+export type ChannelType =
+  | 'EMAIL'
+  | 'DISCORD'
+  | 'PUSH';
+
+export interface NotificationResponse {
+  notificationId: string;
+  userId: string;
+  templateId: string;
+  channelType: ChannelType;
+  title: string;
+  content: string;
+  recipientContacts: string[];
+  status: NotificationStatus;
+  createdAt: string;
+  updatedAt: string;
+  sentAt?: string;
+  failMessage?: string;
+  retryCount: number;
+  scheduledAt?: string;
+  version: number;
+}
+
+export interface NotificationSearchCriteria {
+  userId?: string;
+  statuses?: string;
+  templateId?: string;
+  channelTypes?: string;
+  startDate?: string;
+  endDate?: string;
+  scheduledStartDate?: string;
+  scheduledEndDate?: string;
+  keyword?: string;
+  hasFailMessage?: boolean;
 }
 
 export interface NotiTemplate {
@@ -141,4 +185,36 @@ export const notiApi = {
       url: `${NOTI_API_PATH}/channel-types`,
     });
   },
+
+  // Notification Dashboard APIs
+  getAllNotifications: async (page = 0, size = 20): Promise<ApiResponse<PageResponse<NotificationResponse>>> => {
+    return request<PageResponse<NotificationResponse>>({
+      method: 'GET',
+      url: `${NOTI_API_PATH}/admin/all`,
+      params: { page, size }
+    });
+  },
+
+  searchNotifications: async (
+    criteria: NotificationSearchCriteria,
+    page = 0,
+    size = 20
+  ): Promise<ApiResponse<PageResponse<NotificationResponse>>> => {
+    return request<PageResponse<NotificationResponse>>({
+      method: 'GET',
+      url: `${NOTI_API_PATH}/admin/search`,
+      params: {
+        ...criteria,
+        page,
+        size
+      }
+    });
+  },
+
+  retryNotification: async (notificationId: string): Promise<ApiResponse<NotificationResponse>> => {
+    return request<NotificationResponse>({
+      method: 'PATCH',
+      url: `${NOTI_API_PATH}/${notificationId}/retry`
+    });
+  }
 };
