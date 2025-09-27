@@ -9,6 +9,7 @@ export const ButtonVariant = {
   ERROR: 'error',
   DANGER: 'error', // Alias for ERROR
   GHOST: 'ghost',
+  TEXT: 'text',
 } as const;
 
 export type ButtonVariant = typeof ButtonVariant[keyof typeof ButtonVariant];
@@ -94,14 +95,24 @@ const getVariantStyles = (variant: ButtonVariant) => {
       background: transparent;
       color: ${({ theme }) => theme.colors.primary};
       border: 1px solid ${({ theme }) => theme.colors.primary};
-      
+
       &:hover:not(:disabled) {
         background: ${({ theme }) => theme.colors.primary};
         color: white;
       }
     `,
+    [ButtonVariant.TEXT]: css`
+      background: transparent;
+      color: ${({ theme }) => theme.colors.primary};
+      border: none;
+      padding: 4px 8px;
+
+      &:hover:not(:disabled) {
+        background: ${({ theme }) => theme.colors.gray[100]};
+      }
+    `,
   };
-  
+
   return styles[variant];
 };
 

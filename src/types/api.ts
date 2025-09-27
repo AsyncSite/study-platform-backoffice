@@ -91,6 +91,9 @@ export interface Page<T> {
   empty: boolean;
 }
 
+// Alias for backward compatibility
+export type PageResponse<T> = Page<T>;
+
 // Query Parameters
 export interface PageRequest {
   page?: number;

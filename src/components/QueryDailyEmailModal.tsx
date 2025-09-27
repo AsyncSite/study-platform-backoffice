@@ -27,7 +27,6 @@ export const EmailSendModal = memo(({
   const [scheduledDate, setScheduledDate] = useState('');
   const [scheduledTime, setScheduledTime] = useState('');
   const [showCalendar, setShowCalendar] = useState(false);
-  const [showTimePicker, setShowTimePicker] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [applicants, setApplicants] = useState<QueryApplication[]>([]);
   const [selectedApplicantId, setSelectedApplicantId] = useState<string>('');
@@ -61,19 +60,16 @@ export const EmailSendModal = memo(({
       if (!target.closest('.date-picker-wrapper')) {
         setShowCalendar(false);
       }
-      if (!target.closest('.time-picker-wrapper')) {
-        setShowTimePicker(false);
-      }
       if (!target.closest('.applicant-dropdown-wrapper')) {
         setShowApplicantDropdown(false);
       }
     };
 
-    if (showCalendar || showTimePicker || showApplicantDropdown) {
+    if (showCalendar || showApplicantDropdown) {
       document.addEventListener('click', handleClickOutside);
       return () => document.removeEventListener('click', handleClickOutside);
     }
-  }, [showCalendar, showTimePicker, showApplicantDropdown]);
+  }, [showCalendar, showApplicantDropdown]);
 
   // Handle applicant selection
   const handleApplicantSelect = (applicant: QueryApplication) => {
@@ -145,18 +141,6 @@ export const EmailSendModal = memo(({
     return [...emptyDays, ...days];
   };
 
-  // Generate time options (15-minute intervals)
-  const generateTimeOptions = () => {
-    const times = [];
-    for (let hour = 0; hour < 24; hour++) {
-      for (let minute = 0; minute < 60; minute += 15) {
-        const h = hour.toString().padStart(2, '0');
-        const m = minute.toString().padStart(2, '0');
-        times.push(`${h}:${m}`);
-      }
-    }
-    return times;
-  };
 
   // Handle date selection
   const handleDateSelect = (date: Date) => {
@@ -164,11 +148,6 @@ export const EmailSendModal = memo(({
     setShowCalendar(false);
   };
 
-  // Handle time selection
-  const handleTimeSelect = (time: string) => {
-    setScheduledTime(time);
-    setShowTimePicker(false);
-  };
 
   // Format display date
   const getDisplayDate = () => {
@@ -177,15 +156,6 @@ export const EmailSendModal = memo(({
     return format(date, 'M월 d일 (EEEE)', { locale: ko });
   };
 
-  // Format display time
-  const getDisplayTime = () => {
-    if (!scheduledTime) return '시간을 선택하세요';
-    const [hours, minutes] = scheduledTime.split(':');
-    const hour = parseInt(hours);
-    const period = hour < 12 ? '오전' : '오후';
-    const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
-    return `${period} ${displayHour}:${minutes}`;
-  };
 
   const [questionData, setQuestionData] = useState({
     question: '',
@@ -516,31 +486,15 @@ export const EmailSendModal = memo(({
 
                 <FormGroup>
                   <Label>발송 시간 * (KST)</Label>
-                  <TimePickerWrapper className="time-picker-wrapper">
-                    <DateDisplay onClick={() => setShowTimePicker(!showTimePicker)}>
-                      <CalendarIcon>🕐</CalendarIcon>
-                      <span>{getDisplayTime()}</span>
-                    </DateDisplay>
-
-                    {showTimePicker && (
-                      <TimeDropdown>
-                        <TimeGrid>
-                          {generateTimeOptions().map(time => {
-                            const isSelected = scheduledTime === time;
-                            return (
-                              <TimeOption
-                                key={time}
-                                onClick={() => handleTimeSelect(time)}
-                                $isSelected={isSelected}
-                              >
-                                {time.replace(':', ' : ')}
-                              </TimeOption>
-                            );
-                          })}
-                        </TimeGrid>
-                      </TimeDropdown>
-                    )}
-                  </TimePickerWrapper>
+                  <TimeInputWrapper>
+                    <TimeInput
+                      type="time"
+                      value={scheduledTime || ''}
+                      onChange={(e) => setScheduledTime(e.target.value)}
+                      placeholder="HH:MM"
+                    />
+                    <TimeHelperText>24시간 형식으로 입력 (예: 14:30)</TimeHelperText>
+                  </TimeInputWrapper>
                 </FormGroup>
               </FormRow>
             </>
@@ -1034,8 +988,29 @@ const DatePickerWrapper = styled.div`
   position: relative;
 `;
 
-const TimePickerWrapper = styled.div`
-  position: relative;
+
+const TimeInputWrapper = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+`;
+
+const TimeInput = styled.input`
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid ${({ theme }) => theme.colors.gray[300]};
+  border-radius: 6px;
+  font-size: 14px;
+
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.primary};
+  }
+`;
+
+const TimeHelperText = styled.span`
+  font-size: 12px;
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const DateDisplay = styled.div`
@@ -1150,63 +1125,6 @@ const DayCell = styled.button<{ $isSelected: boolean; $isToday: boolean; $isPast
   transition: all 0.2s;
 
   &:hover:not(:disabled) {
-    background: ${({ $isSelected, theme }) =>
-      $isSelected ? theme.colors.primaryDark : theme.colors.gray[100]};
-  }
-`;
-
-const TimeDropdown = styled.div`
-  position: absolute;
-  top: calc(100% + 8px);
-  left: 0;
-  right: 0;
-  max-height: 300px;
-  overflow-y: auto;
-  background: white;
-  border: 1px solid ${({ theme }) => theme.colors.gray[200]};
-  border-radius: 12px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
-  z-index: 1001;
-  padding: 8px;
-
-  &::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: ${({ theme }) => theme.colors.gray[100]};
-    border-radius: 3px;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: ${({ theme }) => theme.colors.gray[400]};
-    border-radius: 3px;
-
-    &:hover {
-      background: ${({ theme }) => theme.colors.gray[500]};
-    }
-  }
-`;
-
-const TimeGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 4px;
-`;
-
-const TimeOption = styled.button<{ $isSelected: boolean }>`
-  padding: 8px 4px;
-  border: none;
-  border-radius: 6px;
-  background: ${({ $isSelected, theme }) =>
-    $isSelected ? theme.colors.primary : theme.colors.gray[50]};
-  color: ${({ $isSelected, theme }) => ($isSelected ? 'white' : theme.colors.text.primary)};
-  font-size: 12px;
-  font-weight: ${({ $isSelected }) => ($isSelected ? '500' : '400')};
-  cursor: pointer;
-  transition: all 0.2s;
-
-  &:hover {
     background: ${({ $isSelected, theme }) =>
       $isSelected ? theme.colors.primaryDark : theme.colors.gray[100]};
   }

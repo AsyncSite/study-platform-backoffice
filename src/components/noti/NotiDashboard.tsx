@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { Search, RefreshCw, Send, CheckCircle, XCircle, Clock, Filter } from 'lucide-react';
+import { Search, RefreshCw, Send, CheckCircle, XCircle, Clock, Filter, Eye } from 'lucide-react';
 import { useNotification } from '../../contexts/NotificationContext';
 import { notiApi, type NotificationResponse, type NotificationSearchCriteria, type NotificationStatus, type ChannelType } from '../../api/noti';
-import type { PageResponse } from '../../types/api';
 import Button from '../common/Button';
 
 const NotiDashboard: React.FC = () => {
@@ -28,6 +27,11 @@ const NotiDashboard: React.FC = () => {
 
   // Search criteria
   const [searchCriteria, setSearchCriteria] = useState<NotificationSearchCriteria>({});
+
+  // Preview modal state
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [previewNotification, setPreviewNotification] = useState<NotificationResponse | null>(null);
+  const [previewContent, setPreviewContent] = useState<string>('');
   const [tempCriteria, setTempCriteria] = useState<NotificationSearchCriteria>({});
 
   // Initial load
@@ -122,6 +126,28 @@ const NotiDashboard: React.FC = () => {
       }
     } catch (error: any) {
       showToast(error.message || '알림 취소에 실패했습니다.', { type: 'error' });
+    }
+  };
+
+  const handlePreview = async (notification: NotificationResponse) => {
+    // 이메일 채널인 경우에만 미리보기 제공
+    if (notification.channelType !== 'EMAIL') {
+      showToast('이메일 알림만 미리보기를 지원합니다.', { type: 'info' });
+      return;
+    }
+
+    setPreviewNotification(notification);
+    setShowPreviewModal(true);
+
+    try {
+      // 백엔드에서 렌더링된 HTML 가져오기
+      const response = await notiApi.getNotificationPreview(notification.notificationId);
+      if (response.success && response.data) {
+        setPreviewContent(response.data.htmlContent);
+      }
+    } catch (error: any) {
+      // 실패 시 기본 콘텐츠 표시
+      setPreviewContent(notification.content || '미리보기를 불러올 수 없습니다.');
     }
   };
 
@@ -359,7 +385,6 @@ const NotiDashboard: React.FC = () => {
                     <DateWrapper>
                       <DateLabel $color={dateInfo.color}>{dateInfo.label}</DateLabel>
                       <DateText>{formatKstDate(dateInfo.date)}</DateText>
-                      <TimeZoneIndicator>KST</TimeZoneIndicator>
                     </DateWrapper>
                   </Td>
                 <Td>{notification.userId || 'Guest'}</Td>
@@ -372,16 +397,24 @@ const NotiDashboard: React.FC = () => {
                 <Td>{getStatusBadge(notification.status)}</Td>
                 <Td>{notification.retryCount}</Td>
                 <Td>
-                  {notification.status === 'FAILED' && (
-                    <ActionButton onClick={() => handleRetry(notification.notificationId)}>
-                      재발송
-                    </ActionButton>
-                  )}
-                  {notification.status === 'SCHEDULED' && (
-                    <CancelButton onClick={() => handleCancel(notification.notificationId)}>
-                      취소
-                    </CancelButton>
-                  )}
+                  <ActionButtons>
+                    {notification.channelType === 'EMAIL' && (
+                      <PreviewButton onClick={() => handlePreview(notification)}>
+                        <Eye size={14} />
+                        미리보기
+                      </PreviewButton>
+                    )}
+                    {notification.status === 'FAILED' && (
+                      <ActionButton onClick={() => handleRetry(notification.notificationId)}>
+                        재발송
+                      </ActionButton>
+                    )}
+                    {notification.status === 'SCHEDULED' && (
+                      <CancelButton onClick={() => handleCancel(notification.notificationId)}>
+                        취소
+                      </CancelButton>
+                    )}
+                  </ActionButtons>
                 </Td>
               </Tr>
               );
@@ -434,6 +467,50 @@ const NotiDashboard: React.FC = () => {
           </Pagination>
         )}
       </TableSection>
+
+      {/* Email Preview Modal */}
+      {showPreviewModal && previewNotification && (
+        <PreviewModal>
+          <PreviewModalOverlay onClick={() => setShowPreviewModal(false)} />
+          <PreviewModalContent>
+            <PreviewModalHeader>
+              <h2>이메일 미리보기</h2>
+              <CloseButton onClick={() => setShowPreviewModal(false)}>✕</CloseButton>
+            </PreviewModalHeader>
+            <PreviewModalBody>
+              <PreviewInfo>
+                <InfoRow>
+                  <InfoLabel>수신자:</InfoLabel>
+                  <InfoValue>{previewNotification.userId || 'Guest'}</InfoValue>
+                </InfoRow>
+                <InfoRow>
+                  <InfoLabel>제목:</InfoLabel>
+                  <InfoValue>{previewNotification.title}</InfoValue>
+                </InfoRow>
+                <InfoRow>
+                  <InfoLabel>템플릿:</InfoLabel>
+                  <InfoValue>{previewNotification.templateId}</InfoValue>
+                </InfoRow>
+              </PreviewInfo>
+              <PreviewDivider />
+              <PreviewFrame>
+                {previewContent ? (
+                  <iframe
+                    srcDoc={previewContent}
+                    style={{ width: '100%', height: '100%', border: 'none' }}
+                    title="Email Preview"
+                  />
+                ) : (
+                  <LoadingWrapper>
+                    <RefreshCw className="animate-spin" />
+                    <LoadingText>미리보기 로딩 중...</LoadingText>
+                  </LoadingWrapper>
+                )}
+              </PreviewFrame>
+            </PreviewModalBody>
+          </PreviewModalContent>
+        </PreviewModal>
+      )}
     </Container>
   );
 };
@@ -636,13 +713,6 @@ const DateText = styled.span`
   color: ${({ theme }) => theme.colors.text.primary};
 `;
 
-const TimeZoneIndicator = styled.span`
-  font-size: 11px;
-  color: ${({ theme }) => theme.colors.text.secondary};
-  margin-left: 4px;
-  font-weight: 500;
-  opacity: 0.7;
-`;
 
 const StatusBadge = styled.div<{ $color: string }>`
   display: inline-flex;
@@ -722,6 +792,144 @@ const PageInfo = styled.div`
 const PageButtons = styled.div`
   display: flex;
   gap: 8px;
+`;
+
+const ActionButtons = styled.div`
+  display: flex;
+  gap: 8px;
+  align-items: center;
+`;
+
+const PreviewButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: ${({ theme }) => theme.radii.small};
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: ${({ theme }) => theme.transitions.fast};
+
+  &:hover {
+    background: #2563eb;
+  }
+`;
+
+// Preview Modal Styles
+const PreviewModal = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`;
+
+const PreviewModalOverlay = styled.div`
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+`;
+
+const PreviewModalContent = styled.div`
+  position: relative;
+  width: 90%;
+  max-width: 900px;
+  height: 80vh;
+  background: white;
+  border-radius: ${({ theme }) => theme.radii.large};
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+`;
+
+const PreviewModalHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.gray[200]};
+
+  h2 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 600;
+    color: ${({ theme }) => theme.colors.text.primary};
+  }
+`;
+
+const CloseButton = styled.button`
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: ${({ theme }) => theme.radii.small};
+  font-size: 20px;
+  color: ${({ theme }) => theme.colors.text.secondary};
+  cursor: pointer;
+  transition: ${({ theme }) => theme.transitions.fast};
+
+  &:hover {
+    background: ${({ theme }) => theme.colors.gray[100]};
+  }
+`;
+
+const PreviewModalBody = styled.div`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+`;
+
+const PreviewInfo = styled.div`
+  padding: 16px 24px;
+  background: ${({ theme }) => theme.colors.gray[50]};
+`;
+
+const InfoRow = styled.div`
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+`;
+
+const InfoLabel = styled.span`
+  font-weight: 500;
+  color: ${({ theme }) => theme.colors.text.secondary};
+  margin-right: 8px;
+  min-width: 80px;
+`;
+
+const InfoValue = styled.span`
+  color: ${({ theme }) => theme.colors.text.primary};
+`;
+
+const PreviewDivider = styled.div`
+  height: 1px;
+  background: ${({ theme }) => theme.colors.gray[200]};
+`;
+
+const PreviewFrame = styled.div`
+  flex: 1;
+  padding: 24px;
+  overflow: auto;
+  background: ${({ theme }) => theme.colors.gray[50]};
 `;
 
 export default NotiDashboard;

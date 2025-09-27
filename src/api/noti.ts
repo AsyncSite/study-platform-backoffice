@@ -223,5 +223,11 @@ export const notiApi = {
       method: 'PATCH',
       url: `${NOTI_API_PATH}/${notificationId}/cancel`
     });
+  },
+  getNotificationPreview: async (notificationId: string): Promise<ApiResponse<{ htmlContent: string }>> => {
+    return request<{ htmlContent: string }>({
+      method: 'GET',
+      url: `${NOTI_API_PATH}/${notificationId}/preview`
+    });
   }
 };
