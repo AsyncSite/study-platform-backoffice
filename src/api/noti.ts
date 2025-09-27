@@ -216,5 +216,12 @@ export const notiApi = {
       method: 'PATCH',
       url: `${NOTI_API_PATH}/${notificationId}/retry`
     });
+  },
+
+  cancelNotification: async (notificationId: string): Promise<ApiResponse<NotificationResponse>> => {
+    return request<NotificationResponse>({
+      method: 'PATCH',
+      url: `${NOTI_API_PATH}/${notificationId}/cancel`
+    });
   }
 };

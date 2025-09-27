@@ -108,6 +108,23 @@ const NotiDashboard: React.FC = () => {
     }
   };
 
+  const handleCancel = async (notificationId: string) => {
+    if (!confirm('예약된 알림을 취소하시겠습니까?')) {
+      return;
+    }
+
+    try {
+      const response = await notiApi.cancelNotification(notificationId);
+      if (response.success) {
+        showToast('예약 알림이 취소되었습니다.', { type: 'success' });
+        fetchNotifications();
+        fetchTotalStats();
+      }
+    } catch (error: any) {
+      showToast(error.message || '알림 취소에 실패했습니다.', { type: 'error' });
+    }
+  };
+
   const getStatusBadge = (status: NotificationStatus) => {
     const config = {
       SENT: { color: '#10b981', icon: CheckCircle, label: '발송완료' },
@@ -137,6 +154,50 @@ const NotiDashboard: React.FC = () => {
     const { color, label } = config[channel] || { color: '#6b7280', label: channel };
 
     return <ChannelBadge $color={color}>{label}</ChannelBadge>;
+  };
+
+  // UTC를 KST로 변환하는 헬퍼 함수
+  const utcToKst = (utcDateStr: string) => {
+    const utcDate = new Date(utcDateStr);
+    const kstDate = new Date(utcDate.getTime() + (9 * 60 * 60 * 1000));
+    return kstDate;
+  };
+
+  // KST 포맷팅 함수
+  const formatKstDate = (dateStr: string) => {
+    const kstDate = utcToKst(dateStr);
+    return kstDate.toLocaleString('ko-KR', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    });
+  };
+
+  const getNotificationDate = (notification: NotificationResponse) => {
+    // 상태에 따라 적절한 날짜 선택
+    if (notification.status === 'SCHEDULED' && notification.scheduledAt) {
+      return {
+        date: notification.scheduledAt,
+        label: '예약',
+        color: '#6366f1'
+      };
+    } else if (notification.status === 'SENT' && notification.sentAt) {
+      return {
+        date: notification.sentAt,
+        label: '발송',
+        color: '#10b981'
+      };
+    } else {
+      return {
+        date: notification.createdAt,
+        label: '생성',
+        color: '#6b7280'
+      };
+    }
   };
 
   if (loading && notifications.length === 0) {
@@ -280,7 +341,7 @@ const NotiDashboard: React.FC = () => {
         <Table>
           <thead>
             <tr>
-              <Th>발송일시</Th>
+              <Th>일시 (KST)</Th>
               <Th>사용자</Th>
               <Th>채널</Th>
               <Th>제목</Th>
@@ -290,9 +351,17 @@ const NotiDashboard: React.FC = () => {
             </tr>
           </thead>
           <tbody>
-            {notifications.map((notification) => (
-              <Tr key={notification.notificationId}>
-                <Td>{new Date(notification.createdAt).toLocaleString('ko-KR')}</Td>
+            {notifications.map((notification) => {
+              const dateInfo = getNotificationDate(notification);
+              return (
+                <Tr key={notification.notificationId}>
+                  <Td>
+                    <DateWrapper>
+                      <DateLabel $color={dateInfo.color}>{dateInfo.label}</DateLabel>
+                      <DateText>{formatKstDate(dateInfo.date)}</DateText>
+                      <TimeZoneIndicator>KST</TimeZoneIndicator>
+                    </DateWrapper>
+                  </Td>
                 <Td>{notification.userId || 'Guest'}</Td>
                 <Td>{getChannelBadge(notification.channelType)}</Td>
                 <Td>
@@ -308,9 +377,15 @@ const NotiDashboard: React.FC = () => {
                       재발송
                     </ActionButton>
                   )}
+                  {notification.status === 'SCHEDULED' && (
+                    <CancelButton onClick={() => handleCancel(notification.notificationId)}>
+                      취소
+                    </CancelButton>
+                  )}
                 </Td>
               </Tr>
-            ))}
+              );
+            })}
           </tbody>
         </Table>
 
@@ -542,6 +617,33 @@ const TitleCell = styled.div`
   white-space: nowrap;
 `;
 
+const DateWrapper = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+`;
+
+const DateLabel = styled.span<{ $color: string }>`
+  font-size: 10px;
+  font-weight: 600;
+  color: ${({ $color }) => $color};
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+`;
+
+const DateText = styled.span`
+  font-size: 13px;
+  color: ${({ theme }) => theme.colors.text.primary};
+`;
+
+const TimeZoneIndicator = styled.span`
+  font-size: 11px;
+  color: ${({ theme }) => theme.colors.text.secondary};
+  margin-left: 4px;
+  font-weight: 500;
+  opacity: 0.7;
+`;
+
 const StatusBadge = styled.div<{ $color: string }>`
   display: inline-flex;
   align-items: center;
@@ -568,6 +670,22 @@ const ChannelBadge = styled.div<{ $color: string }>`
 const ActionButton = styled.button`
   padding: 4px 12px;
   background: ${({ theme }) => theme.colors.primary};
+  color: white;
+  border: none;
+  border-radius: ${({ theme }) => theme.radii.small};
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: ${({ theme }) => theme.transitions.fast};
+
+  &:hover {
+    opacity: 0.9;
+  }
+`;
+
+const CancelButton = styled.button`
+  padding: 4px 12px;
+  background: ${({ theme }) => theme.colors.error || '#ef4444'};
   color: white;
   border: none;
   border-radius: ${({ theme }) => theme.radii.small};
