@@ -89,7 +89,7 @@ class EmailService {
     const defaultMessages = {
       1: {
         intro: "첫 날의 도전을 시작합니다. 기초부터 차근차근 실력을 다져보세요.",
-        motivation: "훌륭한 첫 걸음입니다! 앞으로 2일간의 여정도 함께해요. 💪"
+        motivation: "앞으로 2일간의 여정도 함께해요. 💪"
       },
       2: {
         intro: "오늘은 많은 주니어 개발자들이 실무에서 꼭 마주치는 질문을 준비했습니다.",
