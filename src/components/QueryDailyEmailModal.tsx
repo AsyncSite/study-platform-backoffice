@@ -159,11 +159,9 @@ export const EmailSendModal = memo(({
 
   const [questionData, setQuestionData] = useState({
     question: '',
-    hint: '',
     userName: '',
     currentDay: 1,
-    totalDays: 3,
-    tomorrowTopic: ''
+    totalDays: 3
   });
 
   const [challengeStartDate, setChallengeStartDate] = useState('');
@@ -219,8 +217,8 @@ export const EmailSendModal = memo(({
 
     try {
       if (emailModalType === 'question') {
-        if (!questionData.question || !questionData.hint) {
-          setEmailError('질문과 힌트는 필수 항목입니다.');
+        if (!questionData.question) {
+          setEmailError('질문은 필수 항목입니다.');
           setSendingEmail(false);
           return;
         }
@@ -228,11 +226,9 @@ export const EmailSendModal = memo(({
         await emailService.sendQueryDailyQuestion(
           recipientEmail,
           questionData.question,
-          questionData.hint,
           questionData.userName || recipientEmail.split('@')[0],
           questionData.currentDay,
           questionData.totalDays,
-          questionData.tomorrowTopic || '다음 주제',
           scheduledAt
         );
         const successMessage = isScheduled
@@ -297,11 +293,9 @@ export const EmailSendModal = memo(({
       setRecipientEmail('');
       setQuestionData({
         question: '',
-        hint: '',
         userName: '',
         currentDay: 1,
-        totalDays: 3,
-        tomorrowTopic: ''
+        totalDays: 3
       });
       setAnswerGuideData({
         question: '',
@@ -551,16 +545,6 @@ export const EmailSendModal = memo(({
                 />
               </FormGroup>
 
-              <FormGroup>
-                <Label>힌트 *</Label>
-                <Textarea
-                  value={questionData.hint}
-                  onChange={e => setQuestionData({...questionData, hint: e.target.value})}
-                  placeholder="답변 작성에 도움이 될 힌트를 입력하세요"
-                  rows={2}
-                />
-              </FormGroup>
-
               <FormRow>
                 <FormGroup>
                   <Label>사용자 이름</Label>
@@ -582,25 +566,15 @@ export const EmailSendModal = memo(({
                 </FormGroup>
               </FormRow>
 
-              <FormRow>
-                <FormGroup>
-                  <Label>전체 일차</Label>
-                  <Input
-                    type="number"
-                    min="1"
-                    value={questionData.totalDays}
-                    onChange={e => setQuestionData({...questionData, totalDays: parseInt(e.target.value) || 3})}
-                  />
-                </FormGroup>
-                <FormGroup>
-                  <Label>내일 주제</Label>
-                  <Input
-                    value={questionData.tomorrowTopic}
-                    onChange={e => setQuestionData({...questionData, tomorrowTopic: e.target.value})}
-                    placeholder="다음 주제 (선택사항)"
-                  />
-                </FormGroup>
-              </FormRow>
+              <FormGroup>
+                <Label>전체 일차</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  value={questionData.totalDays}
+                  onChange={e => setQuestionData({...questionData, totalDays: parseInt(e.target.value) || 3})}
+                />
+              </FormGroup>
             </>
           )}
 

@@ -78,11 +78,9 @@ class EmailService {
   async sendQueryDailyQuestion(
     email: string,
     question: string,
-    hint: string,
     userName: string = '개발자',
     currentDay: number = 1,
     totalDays: number = 3,
-    tomorrowTopic: string = '다음 주제',
     scheduledAt?: string
   ): Promise<void> {
     return this.sendEmail({
@@ -90,11 +88,9 @@ class EmailService {
       to: email,
       variables: {
         question,
-        hint,
         userName,
         currentDay: currentDay.toString(),
-        totalDays: totalDays.toString(),
-        tomorrowTopic
+        totalDays: totalDays.toString()
       },
       ...(scheduledAt && { scheduledAt })
     });
