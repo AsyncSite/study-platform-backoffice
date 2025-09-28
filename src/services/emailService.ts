@@ -152,7 +152,7 @@ class EmailService {
         'starStructure.result': starStructure.result,
         'personaAnswers.bigTech': personaAnswers.bigTech,
         'personaAnswers.unicorn': personaAnswers.unicorn,
-        followUpQuestions: followUpQuestions.join(' / '),
+        followUpQuestions: followUpQuestions.map(q => `<li>${q}</li>`).join(''),
       },
       ...(scheduledAt && { scheduledAt })
     });
