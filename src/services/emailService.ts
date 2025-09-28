@@ -235,7 +235,7 @@ class EmailService {
       variables: {
         userName,
         challengeName: 'QueryDaily 3-Day Challenge',
-        surveyUrl: 'https://forms.gle/querydaily-survey',
+        surveyUrl: 'https://forms.gle/AKGegYc9rT6GgfaD9',
         queryDailyBaseUrl: 'https://querydaily.asyncsite.com'
       },
       ...(scheduledAt && { scheduledAt })
