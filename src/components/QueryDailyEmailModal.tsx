@@ -229,6 +229,8 @@ export const EmailSendModal = memo(({
           questionData.userName || recipientEmail.split('@')[0],
           questionData.currentDay,
           questionData.totalDays,
+          undefined, // dayIntroMessage - emailService에서 자동 설정
+          undefined, // dayMotivationMessage - emailService에서 자동 설정
           scheduledAt
         );
         const successMessage = isScheduled

@@ -81,8 +81,28 @@ class EmailService {
     userName: string = '개발자',
     currentDay: number = 1,
     totalDays: number = 3,
+    dayIntroMessage?: string,
+    dayMotivationMessage?: string,
     scheduledAt?: string
   ): Promise<void> {
+    // 기본 메시지 설정
+    const defaultMessages = {
+      1: {
+        intro: "첫 날의 도전을 시작합니다. 기초부터 차근차근 실력을 다져보세요.",
+        motivation: "훌륭한 첫 걸음입니다! 앞으로 2일간의 여정도 함께해요. 💪"
+      },
+      2: {
+        intro: "오늘은 많은 주니어 개발자들이 실무에서 꼭 마주치는 질문을 준비했습니다.",
+        motivation: "이 질문에 막힘없이 답변하셨다면, 이미 한 단계 성장하신 겁니다. 👍"
+      },
+      3: {
+        intro: "마지막 날입니다. 그동안 준비한 실력을 확인해보세요.",
+        motivation: "3일간의 여정을 완주하셨네요! 정말 대단합니다. 🎉"
+      }
+    };
+
+    const messages = defaultMessages[currentDay as keyof typeof defaultMessages] || defaultMessages[1];
+
     return this.sendEmail({
       templateId: 'querydaily-question',
       to: email,
@@ -90,7 +110,9 @@ class EmailService {
         question,
         userName,
         currentDay: currentDay.toString(),
-        totalDays: totalDays.toString()
+        totalDays: totalDays.toString(),
+        dayIntroMessage: dayIntroMessage || messages.intro,
+        dayMotivationMessage: dayMotivationMessage || messages.motivation
       },
       ...(scheduledAt && { scheduledAt })
     });
