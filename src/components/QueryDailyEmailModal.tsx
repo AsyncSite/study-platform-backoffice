@@ -75,12 +75,11 @@ export const EmailSendModal = memo(({
   const handleApplicantSelect = (applicant: QueryApplication) => {
     setSelectedApplicantId(String(applicant.id));
     setRecipientEmail(applicant.email);
-    if (emailModalType === 'question') {
-      setQuestionData(prev => ({
-        ...prev,
-        userName: applicant.name || applicant.email.split('@')[0]
-      }));
-    }
+    // Set userName for all email types
+    setQuestionData(prev => ({
+      ...prev,
+      userName: applicant.name || applicant.email.split('@')[0]
+    }));
     setShowApplicantDropdown(false);
     console.log('✅ Selected applicant:', applicant.name, applicant.email);
   };
@@ -453,17 +452,23 @@ export const EmailSendModal = memo(({
               <FormGroup>
                 <Label>빠른 선택</Label>
                 <QuickSelectButtons>
-                  <QuickButton onClick={() => setQuickSchedule(30)}>30분 후</QuickButton>
                   <QuickButton onClick={() => setQuickSchedule(60)}>1시간 후</QuickButton>
-                  <QuickButton onClick={() => setQuickSchedule(120)}>2시간 후</QuickButton>
                   <QuickButton onClick={() => {
                     const tomorrow = new Date();
                     tomorrow.setDate(tomorrow.getDate() + 1);
-                    tomorrow.setHours(9, 0, 0, 0);
+                    tomorrow.setHours(7, 0, 0, 0);
                     const now = new Date();
                     const diffMinutes = Math.floor((tomorrow.getTime() - now.getTime()) / 60000);
                     setQuickSchedule(diffMinutes);
-                  }}>내일 오전 9시</QuickButton>
+                  }}>내일 오전 7시</QuickButton>
+                  <QuickButton onClick={() => {
+                    const tomorrow = new Date();
+                    tomorrow.setDate(tomorrow.getDate() + 1);
+                    tomorrow.setHours(17, 0, 0, 0);
+                    const now = new Date();
+                    const diffMinutes = Math.floor((tomorrow.getTime() - now.getTime()) / 60000);
+                    setQuickSchedule(diffMinutes);
+                  }}>내일 오후 5시</QuickButton>
                 </QuickSelectButtons>
               </FormGroup>
 
