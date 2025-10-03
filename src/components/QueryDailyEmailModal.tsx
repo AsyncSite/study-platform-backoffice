@@ -160,7 +160,7 @@ export const EmailSendModal = memo(({
     question: '',
     userName: '',
     currentDay: 1,
-    totalDays: 3
+    totalDays: 22
   });
 
   const [challengeStartDate, setChallengeStartDate] = useState('');
@@ -363,7 +363,7 @@ export const EmailSendModal = memo(({
         question: '',
         userName: '',
         currentDay: 1,
-        totalDays: 3
+        totalDays: 22
       });
       setAnswerGuideData({
         question: '',
@@ -649,7 +649,7 @@ export const EmailSendModal = memo(({
                   type="number"
                   min="1"
                   value={questionData.totalDays}
-                  onChange={e => setQuestionData({...questionData, totalDays: parseInt(e.target.value) || 3})}
+                  onChange={e => setQuestionData({...questionData, totalDays: parseInt(e.target.value) || 22})}
                 />
               </FormGroup>
             </>
