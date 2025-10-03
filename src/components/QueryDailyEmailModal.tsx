@@ -799,15 +799,16 @@ export const EmailSendModal = memo(({
               <FormGroup>
                 <Label>예상 꼬리 질문</Label>
                 {answerGuideData.followUpQuestions.map((question, index) => (
-                  <div key={`question-${index}-${question}`} style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
-                    <Input
+                  <div key={`question-${index}`} style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                    <Textarea
                       value={question}
                       onChange={e => {
                         const newQuestions = [...answerGuideData.followUpQuestions];
                         newQuestions[index] = e.target.value;
                         setAnswerGuideData({...answerGuideData, followUpQuestions: newQuestions});
                       }}
-                      placeholder="예상 꼬리 질문"
+                      placeholder="예상 꼬리 질문 (예: 그 기술을 선택한 이유가 무엇인가요?)"
+                      rows={2}
                     />
                     {answerGuideData.followUpQuestions.length > 1 && (
                       <ActionButton onClick={() => {
