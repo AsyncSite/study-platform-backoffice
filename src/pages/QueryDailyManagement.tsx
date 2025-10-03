@@ -108,7 +108,7 @@ const QueryDailyManagement: React.FC = () => {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [showUserDetailModal, setShowUserDetailModal] = useState(false);
   const [showEmailModal, setShowEmailModal] = useState(false);
-  const [emailModalType, setEmailModalType] = useState<'question' | 'answerGuide' | 'welcome' | 'midFeedback' | 'complete'>('question');
+  const [emailModalType, setEmailModalType] = useState<'question' | 'answerGuide' | 'welcome' | 'midFeedback' | 'complete' | 'purchaseConfirmation'>('question');
   const [showAnswerGuideModal, setShowAnswerGuideModal] = useState(false);
   const [contentTab, setContentTab] = useState<'guides' | 'questions' | 'templates'>('guides');
   const [guideKeywords, setGuideKeywords] = useState<string[]>([]);
@@ -686,6 +686,24 @@ const QueryDailyManagement: React.FC = () => {
             setShowEmailModal(true);
           }} style={{ background: '#8b5cf6' }}>
             🏆 완료 메일 발송
+          </AddButton>
+          <AddButton onClick={() => {
+            setEmailModalType('growthPlanQuestion');
+            setShowEmailModal(true);
+          }} style={{ background: '#FF8C00' }}>
+            🚀 그로스 플랜 질문 발송
+          </AddButton>
+          <AddButton onClick={() => {
+            setEmailModalType('growthPlanAnswerGuide');
+            setShowEmailModal(true);
+          }} style={{ background: '#FFD700' }}>
+            ⭐ 그로스 플랜 답변 가이드
+          </AddButton>
+          <AddButton onClick={() => {
+            setEmailModalType('purchaseConfirmation');
+            setShowEmailModal(true);
+          }} style={{ background: '#0066CC' }}>
+            💳 그로스 플랜 구매 확인
           </AddButton>
         </div>
       </Header>

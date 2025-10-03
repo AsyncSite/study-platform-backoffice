@@ -119,6 +119,34 @@ class EmailService {
   }
 
   /**
+   * Send Growth Plan question email
+   */
+  async sendGrowthPlanQuestion(
+    email: string,
+    question: string,
+    userName: string = '개발자',
+    currentDay: number = 1,
+    totalDays: number = 20,
+    dayIntroMessage?: string,
+    dayMotivationMessage?: string,
+    scheduledAt?: string
+  ): Promise<void> {
+    return this.sendEmail({
+      templateId: 'growth-plan-question',
+      to: email,
+      variables: {
+        question,
+        userName,
+        currentDay: currentDay.toString(),
+        totalDays: totalDays.toString(),
+        dayIntroMessage: dayIntroMessage || '이력서 프로젝트를 기반으로 기술의 내부 동작 원리까지 깊이 있게 준비해보세요.',
+        dayMotivationMessage: dayMotivationMessage || '20일간의 성장 여정을 시작합니다. 매일 한 걸음씩 전문성을 쌓아가세요. 💪'
+      },
+      ...(scheduledAt && { scheduledAt })
+    });
+  }
+
+  /**
    * Send QueryDaily answer guide email
    */
   async sendQueryDailyAnswerGuide(
@@ -141,6 +169,46 @@ class EmailService {
   ): Promise<void> {
     return this.sendEmail({
       templateId: 'querydaily-answer-guide',
+      to: email,
+      variables: {
+        question,
+        analysis,
+        keywords: keywords.join(', '),
+        'starStructure.situation': starStructure.situation,
+        'starStructure.task': starStructure.task,
+        'starStructure.action': starStructure.action,
+        'starStructure.result': starStructure.result,
+        'personaAnswers.bigTech': personaAnswers.bigTech,
+        'personaAnswers.unicorn': personaAnswers.unicorn,
+        followUpQuestions: followUpQuestions.map(q => `<li>${q}</li>`).join(''),
+      },
+      ...(scheduledAt && { scheduledAt })
+    });
+  }
+
+  /**
+   * Send Growth Plan answer guide email
+   */
+  async sendGrowthPlanAnswerGuide(
+    email: string,
+    question: string,
+    analysis: string,
+    keywords: string[],
+    starStructure: {
+      situation: string;
+      task: string;
+      action: string;
+      result: string;
+    },
+    personaAnswers: {
+      bigTech: string;
+      unicorn: string;
+    },
+    followUpQuestions: string[],
+    scheduledAt?: string
+  ): Promise<void> {
+    return this.sendEmail({
+      templateId: 'growth-plan-answer-guide',
       to: email,
       variables: {
         question,
@@ -237,6 +305,32 @@ class EmailService {
         challengeName: 'QueryDaily 3-Day Challenge',
         surveyUrl: 'https://forms.gle/AKGegYc9rT6GgfaD9',
         queryDailyBaseUrl: 'https://querydaily.asyncsite.com'
+      },
+      ...(scheduledAt && { scheduledAt })
+    });
+  }
+
+  /**
+   * Send Growth Plan Purchase Confirmation email
+   */
+  async sendGrowthPlanPurchaseConfirmation(
+    email: string,
+    userName: string = '개발자',
+    confirmDate: string,
+    startDate: string,
+    endDate: string,
+    scheduledAt?: string
+  ): Promise<void> {
+    return this.sendEmail({
+      templateId: 'growth-plan-purchase-confirmation',
+      to: email,
+      variables: {
+        userName,
+        userEmail: email,
+        confirmDate,
+        startDate,
+        endDate,
+        kakaoChannelUrl: 'https://pf.kakao.com/_zxkxmUn/chat'
       },
       ...(scheduledAt && { scheduledAt })
     });

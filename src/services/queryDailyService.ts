@@ -16,7 +16,7 @@ class QueryDailyService {
    */
   async getAllApplications(): Promise<QueryApplication[]> {
     try {
-      const response = await apiClient.get('/api/queries/admin/all');
+      const response = await apiClient.get('/api/query-daily/admin/leads');
       console.log('✅ Fetched applications:', response.data);
       return response.data.data || [];
     } catch (error: any) {
@@ -31,7 +31,7 @@ class QueryDailyService {
    */
   async getApplication(id: number): Promise<QueryApplication> {
     try {
-      const response = await apiClient.get(`/api/queries/admin/${id}`);
+      const response = await apiClient.get(`/api/query-daily/admin/leads/${id}`);
       return response.data.data;
     } catch (error: any) {
       console.error('❌ Failed to fetch application:', error);

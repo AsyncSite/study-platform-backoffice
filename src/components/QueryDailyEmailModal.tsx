@@ -9,7 +9,7 @@ import { ko } from 'date-fns/locale';
 interface EmailSendModalProps {
   showEmailModal: boolean;
   setShowEmailModal: (show: boolean) => void;
-  emailModalType: 'question' | 'answerGuide' | 'welcome' | 'midFeedback' | 'complete';
+  emailModalType: 'question' | 'answerGuide' | 'welcome' | 'midFeedback' | 'complete' | 'purchaseConfirmation' | 'growthPlanQuestion' | 'growthPlanAnswerGuide';
   selectedUserEmail?: string;
 }
 
@@ -165,6 +165,12 @@ export const EmailSendModal = memo(({
 
   const [challengeStartDate, setChallengeStartDate] = useState('');
 
+  const [purchaseConfirmationData, setPurchaseConfirmationData] = useState({
+    confirmDate: '',
+    startDate: '',
+    endDate: ''
+  });
+
   const [answerGuideData, setAnswerGuideData] = useState({
     question: '',
     analysis: '',
@@ -288,6 +294,67 @@ export const EmailSendModal = memo(({
           ? `${recipientEmail}로 ${scheduledDate} ${scheduledTime} ${getRelativeTime(scheduledDate, scheduledTime)} KST에 완료 메일 발송 예약되었습니다.`
           : `${recipientEmail}로 완료 메일을 발송했습니다.`;
         setEmailSuccess(successMessage);
+      } else if (emailModalType === 'purchaseConfirmation') {
+        if (!purchaseConfirmationData.confirmDate || !purchaseConfirmationData.startDate || !purchaseConfirmationData.endDate) {
+          setEmailError('모든 필수 항목을 입력해주세요.');
+          setSendingEmail(false);
+          return;
+        }
+
+        await emailService.sendGrowthPlanPurchaseConfirmation(
+          recipientEmail,
+          questionData.userName || recipientEmail.split('@')[0],
+          purchaseConfirmationData.confirmDate,
+          purchaseConfirmationData.startDate,
+          purchaseConfirmationData.endDate,
+          scheduledAt
+        );
+        const successMessage = isScheduled
+          ? `${recipientEmail}로 ${scheduledDate} ${scheduledTime} ${getRelativeTime(scheduledDate, scheduledTime)} KST에 그로스 플랜 구매 확인 메일 발송 예약되었습니다.`
+          : `${recipientEmail}로 그로스 플랜 구매 확인 메일을 발송했습니다.`;
+        setEmailSuccess(successMessage);
+      } else if (emailModalType === 'growthPlanQuestion') {
+        if (!questionData.question) {
+          setEmailError('질문은 필수 항목입니다.');
+          setSendingEmail(false);
+          return;
+        }
+
+        await emailService.sendGrowthPlanQuestion(
+          recipientEmail,
+          questionData.question,
+          questionData.userName || recipientEmail.split('@')[0],
+          questionData.currentDay,
+          20, // totalDays: Growth Plan is 20 days
+          undefined,
+          undefined,
+          scheduledAt
+        );
+        const successMessage = isScheduled
+          ? `${recipientEmail}로 ${scheduledDate} ${scheduledTime} ${getRelativeTime(scheduledDate, scheduledTime)} KST에 그로스 플랜 질문 발송 예약되었습니다.`
+          : `${recipientEmail}로 그로스 플랜 질문을 발송했습니다.`;
+        setEmailSuccess(successMessage);
+      } else if (emailModalType === 'growthPlanAnswerGuide') {
+        if (!answerGuideData.question || !answerGuideData.analysis) {
+          setEmailError('질문과 질문 해부는 필수 항목입니다.');
+          setSendingEmail(false);
+          return;
+        }
+
+        await emailService.sendGrowthPlanAnswerGuide(
+          recipientEmail,
+          answerGuideData.question,
+          answerGuideData.analysis,
+          answerGuideData.keywords.filter(k => k),
+          answerGuideData.starStructure,
+          answerGuideData.personaAnswers,
+          answerGuideData.followUpQuestions.filter(q => q),
+          scheduledAt
+        );
+        const successMessage = isScheduled
+          ? `${recipientEmail}로 ${scheduledDate} ${scheduledTime} ${getRelativeTime(scheduledDate, scheduledTime)} KST에 그로스 플랜 답변 가이드 발송 예약되었습니다.`
+          : `${recipientEmail}로 그로스 플랜 답변 가이드를 발송했습니다.`;
+        setEmailSuccess(successMessage);
       }
 
       // Clear form data only on success
@@ -349,7 +416,10 @@ export const EmailSendModal = memo(({
              emailModalType === 'answerGuide' ? 'QueryDaily 답변 가이드 발송' :
              emailModalType === 'welcome' ? 'QueryDaily 환영 메일 발송' :
              emailModalType === 'midFeedback' ? 'QueryDaily 중간 피드백 메일 발송' :
-             emailModalType === 'complete' ? 'QueryDaily 완료 메일 발송' : 'QueryDaily 메일 발송'}
+             emailModalType === 'complete' ? 'QueryDaily 완료 메일 발송' :
+             emailModalType === 'purchaseConfirmation' ? '그로스 플랜 구매 확인 메일 발송' :
+             emailModalType === 'growthPlanQuestion' ? '그로스 플랜 질문 발송' :
+             emailModalType === 'growthPlanAnswerGuide' ? '그로스 플랜 답변 가이드 발송' : 'QueryDaily 메일 발송'}
           </h3>
           <CloseButton onClick={() => {
             setShowEmailModal(false);
@@ -540,7 +610,7 @@ export const EmailSendModal = memo(({
             </>
           )}
 
-          {emailModalType === 'question' && (
+          {(emailModalType === 'question' || emailModalType === 'growthPlanQuestion') && (
             <>
               <FormGroup>
                 <Label>질문 *</Label>
@@ -616,7 +686,7 @@ export const EmailSendModal = memo(({
             </FormGroup>
           )}
 
-          {emailModalType === 'answerGuide' && (
+          {(emailModalType === 'answerGuide' || emailModalType === 'growthPlanAnswerGuide') && (
             <>
               <FormGroup>
                 <Label>질문 *</Label>
@@ -641,7 +711,7 @@ export const EmailSendModal = memo(({
               <FormGroup>
                 <Label>핵심 키워드</Label>
                 {answerGuideData.keywords.map((keyword, index) => (
-                  <div key={index} style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                  <div key={`keyword-${index}-${keyword}`} style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
                     <Input
                       value={keyword}
                       onChange={e => {
@@ -729,7 +799,7 @@ export const EmailSendModal = memo(({
               <FormGroup>
                 <Label>예상 꼬리 질문</Label>
                 {answerGuideData.followUpQuestions.map((question, index) => (
-                  <div key={index} style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                  <div key={`question-${index}-${question}`} style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
                     <Input
                       value={question}
                       onChange={e => {
@@ -751,6 +821,52 @@ export const EmailSendModal = memo(({
                   + 질문 추가
                 </ActionButton>
               </FormGroup>
+            </>
+          )}
+
+          {emailModalType === 'purchaseConfirmation' && (
+            <>
+              <FormGroup>
+                <Label>사용자 이름</Label>
+                <Input
+                  value={questionData.userName}
+                  onChange={e => setQuestionData({...questionData, userName: e.target.value})}
+                  placeholder="홍길동 (기본: 이메일 앞부분)"
+                />
+                <HelperText>구매 확인 메일에 표시될 사용자 이름입니다.</HelperText>
+              </FormGroup>
+
+              <FormGroup>
+                <Label>입금 확인일 *</Label>
+                <Input
+                  value={purchaseConfirmationData.confirmDate}
+                  onChange={e => setPurchaseConfirmationData({...purchaseConfirmationData, confirmDate: e.target.value})}
+                  placeholder="2025년 10월 3일"
+                />
+                <HelperText>입금을 확인한 날짜를 입력하세요 (예: 2025년 10월 3일)</HelperText>
+              </FormGroup>
+
+              <FormRow>
+                <FormGroup>
+                  <Label>서비스 시작일 *</Label>
+                  <Input
+                    value={purchaseConfirmationData.startDate}
+                    onChange={e => setPurchaseConfirmationData({...purchaseConfirmationData, startDate: e.target.value})}
+                    placeholder="2025년 10월 4일 (금)"
+                  />
+                  <HelperText>첫 발송일 (예: 2025년 10월 4일 (금))</HelperText>
+                </FormGroup>
+
+                <FormGroup>
+                  <Label>서비스 종료일 *</Label>
+                  <Input
+                    value={purchaseConfirmationData.endDate}
+                    onChange={e => setPurchaseConfirmationData({...purchaseConfirmationData, endDate: e.target.value})}
+                    placeholder="2025년 10월 23일 (수)"
+                  />
+                  <HelperText>마지막 발송일 (예: 2025년 10월 23일 (수))</HelperText>
+                </FormGroup>
+              </FormRow>
             </>
           )}
 
