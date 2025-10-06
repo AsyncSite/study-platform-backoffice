@@ -15,6 +15,7 @@ const tabs: Tab[] = [
   { id: 'query-daily', label: 'QueryDaily', icon: '❓', path: '/query-daily' },
   { id: 'noti-management', label: '알림 관리', icon: '📥', path: '/noti-management' },
   { id: 'members', label: '회원 관리', icon: '👥', path: '/members' },
+  { id: 'payments', label: '결제 관리', icon: '💳', path: '/payments' },
   { id: 'analytics', label: '통계/분석', icon: '📈', path: '/analytics' },
   { id: 'settings', label: '설정', icon: '⚙️', path: '/myPage' },
 ];

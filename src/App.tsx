@@ -14,6 +14,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import NotiManagement from './pages/NotiManagement';
 import QueryDailyManagement from './pages/QueryDailyManagement';
+import PaymentTransactionManagement from './pages/PaymentTransactionManagement';
 
 function App() {
   return (
@@ -91,6 +92,16 @@ function App() {
                 <PrivateRoute>
                   <Layout>
                     <MyPage />
+                  </Layout>
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/payments"
+              element={
+                <PrivateRoute>
+                  <Layout>
+                    <PaymentTransactionManagement />
                   </Layout>
                 </PrivateRoute>
               }
