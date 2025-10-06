@@ -2,7 +2,7 @@ import { useState, memo, useEffect } from 'react';
 import styled from 'styled-components';
 import emailService from '../services/emailService';
 import queryDailyService from '../services/queryDailyService';
-import type { QueryApplication } from '../services/queryDailyService';
+import type { QueryApplication, QuestionWithMember } from '../services/queryDailyService';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isToday, addMonths, subMonths, getDay, isBefore, startOfToday } from 'date-fns';
 import { ko } from 'date-fns/locale';
 
@@ -29,8 +29,13 @@ export const EmailSendModal = memo(({
   const [showCalendar, setShowCalendar] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [applicants, setApplicants] = useState<QueryApplication[]>([]);
-  const [selectedApplicantId, setSelectedApplicantId] = useState<string>('');
+  const [selectedMemberId, setSelectedMemberId] = useState<string>('');
   const [showApplicantDropdown, setShowApplicantDropdown] = useState(false);
+
+  // Phase 1: Question selection for answer guide
+  const [questions, setQuestions] = useState<QuestionWithMember[]>([]);
+  const [selectedQuestion, setSelectedQuestion] = useState<QuestionWithMember | null>(null);
+  const [showQuestionDropdown, setShowQuestionDropdown] = useState(false);
 
   // Fetch applicants on component mount
   useEffect(() => {
@@ -53,6 +58,26 @@ export const EmailSendModal = memo(({
     }
   }, [showEmailModal]);
 
+  // Phase 1: Load questions without answers for answer guide modal
+  useEffect(() => {
+    if (showEmailModal && (emailModalType === 'answerGuide' || emailModalType === 'growthPlanAnswerGuide')) {
+      const loadQuestions = async () => {
+        try {
+          const type = emailModalType === 'growthPlanAnswerGuide' ? 'GROWTH_PLAN' : 'TRIAL';
+          const response = await queryDailyService.getQuestionsWithoutAnswers({ type, page: 0, size: 100 });
+          setQuestions(response.content);
+          console.log('✅ Loaded questions without answers:', response.content.length);
+        } catch (error: any) {
+          console.error('Failed to load questions:', error);
+          if (error.response?.status !== 401) {
+            setQuestions([]);
+          }
+        }
+      };
+      loadQuestions();
+    }
+  }, [showEmailModal, emailModalType]);
+
   // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -63,17 +88,20 @@ export const EmailSendModal = memo(({
       if (!target.closest('.applicant-dropdown-wrapper')) {
         setShowApplicantDropdown(false);
       }
+      if (!target.closest('.question-dropdown-wrapper')) {
+        setShowQuestionDropdown(false);
+      }
     };
 
-    if (showCalendar || showApplicantDropdown) {
+    if (showCalendar || showApplicantDropdown || showQuestionDropdown) {
       document.addEventListener('click', handleClickOutside);
       return () => document.removeEventListener('click', handleClickOutside);
     }
-  }, [showCalendar, showApplicantDropdown]);
+  }, [showCalendar, showApplicantDropdown, showQuestionDropdown]);
 
   // Handle applicant selection
   const handleApplicantSelect = (applicant: QueryApplication) => {
-    setSelectedApplicantId(String(applicant.id));
+    setSelectedMemberId(applicant.memberId);
     setRecipientEmail(applicant.email);
     // Set userName for all email types
     setQuestionData(prev => ({
@@ -81,7 +109,24 @@ export const EmailSendModal = memo(({
       userName: applicant.name || applicant.email.split('@')[0]
     }));
     setShowApplicantDropdown(false);
-    console.log('✅ Selected applicant:', applicant.name, applicant.email);
+    console.log('✅ Selected applicant:', applicant.name, applicant.email, 'memberId:', applicant.memberId);
+  };
+
+  // Phase 1: Handle question selection (for answer guide)
+  const handleQuestionSelect = (question: QuestionWithMember) => {
+    setSelectedQuestion(question);
+    // Auto-fill email and question content
+    setRecipientEmail(question.member.email);
+    setAnswerGuideData(prev => ({
+      ...prev,
+      question: question.content
+    }));
+    setQuestionData(prev => ({
+      ...prev,
+      userName: question.member.name
+    }));
+    setShowQuestionDropdown(false);
+    console.log('✅ Selected question:', question.id, question.content);
   };
 
   // Helper function to set quick schedule times
@@ -228,6 +273,25 @@ export const EmailSendModal = memo(({
           return;
         }
 
+        if (!selectedMemberId) {
+          setEmailError('신청자를 선택해주세요.');
+          setSendingEmail(false);
+          return;
+        }
+
+        // Phase 1: 1. Create Question in query-daily-service
+        const questionResponse = await queryDailyService.createQuestion({
+          memberId: selectedMemberId,
+          content: questionData.question,
+          type: 'TRIAL',
+          currentDay: questionData.currentDay,
+          totalDays: questionData.totalDays,
+          scheduledAt: scheduledAt || new Date().toISOString()
+        });
+
+        console.log('✅ Question created:', questionResponse.id);
+
+        // Phase 1: 2. Send email via noti-service (기존 방식)
         await emailService.sendQueryDailyQuestion(
           recipientEmail,
           questionData.question,
@@ -249,6 +313,30 @@ export const EmailSendModal = memo(({
           return;
         }
 
+        if (!selectedQuestion) {
+          setEmailError('질문을 먼저 선택해주세요.');
+          setSendingEmail(false);
+          return;
+        }
+
+        // Phase 1: 1. Create Answer in query-daily-service
+        const answerResponse = await queryDailyService.createAnswer({
+          questionId: selectedQuestion.id,
+          content: {
+            version: '1.0',
+            question: answerGuideData.question,
+            analysis: answerGuideData.analysis,
+            keywords: answerGuideData.keywords.filter(k => k.trim() !== ''),
+            starStructure: answerGuideData.starStructure,
+            personaAnswers: answerGuideData.personaAnswers,
+            followUpQuestions: answerGuideData.followUpQuestions.filter(q => q.trim() !== '')
+          },
+          scheduledAt: scheduledAt || new Date().toISOString()
+        });
+
+        console.log('✅ Answer created:', answerResponse.id);
+
+        // Phase 1: 2. Send email via noti-service (기존 방식)
         await emailService.sendQueryDailyAnswerGuide(
           recipientEmail,
           answerGuideData.question,
@@ -320,6 +408,25 @@ export const EmailSendModal = memo(({
           return;
         }
 
+        if (!selectedMemberId) {
+          setEmailError('신청자를 선택해주세요.');
+          setSendingEmail(false);
+          return;
+        }
+
+        // Phase 1: 1. Create Question in query-daily-service
+        const questionResponse = await queryDailyService.createQuestion({
+          memberId: selectedMemberId,
+          content: questionData.question,
+          type: 'GROWTH_PLAN',
+          currentDay: questionData.currentDay,
+          totalDays: 20,
+          scheduledAt: scheduledAt || new Date().toISOString()
+        });
+
+        console.log('✅ Growth Plan Question created:', questionResponse.id);
+
+        // Phase 1: 2. Send email via noti-service (기존 방식)
         await emailService.sendGrowthPlanQuestion(
           recipientEmail,
           questionData.question,
@@ -341,6 +448,30 @@ export const EmailSendModal = memo(({
           return;
         }
 
+        if (!selectedQuestion) {
+          setEmailError('질문을 먼저 선택해주세요.');
+          setSendingEmail(false);
+          return;
+        }
+
+        // Phase 1: 1. Create Answer in query-daily-service
+        const answerResponse = await queryDailyService.createAnswer({
+          questionId: selectedQuestion.id,
+          content: {
+            version: '1.0',
+            question: answerGuideData.question,
+            analysis: answerGuideData.analysis,
+            keywords: answerGuideData.keywords.filter(k => k.trim() !== ''),
+            starStructure: answerGuideData.starStructure,
+            personaAnswers: answerGuideData.personaAnswers,
+            followUpQuestions: answerGuideData.followUpQuestions.filter(q => q.trim() !== '')
+          },
+          scheduledAt: scheduledAt || new Date().toISOString()
+        });
+
+        console.log('✅ Growth Plan Answer created:', answerResponse.id);
+
+        // Phase 1: 2. Send email via noti-service (기존 방식)
         await emailService.sendGrowthPlanAnswerGuide(
           recipientEmail,
           answerGuideData.question,
@@ -434,10 +565,10 @@ export const EmailSendModal = memo(({
             <ApplicantDropdownWrapper className="applicant-dropdown-wrapper">
               <ApplicantSelectButton
                 onClick={() => setShowApplicantDropdown(!showApplicantDropdown)}
-                $hasSelection={!!selectedApplicantId}
+                $hasSelection={!!selectedMemberId}
               >
-                {selectedApplicantId
-                  ? applicants.find(a => String(a.id) === selectedApplicantId)?.name || '선택된 신청자'
+                {selectedMemberId
+                  ? applicants.find(a => a.memberId === selectedMemberId)?.name || '선택된 신청자'
                   : '신청자 목록에서 선택하기'}
                 <DropdownArrow>▼</DropdownArrow>
               </ApplicantSelectButton>
@@ -450,7 +581,7 @@ export const EmailSendModal = memo(({
                     <>
                       <ApplicantOption
                         onClick={() => {
-                          setSelectedApplicantId('');
+                          setSelectedMemberId('');
                           setRecipientEmail('');
                           setQuestionData(prev => ({ ...prev, userName: '' }));
                           setShowApplicantDropdown(false);
@@ -461,9 +592,9 @@ export const EmailSendModal = memo(({
                       </ApplicantOption>
                       {applicants.map(applicant => (
                         <ApplicantOption
-                          key={applicant.id}
+                          key={applicant.memberId}
                           onClick={() => handleApplicantSelect(applicant)}
-                          selected={String(applicant.id) === selectedApplicantId}
+                          selected={applicant.memberId === selectedMemberId}
                         >
                           <ApplicantName>{applicant.name}</ApplicantName>
                           <ApplicantEmail>{applicant.email}</ApplicantEmail>
@@ -474,9 +605,9 @@ export const EmailSendModal = memo(({
                 </ApplicantDropdown>
               )}
             </ApplicantDropdownWrapper>
-            {selectedApplicantId && (
+            {selectedMemberId && (
               <SelectedInfo>
-                ✅ {applicants.find(a => String(a.id) === selectedApplicantId)?.name} ({applicants.find(a => String(a.id) === selectedApplicantId)?.email}) 선택됨
+                ✅ {applicants.find(a => a.memberId === selectedMemberId)?.name} ({applicants.find(a => a.memberId === selectedMemberId)?.email}) 선택됨
               </SelectedInfo>
             )}
           </FormGroup>
@@ -488,9 +619,9 @@ export const EmailSendModal = memo(({
               value={recipientEmail}
               onChange={e => setRecipientEmail(e.target.value)}
               placeholder="example@email.com"
-              disabled={!!selectedApplicantId}
+              disabled={!!selectedMemberId}
             />
-            {selectedApplicantId && (
+            {selectedMemberId && (
               <HelperText>신청자를 선택하면 이메일이 자동으로 입력됩니다</HelperText>
             )}
           </FormGroup>
@@ -689,13 +820,72 @@ export const EmailSendModal = memo(({
           {(emailModalType === 'answerGuide' || emailModalType === 'growthPlanAnswerGuide') && (
             <>
               <FormGroup>
+                <Label>질문 선택 (Phase 1: 필수) *</Label>
+                <ApplicantDropdownWrapper className="question-dropdown-wrapper">
+                  <ApplicantSelectButton
+                    onClick={() => setShowQuestionDropdown(!showQuestionDropdown)}
+                    $hasSelection={!!selectedQuestion}
+                  >
+                    {selectedQuestion
+                      ? `${selectedQuestion.member.name} - ${selectedQuestion.content.substring(0, 50)}...`
+                      : '답변할 질문을 선택하세요'}
+                    <DropdownArrow>▼</DropdownArrow>
+                  </ApplicantSelectButton>
+
+                  {showQuestionDropdown && (
+                    <ApplicantDropdown>
+                      {questions.length === 0 ? (
+                        <ApplicantOption disabled>답변이 없는 질문이 없습니다</ApplicantOption>
+                      ) : (
+                        <>
+                          <ApplicantOption
+                            onClick={() => {
+                              setSelectedQuestion(null);
+                              setRecipientEmail('');
+                              setAnswerGuideData(prev => ({ ...prev, question: '' }));
+                              setShowQuestionDropdown(false);
+                            }}
+                            className="clear-option"
+                          >
+                            선택 해제
+                          </ApplicantOption>
+                          {questions.map(question => (
+                            <ApplicantOption
+                              key={question.id}
+                              onClick={() => handleQuestionSelect(question)}
+                              selected={selectedQuestion?.id === question.id}
+                            >
+                              <ApplicantName>{question.member.name} ({question.member.email})</ApplicantName>
+                              <ApplicantEmail>
+                                {question.content.substring(0, 80)}
+                                {question.content.length > 80 ? '...' : ''}
+                              </ApplicantEmail>
+                            </ApplicantOption>
+                          ))}
+                        </>
+                      )}
+                    </ApplicantDropdown>
+                  )}
+                </ApplicantDropdownWrapper>
+                {selectedQuestion && (
+                  <SelectedInfo>
+                    ✅ 선택됨: {selectedQuestion.member.name} - Day {selectedQuestion.currentDay}/{selectedQuestion.totalDays}
+                  </SelectedInfo>
+                )}
+              </FormGroup>
+
+              <FormGroup>
                 <Label>질문 *</Label>
                 <Textarea
                   value={answerGuideData.question}
                   onChange={e => setAnswerGuideData({...answerGuideData, question: e.target.value})}
                   placeholder="예: JWT를 사용한 인증 방식의 장단점은?"
                   rows={2}
+                  disabled={!selectedQuestion}
                 />
+                {!selectedQuestion && (
+                  <HelperText>먼저 질문을 선택하면 자동으로 입력됩니다</HelperText>
+                )}
               </FormGroup>
 
               <FormGroup>
