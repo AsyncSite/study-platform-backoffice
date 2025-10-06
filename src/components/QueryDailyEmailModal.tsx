@@ -636,7 +636,6 @@ export const EmailSendModal = memo(({
                   <Input
                     type="number"
                     min="1"
-                    max="3"
                     value={questionData.currentDay}
                     onChange={e => setQuestionData({...questionData, currentDay: parseInt(e.target.value) || 1})}
                   />
