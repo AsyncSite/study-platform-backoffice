@@ -73,7 +73,7 @@ export const EmailSendModal = memo(({
 
   // Handle applicant selection
   const handleApplicantSelect = (applicant: QueryApplication) => {
-    setSelectedApplicantId(String(applicant.id));
+    setSelectedApplicantId(applicant.memberId);
     setRecipientEmail(applicant.email);
     // Set userName for all email types
     setQuestionData(prev => ({
@@ -461,9 +461,9 @@ export const EmailSendModal = memo(({
                       </ApplicantOption>
                       {applicants.map(applicant => (
                         <ApplicantOption
-                          key={applicant.id}
+                          key={applicant.memberId}
                           onClick={() => handleApplicantSelect(applicant)}
-                          selected={String(applicant.id) === selectedApplicantId}
+                          selected={applicant.memberId === selectedApplicantId}
                         >
                           <ApplicantName>{applicant.name}</ApplicantName>
                           <ApplicantEmail>{applicant.email}</ApplicantEmail>
