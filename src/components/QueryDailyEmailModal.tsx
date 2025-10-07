@@ -390,30 +390,42 @@ export const EmailSendModal = memo(({
           return;
         }
 
-        if (!selectedMemberId) {
-          setEmailError('신청자를 선택해주세요.');
-          setSendingEmail(false);
-          return;
+        // 신청자 선택은 선택사항 - selectedMemberId가 있을 때만 API 호출
+        if (selectedMemberId) {
+          // Phase 2: Create Question in query-daily-service (Kafka will trigger email)
+          const questionResponse = await queryDailyService.createQuestion({
+            memberId: selectedMemberId,
+            content: questionData.question,
+            type: 'GROWTH_PLAN',
+            currentDay: questionData.currentDay,
+            totalDays: 20,
+            scheduledAt: scheduledAt || new Date().toISOString(),
+            displayName: questionData.userName || undefined  // 백오피스에서 입력한 표시 이름 전달
+          });
+
+          console.log('✅ Growth Plan Question created:', questionResponse.id);
+
+          // Email will be sent automatically via Kafka event → noti-service
+          const successMessage = isScheduled
+            ? `${recipientEmail}로 ${scheduledDate} ${scheduledTime} ${getRelativeTime(scheduledDate, scheduledTime)} KST에 그로스 플랜 질문 발송이 예약되었습니다.`
+            : `${recipientEmail}로 그로스 플랜 질문이 발송되었습니다.`;
+          setEmailSuccess(successMessage);
+        } else {
+          // 신청자를 선택하지 않은 경우 직접 이메일 발송
+          await emailService.sendGrowthPlanQuestion(
+            recipientEmail,
+            questionData.userName || recipientEmail.split('@')[0],
+            questionData.question,
+            questionData.currentDay,
+            questionData.totalDays,
+            scheduledAt
+          );
+
+          const successMessage = isScheduled
+            ? `${recipientEmail}로 ${scheduledDate} ${scheduledTime} ${getRelativeTime(scheduledDate, scheduledTime)} KST에 그로스 플랜 질문 발송이 예약되었습니다.`
+            : `${recipientEmail}로 그로스 플랜 질문이 발송되었습니다.`;
+          setEmailSuccess(successMessage);
         }
-
-        // Phase 2: Create Question in query-daily-service (Kafka will trigger email)
-        const questionResponse = await queryDailyService.createQuestion({
-          memberId: selectedMemberId,
-          content: questionData.question,
-          type: 'GROWTH_PLAN',
-          currentDay: questionData.currentDay,
-          totalDays: 20,
-          scheduledAt: scheduledAt || new Date().toISOString(),
-          displayName: questionData.userName || undefined  // 백오피스에서 입력한 표시 이름 전달
-        });
-
-        console.log('✅ Growth Plan Question created:', questionResponse.id);
-
-        // Email will be sent automatically via Kafka event → noti-service
-        const successMessage = isScheduled
-          ? `${recipientEmail}로 ${scheduledDate} ${scheduledTime} ${getRelativeTime(scheduledDate, scheduledTime)} KST에 그로스 플랜 질문 발송이 예약되었습니다.`
-          : `${recipientEmail}로 그로스 플랜 질문이 발송되었습니다.`;
-        setEmailSuccess(successMessage);
       } else if (emailModalType === 'growthPlanAnswerGuide') {
         if (!answerGuideData.question || !answerGuideData.analysis) {
           setEmailError('질문과 질문 해부는 필수 항목입니다.');
