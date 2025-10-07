@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
@@ -27,24 +27,12 @@ const PaymentTransactionManagement: React.FC = () => {
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
 
-  // 필터
+  // 필터 (전체 탭에서만 사용)
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [paymentMethodFilter, setPaymentMethodFilter] = useState<string>('');
   const [userIdSearch, setUserIdSearch] = useState<string>('');
 
-  // 탭 변경 시 필터 자동 설정
-  useEffect(() => {
-    if (activeTab === 'pending-deposits') {
-      setStatusFilter('CREATED');
-      setPaymentMethodFilter('ACCOUNT_TRANSFER');
-    } else {
-      // 전체 트랜잭션으로 돌아갈 때 필터 초기화 (선택사항)
-      // setStatusFilter('');
-      // setPaymentMethodFilter('');
-    }
-  }, [activeTab]);
-
-  const fetchTransactions = async (page: number = 0) => {
+  const fetchTransactions = useCallback(async (page: number = 0) => {
     setLoading(true);
     try {
       const params = new URLSearchParams({
@@ -54,9 +42,16 @@ const PaymentTransactionManagement: React.FC = () => {
         sortDir: 'DESC'
       });
 
-      if (statusFilter) params.append('status', statusFilter);
-      if (paymentMethodFilter) params.append('paymentMethod', paymentMethodFilter);
-      if (userIdSearch) params.append('userId', userIdSearch);
+      // 탭에 따라 필터 자동 적용
+      if (activeTab === 'pending-deposits') {
+        params.append('status', 'CREATED');
+        params.append('paymentMethod', 'ACCOUNT_TRANSFER');
+      } else {
+        // 전체 탭에서는 사용자 지정 필터 사용
+        if (statusFilter) params.append('status', statusFilter);
+        if (paymentMethodFilter) params.append('paymentMethod', paymentMethodFilter);
+        if (userIdSearch) params.append('userId', userIdSearch);
+      }
 
       const token = localStorage.getItem('authToken');
       const response = await fetch(
@@ -93,11 +88,11 @@ const PaymentTransactionManagement: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeTab, statusFilter, paymentMethodFilter, userIdSearch]);
 
   useEffect(() => {
     fetchTransactions(0);
-  }, [statusFilter, paymentMethodFilter, userIdSearch]);
+  }, [fetchTransactions]);
 
   const handleConfirmDeposit = async (transaction: Transaction) => {
     const confirmed = window.confirm(
@@ -236,9 +231,7 @@ const PaymentTransactionManagement: React.FC = () => {
         </InfoMessage>
       )}
 
-      {loading ? (
-        <LoadingMessage>로딩 중...</LoadingMessage>
-      ) : transactions.length === 0 ? (
+      {transactions.length === 0 && !loading ? (
         <LoadingMessage>결제내역이 없습니다.</LoadingMessage>
       ) : (
         <>
@@ -257,7 +250,22 @@ const PaymentTransactionManagement: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {transactions.map((transaction) => (
+                {loading ? (
+                  // 스켈레톤 로딩
+                  Array.from({ length: 5 }).map((_, index) => (
+                    <SkeletonRow key={index}>
+                      <Td><SkeletonBox width="120px" /></Td>
+                      <Td><SkeletonBox width="140px" /></Td>
+                      <Td><SkeletonBox width="160px" /></Td>
+                      <Td><SkeletonBox width="80px" /></Td>
+                      <Td><SkeletonBox width="70px" /></Td>
+                      <Td><SkeletonBox width="60px" /></Td>
+                      <Td><SkeletonBox width="120px" /></Td>
+                      {activeTab === 'pending-deposits' && <Td><SkeletonBox width="80px" /></Td>}
+                    </SkeletonRow>
+                  ))
+                ) : (
+                  transactions.map((transaction) => (
                   <Tr key={transaction.transactionId}>
                     <Td>{transaction.transactionId}</Td>
                     <Td>{transaction.userId}</Td>
@@ -280,7 +288,8 @@ const PaymentTransactionManagement: React.FC = () => {
                       </Td>
                     )}
                   </Tr>
-                ))}
+                  ))
+                )}
               </tbody>
             </Table>
           </TableWrapper>
@@ -502,8 +511,36 @@ const ActionButton = styled.button`
   &:hover {
     background: #45a049;
   }
+`;
 
-  &:active {
-    transform: scale(0.98);
+const SkeletonRow = styled.tr`
+  animation: pulse 1.5s ease-in-out infinite;
+
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
   }
 `;
+
+const SkeletonBox = styled.div<{ width?: string }>`
+  height: 16px;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: loading 1.5s ease-in-out infinite;
+  border-radius: 4px;
+  width: ${({ width }) => width || '100%'};
+
+  @keyframes loading {
+    0% {
+      background-position: 200% 0;
+    }
+    100% {
+      background-position: -200% 0;
+    }
+  }
+`;
+
