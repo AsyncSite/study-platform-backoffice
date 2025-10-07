@@ -230,15 +230,17 @@ const Dashboard: React.FC = () => {
             <EmptyMessage>진행중인 스터디가 없습니다.</EmptyMessage>
           )}
         </StudyGrid>
-        <ActivitySide>
+        {/* TODO: 실시간 활동 데이터 API 연동 필요 */}
+        {/* <ActivitySide>
           <ActivityCard activities={activities} />
-        </ActivitySide>
+        </ActivitySide> */}
       </StudySection>
 
-      <ChartGrid>
+      {/* TODO: 차트 데이터 API 연동 필요 */}
+      {/* <ChartGrid>
         <WeeklyTrendChart data={weeklyData} />
         <CategoryDistributionChart data={categoryData} total={342} />
-      </ChartGrid>
+      </ChartGrid> */}
     </DashboardContainer>
   );
 };
