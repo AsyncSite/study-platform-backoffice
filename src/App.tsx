@@ -14,7 +14,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import NotiManagement from './pages/NotiManagement';
 import QueryDailyManagement from './pages/QueryDailyManagement';
-// import PaymentTransactionManagement from './pages/PaymentTransactionManagement'; // TODO: 파일 생성 후 활성화
+import PaymentTransactionManagement from './pages/PaymentTransactionManagement';
 
 function App() {
   return (
@@ -96,7 +96,6 @@ function App() {
                 </PrivateRoute>
               }
             />
-            {/* TODO: PaymentTransactionManagement 파일 생성 후 활성화
             <Route
               path="/payments"
               element={
@@ -107,7 +106,6 @@ function App() {
                 </PrivateRoute>
               }
             />
-            */}
             {/* Will add more routes */}
             </Routes>
           </AuthProvider>
