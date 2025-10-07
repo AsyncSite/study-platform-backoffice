@@ -251,6 +251,15 @@ export const EmailSendModal = memo(({
       const scheduledDateTime = new Date(`${scheduledDate}T${scheduledTime}:00`);
       const now = new Date();
 
+      console.log('🕐 [예약 발송 디버깅]', {
+        isScheduled,
+        scheduledDate,
+        scheduledTime,
+        scheduledDateTime: scheduledDateTime.toString(),
+        now: now.toString(),
+        isAfterNow: scheduledDateTime > now
+      });
+
       if (scheduledDateTime <= now) {
         setEmailError('예약 시간은 현재 시간 이후여야 합니다.');
         return;
@@ -259,6 +268,10 @@ export const EmailSendModal = memo(({
       // Convert to ISO string (will be handled as KST on server)
       // Add timezone information comment for clarity
       scheduledAt = scheduledDateTime.toISOString(); // Note: Server should interpret this as KST
+
+      console.log('📤 [전송될 scheduledAt]', scheduledAt);
+    } else {
+      console.log('⚡ [즉시 발송 모드] isScheduled =', isScheduled);
     }
 
     setSendingEmail(true);
@@ -414,11 +427,13 @@ export const EmailSendModal = memo(({
           // 신청자를 선택하지 않은 경우 직접 이메일 발송
           await emailService.sendGrowthPlanQuestion(
             recipientEmail,
-            questionData.userName || recipientEmail.split('@')[0],
-            questionData.question,
-            questionData.currentDay,
-            questionData.totalDays,
-            scheduledAt
+            questionData.question,                             // 2번째: question
+            questionData.userName || recipientEmail.split('@')[0],  // 3번째: userName
+            questionData.currentDay,                           // 4번째: currentDay
+            questionData.totalDays,                            // 5번째: totalDays
+            undefined,                                         // 6번째: dayIntroMessage (기본값 사용)
+            undefined,                                         // 7번째: dayMotivationMessage (기본값 사용)
+            scheduledAt                                        // 8번째: scheduledAt
           );
 
           const successMessage = isScheduled
