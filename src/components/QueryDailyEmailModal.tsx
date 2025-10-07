@@ -273,20 +273,20 @@ export const EmailSendModal = memo(({
           return;
         }
 
-        if (!selectedMemberId) {
-          setEmailError('신청자를 선택해주세요.');
+        if (!recipientEmail) {
+          setEmailError('이메일을 입력해주세요.');
           setSendingEmail(false);
           return;
         }
 
         // Phase 2: Create Question in query-daily-service (Kafka will trigger email)
         const questionResponse = await queryDailyService.createQuestion({
-          memberId: selectedMemberId,
+          email: recipientEmail,
           content: questionData.question,
           type: 'TRIAL',
           currentDay: questionData.currentDay,
           totalDays: questionData.totalDays,
-          scheduledAt: scheduledAt || new Date().toISOString(),
+          scheduledAt: scheduledAt || undefined,
           displayName: questionData.userName || undefined  // 백오피스에서 입력한 표시 이름 전달
         });
 
@@ -312,7 +312,9 @@ export const EmailSendModal = memo(({
 
         // Phase 2: Create Answer in query-daily-service (Kafka will trigger email)
         const answerResponse = await queryDailyService.createAnswer({
-          questionId: selectedQuestion.id,
+          email: recipientEmail,
+          questionId: selectedQuestion?.id,
+          type: 'TRIAL',
           content: {
             version: '1.0',
             question: answerGuideData.question,
@@ -322,11 +324,11 @@ export const EmailSendModal = memo(({
             personaAnswers: answerGuideData.personaAnswers,
             followUpQuestions: answerGuideData.followUpQuestions.filter(q => q.trim() !== '')
           },
-          scheduledAt: scheduledAt || new Date().toISOString(),
+          scheduledAt: scheduledAt || undefined,
           displayName: questionData.userName || undefined  // 백오피스에서 입력한 표시 이름 전달
         });
 
-        console.log('✅ Answer created:', answerResponse.id);
+        console.log('✅ TRIAL Answer created:', answerResponse.id);
 
         // Email will be sent automatically via Kafka event → noti-service
         const successMessage = isScheduled
@@ -390,20 +392,20 @@ export const EmailSendModal = memo(({
           return;
         }
 
-        if (!selectedMemberId) {
-          setEmailError('신청자를 선택해주세요.');
+        if (!recipientEmail) {
+          setEmailError('이메일을 입력해주세요.');
           setSendingEmail(false);
           return;
         }
 
         // Phase 2: Create Question in query-daily-service (Kafka will trigger email)
         const questionResponse = await queryDailyService.createQuestion({
-          memberId: selectedMemberId,
+          email: recipientEmail,
           content: questionData.question,
           type: 'GROWTH_PLAN',
           currentDay: questionData.currentDay,
           totalDays: 20,
-          scheduledAt: scheduledAt || new Date().toISOString(),
+          scheduledAt: scheduledAt || undefined,
           displayName: questionData.userName || undefined  // 백오피스에서 입력한 표시 이름 전달
         });
 
@@ -429,7 +431,9 @@ export const EmailSendModal = memo(({
 
         // Phase 2: Create Answer in query-daily-service (Kafka will trigger email)
         const answerResponse = await queryDailyService.createAnswer({
-          questionId: selectedQuestion.id,
+          email: recipientEmail,
+          questionId: selectedQuestion?.id,
+          type: 'GROWTH_PLAN',
           content: {
             version: '1.0',
             question: answerGuideData.question,
@@ -439,7 +443,7 @@ export const EmailSendModal = memo(({
             personaAnswers: answerGuideData.personaAnswers,
             followUpQuestions: answerGuideData.followUpQuestions.filter(q => q.trim() !== '')
           },
-          scheduledAt: scheduledAt || new Date().toISOString(),
+          scheduledAt: scheduledAt || undefined,
           displayName: questionData.userName || undefined  // 백오피스에서 입력한 표시 이름 전달
         });
 
