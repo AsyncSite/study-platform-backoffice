@@ -75,12 +75,17 @@ const PaymentTransactionManagement: React.FC = () => {
 
       const result = await response.json();
 
-      // payment-core returns data directly without ApiResponse wrapper
-      if (result.content) {
-        setTransactions(result.content);
-        setCurrentPage(result.page);
-        setTotalPages(result.totalPages);
-        setTotalElements(result.totalElements);
+      // Handle both direct response (local) and ApiResponse wrapper (production)
+      const data = result.data || result; // Production has result.data, local doesn't
+
+      if (data.content) {
+        console.log('Setting transactions:', data.content.length, 'items');
+        setTransactions(data.content);
+        setCurrentPage(data.page);
+        setTotalPages(data.totalPages);
+        setTotalElements(data.totalElements);
+      } else {
+        console.warn('No content found in response:', result);
       }
     } catch (error) {
       console.error('Failed to fetch transactions:', error);
@@ -233,6 +238,8 @@ const PaymentTransactionManagement: React.FC = () => {
 
       {loading ? (
         <LoadingMessage>로딩 중...</LoadingMessage>
+      ) : transactions.length === 0 ? (
+        <LoadingMessage>결제내역이 없습니다.</LoadingMessage>
       ) : (
         <>
           <TableWrapper>
