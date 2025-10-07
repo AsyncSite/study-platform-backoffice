@@ -17,14 +17,6 @@ interface Transaction {
   failureReason?: string;
 }
 
-interface PagedResponse {
-  content: Transaction[];
-  page: number;
-  size: number;
-  totalElements: number;
-  totalPages: number;
-}
-
 type TabType = 'all' | 'pending-deposits';
 
 const PaymentTransactionManagement: React.FC = () => {
@@ -143,7 +135,7 @@ const PaymentTransactionManagement: React.FC = () => {
     if (status.includes('SUCCESS') || status === 'COMPLETED') return 'success';
     if (status.includes('FAILED') || status === 'FAILED') return 'error';
     if (status.includes('PENDING') || status === 'PENDING' || status === 'CREATED') return 'warning';
-    if (status.includes('REFUND')) return 'info';
+    if (status.includes('REFUND')) return 'primary';
     if (status === 'CANCELLED') return 'default';
     return 'default';
   };

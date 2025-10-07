@@ -7,9 +7,6 @@ import type { StudyResponse } from '../types/api';
 import { StudyStatus } from '../types/api';
 import StatCard from '../components/dashboard/StatCard';
 import StudyCard from '../components/dashboard/StudyCard';
-import ActivityCard from '../components/dashboard/ActivityCard';
-import WeeklyTrendChart from '../components/dashboard/WeeklyTrendChart';
-import CategoryDistributionChart from '../components/dashboard/CategoryDistributionChart';
 
 const Dashboard: React.FC = () => {
   const [userStatistics, setUserStatistics] = useState<UserStatistics | null>(null);
@@ -302,26 +299,6 @@ const StudyGrid = styled.div`
   display: flex;
   flex-direction: column;
   gap: 20px;
-`;
-
-const ActivitySide = styled.div`
-  flex-shrink: 0;
-  width: 350px;
-
-  @media (max-width: ${({ theme }) => theme.breakpoints.desktop}) {
-    width: 100%;
-  }
-`;
-
-const ChartGrid = styled.div`
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
-  margin-top: 20px;
-  
-  @media (max-width: ${({ theme }) => theme.breakpoints.desktop}) {
-    grid-template-columns: 1fr;
-  }
 `;
 
 const EmptyMessage = styled.p`
