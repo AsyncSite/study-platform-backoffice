@@ -842,17 +842,14 @@ export const EmailSendModal = memo(({
               </FormGroup>
 
               <FormGroup>
-                <Label>질문 *</Label>
+                <Label>질문</Label>
                 <Textarea
                   value={answerGuideData.question}
                   onChange={e => setAnswerGuideData({...answerGuideData, question: e.target.value})}
                   placeholder="예: JWT를 사용한 인증 방식의 장단점은?"
                   rows={2}
-                  disabled={!selectedQuestion}
                 />
-                {!selectedQuestion && (
-                  <HelperText>먼저 질문을 선택하면 자동으로 입력됩니다</HelperText>
-                )}
+                <HelperText>질문을 선택하거나 직접 입력하세요</HelperText>
               </FormGroup>
 
               <FormGroup>

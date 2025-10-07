@@ -839,7 +839,7 @@ const QueryDailyManagement: React.FC = () => {
                           [{answer.type === 'TRIAL' ? '무료체험' : '그로스 플랜'}] 답변 가이드
                         </EmailSubjectLine>
                         <EmailPreview>
-                          {answer.questionContent.substring(0, 100)}...
+                          {answer.questionContent ? answer.questionContent.substring(0, 100) + '...' : '질문 없음 (답변만 발송)'}
                         </EmailPreview>
                       </EmailBody>
                       <EmailFooter>
