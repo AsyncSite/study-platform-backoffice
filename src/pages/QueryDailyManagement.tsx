@@ -658,36 +658,6 @@ const QueryDailyManagement: React.FC = () => {
         </div>
         <div style={{ display: 'flex', gap: '12px' }}>
           <AddButton onClick={() => {
-            setEmailModalType('question');
-            setShowEmailModal(true);
-          }}>
-            📧 질문 발송
-          </AddButton>
-          <AddButton onClick={() => {
-            setEmailModalType('answerGuide');
-            setShowEmailModal(true);
-          }} style={{ background: '#667eea' }}>
-            📚 답변 가이드 발송
-          </AddButton>
-          <AddButton onClick={() => {
-            setEmailModalType('welcome');
-            setShowEmailModal(true);
-          }} style={{ background: '#10b981' }}>
-            🎉 환영 메일 발송
-          </AddButton>
-          <AddButton onClick={() => {
-            setEmailModalType('midFeedback');
-            setShowEmailModal(true);
-          }} style={{ background: '#f59e0b' }}>
-            📝 중간 메일 발송
-          </AddButton>
-          <AddButton onClick={() => {
-            setEmailModalType('complete');
-            setShowEmailModal(true);
-          }} style={{ background: '#8b5cf6' }}>
-            🏆 완료 메일 발송
-          </AddButton>
-          <AddButton onClick={() => {
             setEmailModalType('growthPlanQuestion');
             setShowEmailModal(true);
           }} style={{ background: '#FF8C00' }}>

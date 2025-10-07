@@ -80,7 +80,7 @@ class EmailService {
     question: string,
     userName: string = '개발자',
     currentDay: number = 1,
-    totalDays: number = 3,
+    totalDays: number = 20,
     dayIntroMessage?: string,
     dayMotivationMessage?: string,
     scheduledAt?: string

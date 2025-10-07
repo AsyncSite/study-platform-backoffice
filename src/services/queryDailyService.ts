@@ -3,6 +3,7 @@ import { env } from '../config/environment';
 
 export interface QueryApplication {
   id: number;
+  memberId: string;
   email: string;
   name: string;
   resumeFileName: string;
