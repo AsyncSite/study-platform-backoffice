@@ -803,7 +803,7 @@ const QueryDailyManagement: React.FC = () => {
             </div>
           ) : (
             <EmailGrid>
-              {todayScheduled.map((item, index) => {
+              {todayScheduled.map((item) => {
                 if (item.type === 'question') {
                   const question = item.data as QuestionWithMember;
                   const questionTime = new Date(question.scheduledAt + 'Z');
@@ -1756,7 +1756,7 @@ const ActionButton = styled.button<{ $primary?: boolean; $large?: boolean }>`
 `;
 
 // Content Components
-const ContentContainer = styled.div``;
+// const ContentContainer = styled.div``;
 
 const AddButton = styled.button`
   padding: 10px 20px;
@@ -1774,39 +1774,39 @@ const AddButton = styled.button`
   }
 `;
 
-const ContentTabs = styled.div`
-  display: flex;
-  gap: 16px;
-  margin-bottom: 24px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.gray[200]};
-  padding-bottom: 16px;
-`;
+// const ContentTabs = styled.div`
+//   display: flex;
+//   gap: 16px;
+//   margin-bottom: 24px;
+//   border-bottom: 1px solid ${({ theme }) => theme.colors.gray[200]};
+//   padding-bottom: 16px;
+// `;
 
-const ContentTab = styled.button`
-  padding: 8px 16px;
-  background: transparent;
-  border: none;
-  color: ${({ theme }) => theme.colors.text.secondary};
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
+// const ContentTab = styled.button`
+//   padding: 8px 16px;
+//   background: transparent;
+//   border: none;
+//   color: ${({ theme }) => theme.colors.text.secondary};
+//   font-size: 14px;
+//   font-weight: 500;
+//   cursor: pointer;
+//   transition: all 0.2s;
 
-  &:hover {
-    color: ${({ theme }) => theme.colors.primary};
-  }
+//   &:hover {
+//     color: ${({ theme }) => theme.colors.primary};
+//   }
 
-  &.active {
-    color: ${({ theme }) => theme.colors.primary};
-    font-weight: 600;
-  }
-`;
+//   &.active {
+//     color: ${({ theme }) => theme.colors.primary};
+//     font-weight: 600;
+//   }
+// `;
 
-const AnswerGuideSection = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
-  gap: 20px;
-`;
+// const AnswerGuideSection = styled.div`
+//   display: grid;
+//   grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+//   gap: 20px;
+// `;
 
 // Unused styled components - commented for future use
 // const GuideCard = styled.div`
@@ -1883,11 +1883,11 @@ const Keyword = styled.span`
 // `;
 
 // Question Bank Components
-const QuestionBankSection = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
-  gap: 20px;
-`;
+// const QuestionBankSection = styled.div`
+//   display: grid;
+//   grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+//   gap: 20px;
+// `;
 
 // const QuestionCard = styled.div`
 //   background: white;
@@ -2063,56 +2063,56 @@ const EmailFooter = styled.div`
   justify-content: flex-end;
 `;
 
-const EmailStatus = styled.span<{ sent?: boolean }>`
-  padding: 4px 10px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: 500;
-  background: ${({ sent }) => sent ? '#e0f2fe' : '#fef3c7'};
-  color: ${({ sent }) => sent ? '#0369a1' : '#a16207'};
-`;
+// const EmailStatus = styled.span<{ sent?: boolean }>`
+//   padding: 4px 10px;
+//   border-radius: 4px;
+//   font-size: 12px;
+//   font-weight: 500;
+//   background: ${({ sent }) => sent ? '#e0f2fe' : '#fef3c7'};
+//   color: ${({ sent }) => sent ? '#0369a1' : '#a16207'};
+// `;
 
-const EmailSentTime = styled.span`
-  font-size: 12px;
-  color: ${({ theme }) => theme.colors.text.tertiary};
-`;
+// const EmailSentTime = styled.span`
+//   font-size: 12px;
+//   color: ${({ theme }) => theme.colors.text.tertiary};
+// `;
 
 // Analytics Components
-const AnalyticsContainer = styled.div``;
+// const AnalyticsContainer = styled.div``;
 
-const AnalyticsGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 24px;
+// const AnalyticsGrid = styled.div`
+//   display: grid;
+//   grid-template-columns: repeat(2, 1fr);
+//   gap: 24px;
 
-  @media (max-width: 1200px) {
-    grid-template-columns: 1fr;
-  }
-`;
+//   @media (max-width: 1200px) {
+//     grid-template-columns: 1fr;
+//   }
+// `;
 
-const ChartCard = styled.div`
-  background: white;
-  border-radius: 8px;
-  padding: 24px;
-  border: 1px solid ${({ theme }) => theme.colors.gray[200]};
+// const ChartCard = styled.div`
+//   background: white;
+//   border-radius: 8px;
+//   padding: 24px;
+//   border: 1px solid ${({ theme }) => theme.colors.gray[200]};
 
-  h3 {
-    font-size: 16px;
-    font-weight: 600;
-    margin-bottom: 20px;
-  }
-`;
+//   h3 {
+//     font-size: 16px;
+//     font-weight: 600;
+//     margin-bottom: 20px;
+//   }
+// `;
 
-const ChartPlaceholder = styled.div`
-  height: 200px;
-  background: ${({ theme }) => theme.colors.gray[50]};
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 24px;
-  color: ${({ theme }) => theme.colors.text.tertiary};
-`;
+// const ChartPlaceholder = styled.div`
+//   height: 200px;
+//   background: ${({ theme }) => theme.colors.gray[50]};
+//   border-radius: 8px;
+//   display: flex;
+//   align-items: center;
+//   justify-content: center;
+//   font-size: 24px;
+//   color: ${({ theme }) => theme.colors.text.tertiary};
+// `;
 
 // Modal Components
 const Modal = styled.div`
