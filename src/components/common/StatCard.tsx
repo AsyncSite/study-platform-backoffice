@@ -17,7 +17,7 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, subtitle, trend }) =>
       <CardHeader>
         <CardTitle>{title}</CardTitle>
         {trend && (
-          <TrendBadge isPositive={trend.isPositive}>
+          <TrendBadge $isPositive={trend.isPositive}>
             <TrendIcon>{trend.isPositive ? '↑' : '↓'}</TrendIcon>
             {Math.abs(trend.value)}%
           </TrendBadge>
@@ -55,16 +55,16 @@ const CardTitle = styled.h3`
   color: ${({ theme }) => theme.colors.gray[600]};
 `;
 
-const TrendBadge = styled.span<{ isPositive: boolean }>`
+const TrendBadge = styled.span<{ $isPositive: boolean }>`
   display: flex;
   align-items: center;
   gap: 2px;
   font-size: 12px;
   font-weight: 600;
-  color: ${({ isPositive, theme }) => 
-    isPositive ? theme.colors.success : theme.colors.error};
-  background: ${({ isPositive, theme }) => 
-    isPositive ? theme.colors.success + '10' : theme.colors.error + '10'};
+  color: ${({ $isPositive, theme }) =>
+    $isPositive ? theme.colors.success : theme.colors.error};
+  background: ${({ $isPositive, theme }) =>
+    $isPositive ? theme.colors.success + '10' : theme.colors.error + '10'};
   padding: 4px 8px;
   border-radius: 12px;
 `;
