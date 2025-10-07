@@ -279,7 +279,7 @@ export const EmailSendModal = memo(({
           return;
         }
 
-        // Phase 2: Create Question in query-daily-service (Kafka will trigger email)
+        // Create Question (Kafka will trigger email)
         const questionResponse = await queryDailyService.createQuestion({
           email: recipientEmail,
           content: questionData.question,
@@ -304,16 +304,16 @@ export const EmailSendModal = memo(({
           return;
         }
 
-        if (!selectedQuestion) {
-          setEmailError('질문을 먼저 선택해주세요.');
+        if (!recipientEmail) {
+          setEmailError('이메일을 입력해주세요.');
           setSendingEmail(false);
           return;
         }
 
-        // Phase 2: Create Answer in query-daily-service (Kafka will trigger email)
+        // Question 선택은 선택사항 - questionId는 있으면 전달, 없으면 null
         const answerResponse = await queryDailyService.createAnswer({
           email: recipientEmail,
-          questionId: selectedQuestion?.id,
+          questionId: selectedQuestion?.id || undefined,
           type: 'TRIAL',
           content: {
             version: '1.0',
@@ -398,7 +398,7 @@ export const EmailSendModal = memo(({
           return;
         }
 
-        // Phase 2: Create Question in query-daily-service (Kafka will trigger email)
+        // Create Question (Kafka will trigger email)
         const questionResponse = await queryDailyService.createQuestion({
           email: recipientEmail,
           content: questionData.question,
@@ -423,16 +423,16 @@ export const EmailSendModal = memo(({
           return;
         }
 
-        if (!selectedQuestion) {
-          setEmailError('질문을 먼저 선택해주세요.');
+        if (!recipientEmail) {
+          setEmailError('이메일을 입력해주세요.');
           setSendingEmail(false);
           return;
         }
 
-        // Phase 2: Create Answer in query-daily-service (Kafka will trigger email)
+        // Question 선택은 선택사항 - questionId는 있으면 전달, 없으면 null
         const answerResponse = await queryDailyService.createAnswer({
           email: recipientEmail,
-          questionId: selectedQuestion?.id,
+          questionId: selectedQuestion?.id || undefined,
           type: 'GROWTH_PLAN',
           content: {
             version: '1.0',
