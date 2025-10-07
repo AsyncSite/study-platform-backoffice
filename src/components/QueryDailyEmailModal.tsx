@@ -279,7 +279,7 @@ export const EmailSendModal = memo(({
           return;
         }
 
-        // Phase 1: 1. Create Question in query-daily-service
+        // Phase 2: Create Question in query-daily-service (Kafka will trigger email)
         const questionResponse = await queryDailyService.createQuestion({
           memberId: selectedMemberId,
           content: questionData.question,
@@ -291,20 +291,10 @@ export const EmailSendModal = memo(({
 
         console.log('✅ Question created:', questionResponse.id);
 
-        // Phase 1: 2. Send email via noti-service (기존 방식)
-        await emailService.sendQueryDailyQuestion(
-          recipientEmail,
-          questionData.question,
-          questionData.userName || recipientEmail.split('@')[0],
-          questionData.currentDay,
-          questionData.totalDays,
-          undefined, // dayIntroMessage - emailService에서 자동 설정
-          undefined, // dayMotivationMessage - emailService에서 자동 설정
-          scheduledAt
-        );
+        // Email will be sent automatically via Kafka event → noti-service
         const successMessage = isScheduled
-          ? `${recipientEmail}로 ${scheduledDate} ${scheduledTime} ${getRelativeTime(scheduledDate, scheduledTime)} KST에 발송 예약되었습니다.`
-          : `${recipientEmail}로 질문을 발송했습니다.`;
+          ? `${recipientEmail}로 ${scheduledDate} ${scheduledTime} ${getRelativeTime(scheduledDate, scheduledTime)} KST에 질문 발송이 예약되었습니다.`
+          : `${recipientEmail}로 질문이 발송되었습니다.`;
         setEmailSuccess(successMessage);
       } else if (emailModalType === 'answerGuide') {
         if (!answerGuideData.question || !answerGuideData.analysis) {
@@ -319,7 +309,7 @@ export const EmailSendModal = memo(({
           return;
         }
 
-        // Phase 1: 1. Create Answer in query-daily-service
+        // Phase 2: Create Answer in query-daily-service (Kafka will trigger email)
         const answerResponse = await queryDailyService.createAnswer({
           questionId: selectedQuestion.id,
           content: {
@@ -336,20 +326,10 @@ export const EmailSendModal = memo(({
 
         console.log('✅ Answer created:', answerResponse.id);
 
-        // Phase 1: 2. Send email via noti-service (기존 방식)
-        await emailService.sendQueryDailyAnswerGuide(
-          recipientEmail,
-          answerGuideData.question,
-          answerGuideData.analysis,
-          answerGuideData.keywords.filter(k => k),
-          answerGuideData.starStructure,
-          answerGuideData.personaAnswers,
-          answerGuideData.followUpQuestions.filter(q => q),
-          scheduledAt
-        );
+        // Email will be sent automatically via Kafka event → noti-service
         const successMessage = isScheduled
-          ? `${recipientEmail}로 ${scheduledDate} ${scheduledTime} ${getRelativeTime(scheduledDate, scheduledTime)} KST에 발송 예약되었습니다.`
-          : `${recipientEmail}로 답변 가이드를 발송했습니다.`;
+          ? `${recipientEmail}로 ${scheduledDate} ${scheduledTime} ${getRelativeTime(scheduledDate, scheduledTime)} KST에 답변 가이드 발송이 예약되었습니다.`
+          : `${recipientEmail}로 답변 가이드가 발송되었습니다.`;
         setEmailSuccess(successMessage);
       } else if (emailModalType === 'welcome') {
         await emailService.sendQueryDailyChallengeWelcome(
@@ -414,7 +394,7 @@ export const EmailSendModal = memo(({
           return;
         }
 
-        // Phase 1: 1. Create Question in query-daily-service
+        // Phase 2: Create Question in query-daily-service (Kafka will trigger email)
         const questionResponse = await queryDailyService.createQuestion({
           memberId: selectedMemberId,
           content: questionData.question,
@@ -426,20 +406,10 @@ export const EmailSendModal = memo(({
 
         console.log('✅ Growth Plan Question created:', questionResponse.id);
 
-        // Phase 1: 2. Send email via noti-service (기존 방식)
-        await emailService.sendGrowthPlanQuestion(
-          recipientEmail,
-          questionData.question,
-          questionData.userName || recipientEmail.split('@')[0],
-          questionData.currentDay,
-          20, // totalDays: Growth Plan is 20 days
-          undefined,
-          undefined,
-          scheduledAt
-        );
+        // Email will be sent automatically via Kafka event → noti-service
         const successMessage = isScheduled
-          ? `${recipientEmail}로 ${scheduledDate} ${scheduledTime} ${getRelativeTime(scheduledDate, scheduledTime)} KST에 그로스 플랜 질문 발송 예약되었습니다.`
-          : `${recipientEmail}로 그로스 플랜 질문을 발송했습니다.`;
+          ? `${recipientEmail}로 ${scheduledDate} ${scheduledTime} ${getRelativeTime(scheduledDate, scheduledTime)} KST에 그로스 플랜 질문 발송이 예약되었습니다.`
+          : `${recipientEmail}로 그로스 플랜 질문이 발송되었습니다.`;
         setEmailSuccess(successMessage);
       } else if (emailModalType === 'growthPlanAnswerGuide') {
         if (!answerGuideData.question || !answerGuideData.analysis) {
@@ -454,7 +424,7 @@ export const EmailSendModal = memo(({
           return;
         }
 
-        // Phase 1: 1. Create Answer in query-daily-service
+        // Phase 2: Create Answer in query-daily-service (Kafka will trigger email)
         const answerResponse = await queryDailyService.createAnswer({
           questionId: selectedQuestion.id,
           content: {
@@ -471,20 +441,10 @@ export const EmailSendModal = memo(({
 
         console.log('✅ Growth Plan Answer created:', answerResponse.id);
 
-        // Phase 1: 2. Send email via noti-service (기존 방식)
-        await emailService.sendGrowthPlanAnswerGuide(
-          recipientEmail,
-          answerGuideData.question,
-          answerGuideData.analysis,
-          answerGuideData.keywords.filter(k => k),
-          answerGuideData.starStructure,
-          answerGuideData.personaAnswers,
-          answerGuideData.followUpQuestions.filter(q => q),
-          scheduledAt
-        );
+        // Email will be sent automatically via Kafka event → noti-service
         const successMessage = isScheduled
-          ? `${recipientEmail}로 ${scheduledDate} ${scheduledTime} ${getRelativeTime(scheduledDate, scheduledTime)} KST에 그로스 플랜 답변 가이드 발송 예약되었습니다.`
-          : `${recipientEmail}로 그로스 플랜 답변 가이드를 발송했습니다.`;
+          ? `${recipientEmail}로 ${scheduledDate} ${scheduledTime} ${getRelativeTime(scheduledDate, scheduledTime)} KST에 그로스 플랜 답변 가이드 발송이 예약되었습니다.`
+          : `${recipientEmail}로 그로스 플랜 답변 가이드가 발송되었습니다.`;
         setEmailSuccess(successMessage);
       }
 
