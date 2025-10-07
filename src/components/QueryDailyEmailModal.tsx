@@ -787,7 +787,7 @@ export const EmailSendModal = memo(({
           {(emailModalType === 'answerGuide' || emailModalType === 'growthPlanAnswerGuide') && (
             <>
               <FormGroup>
-                <Label>질문 선택 (Phase 1: 필수) *</Label>
+                <Label>질문 선택 (선택사항)</Label>
                 <ApplicantDropdownWrapper className="question-dropdown-wrapper">
                   <ApplicantSelectButton
                     onClick={() => setShowQuestionDropdown(!showQuestionDropdown)}
