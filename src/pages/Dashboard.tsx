@@ -179,30 +179,33 @@ const Dashboard: React.FC = () => {
       : '#10b981',
   }));
 
-  const activities = [
-    { id: '1', type: 'new-member' as const, title: '새로운 회원 가입', description: '김민수 · park@email.com', timestamp: '2분 전' },
-    { id: '2', type: 'study-apply' as const, title: '스터디 참여 신청', description: 'React 심화 스터디 · 이영희', timestamp: '15분 전' },
-    { id: '3', type: 'payment' as const, title: '결제 완료', description: '월 정기결제 · ₩30,000', timestamp: '30분 전' },
-    { id: '4', type: 'urgent' as const, title: '긴급 문의', description: '로그인 문제 · 최지훈', timestamp: '1시간 전' },
-  ];
+  // TODO: 실제 활동 데이터 API 연동 필요
+  // const activities = [
+  //   { id: '1', type: 'new-member' as const, title: '새로운 회원 가입', description: '김민수 · park@email.com', timestamp: '2분 전' },
+  //   { id: '2', type: 'study-apply' as const, title: '스터디 참여 신청', description: 'React 심화 스터디 · 이영희', timestamp: '15분 전' },
+  //   { id: '3', type: 'payment' as const, title: '결제 완료', description: '월 정기결제 · ₩30,000', timestamp: '30분 전' },
+  //   { id: '4', type: 'urgent' as const, title: '긴급 문의', description: '로그인 문제 · 최지훈', timestamp: '1시간 전' },
+  // ];
 
-  const weeklyData = [
-    { day: '월', value: 60 },
-    { day: '화', value: 80 },
-    { day: '수', value: 100 },
-    { day: '목', value: 90 },
-    { day: '금', value: 70 },
-    { day: '토', value: 50 },
-    { day: '일', value: 60 },
-  ];
+  // TODO: 주간 트렌드 데이터 API 연동 필요
+  // const weeklyData = [
+  //   { day: '월', value: 60 },
+  //   { day: '화', value: 80 },
+  //   { day: '수', value: 100 },
+  //   { day: '목', value: 90 },
+  //   { day: '금', value: 70 },
+  //   { day: '토', value: 50 },
+  //   { day: '일', value: 60 },
+  // ];
 
-  const categoryData = [
-    { name: '개발', value: 102, percentage: 30, color: '#6366f1' },
-    { name: '외국어', value: 86, percentage: 25, color: '#10b981' },
-    { name: '자격증', value: 68, percentage: 20, color: '#f59e0b' },
-    { name: '취미', value: 51, percentage: 15, color: '#ef4444' },
-    { name: '기타', value: 35, percentage: 10, color: '#8b5cf6' },
-  ];
+  // TODO: 카테고리별 분포 데이터 API 연동 필요
+  // const categoryData = [
+  //   { name: '개발', value: 102, percentage: 30, color: '#6366f1' },
+  //   { name: '외국어', value: 86, percentage: 25, color: '#10b981' },
+  //   { name: '자격증', value: 68, percentage: 20, color: '#f59e0b' },
+  //   { name: '취미', value: 51, percentage: 15, color: '#ef4444' },
+  //   { name: '기타', value: 35, percentage: 10, color: '#8b5cf6' },
+  // ];
 
   return (
     <DashboardContainer>
