@@ -112,18 +112,18 @@ export const EmailSendModal = memo(({
     console.log('✅ Selected applicant:', applicant.name, applicant.email, 'memberId:', applicant.memberId);
   };
 
-  // Phase 1: Handle question selection (for answer guide)
+  // Handle question selection (for answer guide)
   const handleQuestionSelect = (question: QuestionWithMember) => {
     setSelectedQuestion(question);
     // Auto-fill email and question content
-    setRecipientEmail(question.member.email);
+    setRecipientEmail(question.member?.email || '');
     setAnswerGuideData(prev => ({
       ...prev,
       question: question.content
     }));
     setQuestionData(prev => ({
       ...prev,
-      userName: question.member.name
+      userName: question.member?.name || ''
     }));
     setShowQuestionDropdown(false);
     console.log('✅ Selected question:', question.id, question.content);
