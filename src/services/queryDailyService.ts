@@ -2,6 +2,7 @@ import apiClient from '../api/client';
 import { env } from '../config/environment';
 
 export interface QueryApplication {
+  id: number;
   memberId: string;
   email: string;
   name: string;
@@ -60,6 +61,21 @@ export interface Answer {
   scheduledAt: string;
 }
 
+export interface AnswerWithMember {
+  id: string;
+  questionId: string;
+  questionContent: string;
+  member: {
+    memberId: string;
+    email: string;
+    name: string;
+  };
+  type: 'TRIAL' | 'GROWTH_PLAN';
+  answerContent: string;  // JSON string
+  scheduledAt: string;
+  createdAt?: string;
+}
+
 export interface CreateQuestionRequest {
   memberId: string;
   content: string;
@@ -67,11 +83,13 @@ export interface CreateQuestionRequest {
   currentDay?: number;
   totalDays?: number;
   scheduledAt: string;
+  displayName?: string;
 }
 
 export interface CreateAnswerRequest {
-  questionId: string;
-  content: {
+  answerId?: string;  // RESEND 모드용 (재발송 시에만 사용)
+  questionId?: string;  // NEW 모드용
+  content?: {
     version?: string;
     question?: string;
     analysis: string;
@@ -88,7 +106,8 @@ export interface CreateAnswerRequest {
     };
     followUpQuestions: string[];
   };
-  scheduledAt: string;
+  scheduledAt?: string;
+  displayName?: string;
 }
 
 class QueryDailyService {
@@ -181,25 +200,26 @@ class QueryDailyService {
   }
 
   /**
-   * 답변이 없는 질문 목록 조회 (답변 작성 시 사용)
+   * 질문 목록 조회 (모든 질문 또는 필터링)
    */
-  async getQuestionsWithoutAnswers(params: {
+  async getQuestions(params: {
     memberId?: string;
     type?: 'TRIAL' | 'GROWTH_PLAN';
+    hasAnswer?: boolean;
     page?: number;
     size?: number;
   }): Promise<{ content: QuestionWithMember[]; totalElements: number; totalPages: number }> {
     try {
       const response = await apiClient.get('/api/query-daily/admin/questions', {
         params: {
-          hasAnswer: false,
           page: params.page || 0,
-          size: params.size || 20,
+          size: params.size || 50,
+          ...(params.hasAnswer !== undefined && { hasAnswer: params.hasAnswer }),
           ...(params.memberId && { memberId: params.memberId }),
           ...(params.type && { type: params.type })
         }
       });
-      console.log('✅ Fetched questions without answers:', response.data.data);
+      console.log('✅ Fetched questions:', response.data.data);
       return response.data.data;
     } catch (error: any) {
       console.error('❌ Failed to fetch questions:', error);
@@ -208,15 +228,71 @@ class QueryDailyService {
   }
 
   /**
-   * 답변 생성 (Phase 1: 데이터 저장용)
+   * 답변이 없는 질문 목록 조회 (답변 작성 시 사용)
+   */
+  async getQuestionsWithoutAnswers(params: {
+    memberId?: string;
+    type?: 'TRIAL' | 'GROWTH_PLAN';
+    page?: number;
+    size?: number;
+  }): Promise<{ content: QuestionWithMember[]; totalElements: number; totalPages: number }> {
+    return this.getQuestions({ ...params, hasAnswer: false });
+  }
+
+  /**
+   * 답변 생성 (Phase 1: 데이터 저장용) 또는 재발송
    */
   async createAnswer(request: CreateAnswerRequest): Promise<{ id: string }> {
     try {
       const response = await apiClient.post('/api/query-daily/admin/answers', request);
-      console.log('✅ Answer created:', response.data.data);
+      console.log('✅ Answer created/resent:', response.data.data);
       return response.data.data;
     } catch (error: any) {
-      console.error('❌ Failed to create answer:', error);
+      console.error('❌ Failed to create/resend answer:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 답변 목록 조회 (발송 이력 관리용)
+   */
+  async getAnswers(params: {
+    memberId?: string;
+    type?: 'TRIAL' | 'GROWTH_PLAN';
+    email?: string;
+    page?: number;
+    size?: number;
+  }): Promise<{ content: AnswerWithMember[]; totalElements: number; totalPages: number }> {
+    try {
+      const response = await apiClient.get('/api/query-daily/admin/answers', {
+        params: {
+          page: params.page || 0,
+          size: params.size || 20,
+          ...(params.memberId && { memberId: params.memberId }),
+          ...(params.type && { type: params.type }),
+          ...(params.email && { email: params.email })
+        }
+      });
+      console.log('✅ Fetched answers:', response.data.data);
+      return response.data.data;
+    } catch (error: any) {
+      console.error('❌ Failed to fetch answers:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 답변 가이드 재발송
+   */
+  async resendAnswerGuide(answerId: string): Promise<{ id: string }> {
+    try {
+      const response = await apiClient.post('/api/query-daily/admin/answers', {
+        answerId,  // RESEND 모드
+      });
+      console.log('✅ Answer guide resent:', response.data.data);
+      return response.data.data;
+    } catch (error: any) {
+      console.error('❌ Failed to resend answer guide:', error);
       throw error;
     }
   }

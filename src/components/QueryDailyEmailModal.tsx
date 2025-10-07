@@ -286,7 +286,8 @@ export const EmailSendModal = memo(({
           type: 'TRIAL',
           currentDay: questionData.currentDay,
           totalDays: questionData.totalDays,
-          scheduledAt: scheduledAt || new Date().toISOString()
+          scheduledAt: scheduledAt || new Date().toISOString(),
+          displayName: questionData.userName || undefined  // 백오피스에서 입력한 표시 이름 전달
         });
 
         console.log('✅ Question created:', questionResponse.id);
@@ -321,7 +322,8 @@ export const EmailSendModal = memo(({
             personaAnswers: answerGuideData.personaAnswers,
             followUpQuestions: answerGuideData.followUpQuestions.filter(q => q.trim() !== '')
           },
-          scheduledAt: scheduledAt || new Date().toISOString()
+          scheduledAt: scheduledAt || new Date().toISOString(),
+          displayName: questionData.userName || undefined  // 백오피스에서 입력한 표시 이름 전달
         });
 
         console.log('✅ Answer created:', answerResponse.id);
@@ -401,7 +403,8 @@ export const EmailSendModal = memo(({
           type: 'GROWTH_PLAN',
           currentDay: questionData.currentDay,
           totalDays: 20,
-          scheduledAt: scheduledAt || new Date().toISOString()
+          scheduledAt: scheduledAt || new Date().toISOString(),
+          displayName: questionData.userName || undefined  // 백오피스에서 입력한 표시 이름 전달
         });
 
         console.log('✅ Growth Plan Question created:', questionResponse.id);
@@ -436,7 +439,8 @@ export const EmailSendModal = memo(({
             personaAnswers: answerGuideData.personaAnswers,
             followUpQuestions: answerGuideData.followUpQuestions.filter(q => q.trim() !== '')
           },
-          scheduledAt: scheduledAt || new Date().toISOString()
+          scheduledAt: scheduledAt || new Date().toISOString(),
+          displayName: questionData.userName || undefined  // 백오피스에서 입력한 표시 이름 전달
         });
 
         console.log('✅ Growth Plan Answer created:', answerResponse.id);
@@ -860,7 +864,7 @@ export const EmailSendModal = memo(({
               <FormGroup>
                 <Label>핵심 키워드</Label>
                 {answerGuideData.keywords.map((keyword, index) => (
-                  <div key={`keyword-${index}-${keyword}`} style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                  <div key={`keyword-${index}`} style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
                     <Input
                       value={keyword}
                       onChange={e => {

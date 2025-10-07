@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import styled from 'styled-components';
 import { EmailSendModal } from '../components/QueryDailyEmailModal';
-import queryDailyService from '../services/queryDailyService';
+import queryDailyService, { type AnswerWithMember, type QuestionWithMember } from '../services/queryDailyService';
 
 // Types
 type UserType = 'LEAD' | 'MEMBER';
@@ -104,16 +104,18 @@ const getCurrentDateTime = () => {
 };
 
 const QueryDailyManagement: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'emails' | 'content' | 'analytics'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'emails'>('dashboard');
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [showUserDetailModal, setShowUserDetailModal] = useState(false);
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [emailModalType, setEmailModalType] = useState<'question' | 'answerGuide' | 'welcome' | 'midFeedback' | 'complete' | 'purchaseConfirmation' | 'growthPlanQuestion' | 'growthPlanAnswerGuide'>('question');
   const [showAnswerGuideModal, setShowAnswerGuideModal] = useState(false);
-  const [contentTab, setContentTab] = useState<'guides' | 'questions' | 'templates'>('guides');
   const [guideKeywords, setGuideKeywords] = useState<string[]>([]);
   const [keywordInput, setKeywordInput] = useState('');
   const [currentOperator] = useState<string>('르네'); // 현재 로그인한 사용자 (임시)
+  const [answers, setAnswers] = useState<AnswerWithMember[]>([]);
+  const [questions, setQuestions] = useState<QuestionWithMember[]>([]);
+  const [isLoadingAnswers, setIsLoadingAnswers] = useState(false);
 
   const { date: todayDate } = getCurrentDateTime();
 
@@ -137,44 +139,70 @@ const QueryDailyManagement: React.FC = () => {
         const applications = await queryDailyService.getAllApplications();
 
         // API 데이터를 User 타입으로 변환
-        const mappedUsers: User[] = applications.map(app => {
+        const mappedUsers: User[] = applications.map((app, index) => {
           // UTC를 KST로 변환 (UTC+9)
           const utcDate = new Date(app.createdAt);
           const kstDate = new Date(utcDate.getTime() + (9 * 60 * 60 * 1000));
 
           return {
-          id: String(app.id),
-          type: 'LEAD', // 신규 신청자는 모두 LEAD로 시작
-          name: app.name || '익명',
-          email: app.email,
-          applicationDate: kstDate.toLocaleString('ko-KR', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-            hour12: false
-          }),
-          resumeUrl: queryDailyService.getAssetDownloadUrl(app.resumeAssetId),
-          resumeAssetId: app.resumeAssetId,
-          resumeFileName: app.resumeFileName,
-          leadStatus: '신청완료',
-          totalDays: 7,
-          currentDay: 0,
-          notes: `이력서: ${app.resumeFileName}`
-        }});
+            id: app.id !== undefined && app.id !== null ? String(app.id) : `temp-${index}`,
+            type: 'LEAD', // 신규 신청자는 모두 LEAD로 시작
+            name: app.name || '익명',
+            email: app.email,
+            applicationDate: kstDate.toLocaleString('ko-KR', {
+              year: 'numeric',
+              month: '2-digit',
+              day: '2-digit',
+              hour: '2-digit',
+              minute: '2-digit',
+              second: '2-digit',
+              hour12: false
+            }),
+            resumeUrl: queryDailyService.getAssetDownloadUrl(app.resumeAssetId),
+            resumeAssetId: app.resumeAssetId,
+            resumeFileName: app.resumeFileName,
+            leadStatus: '신청완료',
+            totalDays: 7,
+            currentDay: 0,
+            notes: `이력서: ${app.resumeFileName}`
+          }
+        });
 
         setUsers(mappedUsers);
         console.log('✅ Loaded', mappedUsers.length, 'applications');
       } catch (error) {
-        console.error('Failed to load applications:', error);
-        // 에러 시 더미 데이터로 fallback (개발용)
+        console.error('❌ Failed to load applications:', error);
       }
     };
 
     loadApplications();
   }, []);
+
+  // 질문 및 답변 발송 이력 로드
+  useEffect(() => {
+    const loadEmailData = async () => {
+      if (activeTab !== 'emails') return;
+
+      setIsLoadingAnswers(true);
+      try {
+        // 질문과 답변을 병렬로 로드
+        const [answersResponse, questionsResponse] = await Promise.all([
+          queryDailyService.getAnswers({ page: 0, size: 50 }),
+          queryDailyService.getQuestions({ page: 0, size: 50 })
+        ]);
+
+        setAnswers(answersResponse.content);
+        setQuestions(questionsResponse.content);
+        console.log('✅ Loaded', answersResponse.content.length, 'answers and', questionsResponse.content.length, 'questions');
+      } catch (error) {
+        console.error('❌ Failed to load email data:', error);
+      } finally {
+        setIsLoadingAnswers(false);
+      }
+    };
+
+    loadEmailData();
+  }, [activeTab]);
 
   const [scheduledEmails, setScheduledEmails] = useState<ScheduledEmail[]>([]);
 
@@ -608,48 +636,61 @@ const QueryDailyManagement: React.FC = () => {
     </UsersContainer>
   );
 
-  const renderContent = () => (
-    <ContentContainer>
-      <Header>
-        <h2>콘텐츠 관리</h2>
-        <Subtitle>QueryDaily 콘텐츠를 관리합니다. 발송은 📮 발송 센터에서 진행하세요.</Subtitle>
-      </Header>
+  const handleResendAnswerGuide = async (answerId: string) => {
+    if (!confirm('이 답변 가이드를 재발송하시겠습니까?')) return;
 
-      <ContentTabs>
-        <ContentTab
-          className={contentTab === 'guides' ? 'active' : ''}
-          onClick={() => setContentTab('guides')}
-        >
-          답변 가이드
-        </ContentTab>
-        <ContentTab
-          className={contentTab === 'questions' ? 'active' : ''}
-          onClick={() => setContentTab('questions')}
-        >
-          질문 은행
-        </ContentTab>
-      </ContentTabs>
+    try {
+      await queryDailyService.resendAnswerGuide(answerId);
+      alert('재발송이 완료되었습니다.');
+    } catch (error: any) {
+      alert('재발송 실패: ' + (error.response?.data?.message || error.message));
+    }
+  };
 
-      {contentTab === 'guides' && (
-        <AnswerGuideSection>
-          <p style={{ textAlign: 'center', color: '#999', padding: '40px' }}>
-            등록된 답변 가이드가 없습니다. '+ 답변 가이드 작성' 버튼을 눌러 새로운 가이드를 작성하세요.
-          </p>
-        </AnswerGuideSection>
-      )}
+  const renderEmails = () => {
+    // KST 기준 현재 시점
+    const now = new Date();
+    const todayEnd = new Date();
+    todayEnd.setHours(23, 59, 59, 999);
 
-      {contentTab === 'questions' && (
-        <QuestionBankSection>
-          <p style={{ textAlign: 'center', color: '#999', padding: '40px' }}>
-            등록된 질문이 없습니다.
-          </p>
-        </QuestionBankSection>
-      )}
+    // 오늘 발송 예정: 현재 시간 이후 && 오늘 자정 이전
+    const todayQuestions = questions.filter(q => {
+      // UTC로 저장된 시간이므로 'Z'를 붙여서 UTC로 파싱 → 그러면 자동으로 로컬(KST)로 변환됨
+      const scheduledDateUTC = new Date(q.scheduledAt + 'Z');
+      const isAfterNow = scheduledDateUTC >= now;
+      const isBeforeTonight = scheduledDateUTC <= todayEnd;
 
-    </ContentContainer>
-  );
+      console.log(`🔍 Q [${q.id.substring(0, 20)}...] scheduledAt="${q.scheduledAt}" → KST=${scheduledDateUTC.toLocaleString('ko-KR')} / now=${now.toLocaleString('ko-KR')} / isAfterNow=${isAfterNow} / isBeforeTonight=${isBeforeTonight}`);
 
-  const renderEmails = () => (
+      return isAfterNow && isBeforeTonight;
+    });
+
+    const todayAnswers = answers.filter(a => {
+      const scheduledDateUTC = new Date(a.scheduledAt + 'Z');
+      const isAfterNow = scheduledDateUTC >= now;
+      const isBeforeTonight = scheduledDateUTC <= todayEnd;
+
+      console.log(`🔍 A [${a.id.substring(0, 20)}...] scheduledAt="${a.scheduledAt}" → KST=${scheduledDateUTC.toLocaleString('ko-KR')} / now=${now.toLocaleString('ko-KR')} / isAfterNow=${isAfterNow} / isBeforeTonight=${isBeforeTonight}`);
+
+      return isAfterNow && isBeforeTonight;
+    });
+
+    console.log(`✅ 필터링 결과: 질문 ${todayQuestions.length}건, 답변 ${todayAnswers.length}건, 총 ${todayQuestions.length + todayAnswers.length}건`);
+
+    // 통합된 발송 예정 목록 (시간순 정렬)
+    const todayScheduled = [
+      ...todayQuestions.map(q => ({ type: 'question' as const, data: q })),
+      ...todayAnswers.map(a => ({ type: 'answer' as const, data: a }))
+    ].sort((a, b) => {
+      const dateA = new Date(a.data.scheduledAt).getTime();
+      const dateB = new Date(b.data.scheduledAt).getTime();
+      return dateA - dateB;
+    });
+
+    console.log('📊 오늘 발송 예정 필터링 결과:', todayScheduled.length, '건 (질문:', todayQuestions.length, ', 답변:', todayAnswers.length, ')');
+    console.log('🔥🔥🔥 === 디버깅 끝 ===');
+
+    return (
     <EmailsContainer>
       <Header>
         <div>
@@ -679,97 +720,147 @@ const QueryDailyManagement: React.FC = () => {
       </Header>
 
       <EmailSections>
+        {/* 답변 발송 이력 (재발송 가능) */}
+        <Section>
+          <SectionTitle>
+            <h3>📋 답변 발송 이력 (재발송 가능)</h3>
+            <span style={{ fontSize: '14px', color: '#666', fontWeight: 'normal' }}>
+              {answers.length}건
+            </span>
+          </SectionTitle>
+          {isLoadingAnswers ? (
+            <div style={{ textAlign: 'center', padding: '40px', color: '#999' }}>
+              로딩 중...
+            </div>
+          ) : answers.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '40px', color: '#999' }}>
+              발송된 답변 가이드가 없습니다.
+            </div>
+          ) : (
+            <AnswerHistoryTable>
+              <thead>
+                <tr>
+                  <th>발송일시 (KST)</th>
+                  <th>이메일</th>
+                  <th>이름</th>
+                  <th>질문 (일부)</th>
+                  <th>타입</th>
+                  <th>액션</th>
+                </tr>
+              </thead>
+              <tbody>
+                {answers.map(answer => {
+                  const scheduledDate = new Date(answer.scheduledAt + 'Z');
+                  const dateTimeStr = scheduledDate.toLocaleString('ko-KR', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false
+                  });
+                  return (
+                    <tr key={answer.id}>
+                      <td>{dateTimeStr}</td>
+                      <td>{answer.member.email}</td>
+                      <td>{answer.member.name}</td>
+                      <td style={{ maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {answer.questionContent}
+                      </td>
+                      <td>
+                        <TypeBadge type={answer.type}>
+                          {answer.type === 'TRIAL' ? '무료체험' : '그로스 플랜'}
+                        </TypeBadge>
+                      </td>
+                      <td>
+                        <ActionButton
+                          $primary
+                          onClick={() => handleResendAnswerGuide(answer.id)}
+                          style={{ fontSize: '13px' }}
+                        >
+                          🔄 재발송
+                        </ActionButton>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </AnswerHistoryTable>
+          )}
+        </Section>
+
         {/* 오늘 발송 예정 */}
         <Section>
           <SectionTitle>
             <h3>📅 오늘 발송 예정</h3>
-            <Badge $isEmpty={scheduledEmails.filter(e => e.scheduledDate === todayDate && e.status === 'scheduled').length === 0}>
-            {scheduledEmails.filter(e => e.scheduledDate === todayDate && e.status === 'scheduled').length}건
-          </Badge>
+            <span style={{ fontSize: '14px', color: '#666', fontWeight: 'normal' }}>
+              {todayScheduled.length}건
+            </span>
           </SectionTitle>
-          <EmailGrid>
-            {scheduledEmails
-              .filter(e => e.scheduledDate === todayDate && e.status === 'scheduled')
-              .map(email => (
-                <EmailDetailCard key={email.id}>
-                  <EmailHeader>
-                    <EmailTime>{email.scheduledTime}</EmailTime>
-                    <EmailType type={email.type}>
-                      {email.type === 'daily_question' ? '일일질문' :
-                       email.type === 'answer_guide' ? '답변가이드' :
-                       email.type === 'conversion_offer' ? '전환제안' : email.type}
-                    </EmailType>
-                  </EmailHeader>
-                  <EmailBody>
-                    <EmailTo>To: {email.userName} ({email.userEmail})</EmailTo>
-                    <EmailSubjectLine>{email.subject}</EmailSubjectLine>
-                    <EmailPreview>{email.content}</EmailPreview>
-                  </EmailBody>
-                  <EmailFooter>
-                    <ActionButton onClick={() => handleEmailStatusChange(email.id, 'cancelled')}>
-                      취소
-                    </ActionButton>
-                    <ActionButton $primary onClick={() => handleEmailStatusChange(email.id, 'sent')}>
-                      발송 완료
-                    </ActionButton>
-                  </EmailFooter>
-                </EmailDetailCard>
-              ))}
-          </EmailGrid>
-        </Section>
-
-        {/* 발송 완료 */}
-        <Section>
-          <SectionTitle>
-            <h3>✅ 최근 발송 완료</h3>
-          </SectionTitle>
-          <EmailGrid>
-            {scheduledEmails
-              .filter(e => e.status === 'sent')
-              .map(email => (
-                <EmailDetailCard key={email.id} sent>
-                  <EmailHeader>
-                    <EmailTime>{email.scheduledTime}</EmailTime>
-                    <EmailStatus sent>발송완료</EmailStatus>
-                  </EmailHeader>
-                  <EmailBody>
-                    <EmailTo>To: {email.userName} ({email.userEmail})</EmailTo>
-                    <EmailSubjectLine>{email.subject}</EmailSubjectLine>
-                  </EmailBody>
-                  <EmailFooter>
-                    <EmailSentTime>발송: {email.sentAt}</EmailSentTime>
-                  </EmailFooter>
-                </EmailDetailCard>
-              ))}
-          </EmailGrid>
+          {todayScheduled.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '40px', color: '#999' }}>
+              오늘 발송 예정된 메일이 없습니다.
+            </div>
+          ) : (
+            <EmailGrid>
+              {todayScheduled.map((item, index) => {
+                if (item.type === 'question') {
+                  const question = item.data as QuestionWithMember;
+                  const questionTime = new Date(question.scheduledAt + 'Z');
+                  return (
+                    <EmailDetailCard key={`q-${question.id}`}>
+                      <EmailHeader>
+                        <EmailTime>{questionTime.toLocaleTimeString('ko-KR', { hour: 'numeric', minute: '2-digit' })}</EmailTime>
+                        <EmailType type="daily_question">일일질문</EmailType>
+                      </EmailHeader>
+                      <EmailBody>
+                        <EmailTo>To: {question.member.name} ({question.member.email})</EmailTo>
+                        <EmailSubjectLine>
+                          [{question.type === 'TRIAL' ? '무료체험' : '그로스 플랜'}] Day {question.currentDay}/{question.totalDays} 질문
+                        </EmailSubjectLine>
+                        <EmailPreview>
+                          {question.content.substring(0, 100)}{question.content.length > 100 ? '...' : ''}
+                        </EmailPreview>
+                      </EmailBody>
+                    </EmailDetailCard>
+                  );
+                } else {
+                  const answer = item.data as AnswerWithMember;
+                  const answerTime = new Date(answer.scheduledAt + 'Z');
+                  return (
+                    <EmailDetailCard key={`a-${answer.id}`}>
+                      <EmailHeader>
+                        <EmailTime>{answerTime.toLocaleTimeString('ko-KR', { hour: 'numeric', minute: '2-digit' })}</EmailTime>
+                        <EmailType type="answer_guide">답변가이드</EmailType>
+                      </EmailHeader>
+                      <EmailBody>
+                        <EmailTo>To: {answer.member.name} ({answer.member.email})</EmailTo>
+                        <EmailSubjectLine>
+                          [{answer.type === 'TRIAL' ? '무료체험' : '그로스 플랜'}] 답변 가이드
+                        </EmailSubjectLine>
+                        <EmailPreview>
+                          {answer.questionContent.substring(0, 100)}...
+                        </EmailPreview>
+                      </EmailBody>
+                      <EmailFooter>
+                        <ActionButton
+                          $primary
+                          onClick={() => handleResendAnswerGuide(answer.id)}
+                        >
+                          🔄 재발송
+                        </ActionButton>
+                      </EmailFooter>
+                    </EmailDetailCard>
+                  );
+                }
+              })}
+            </EmailGrid>
+          )}
         </Section>
       </EmailSections>
     </EmailsContainer>
   );
-
-  const renderAnalytics = () => (
-    <AnalyticsContainer>
-      <Header>
-        <h2>분석 & 인사이트</h2>
-      </Header>
-
-      <AnalyticsGrid>
-        <ChartCard>
-          <h3>주간 전환 추이</h3>
-          <ChartPlaceholder>
-            📈 차트 영역
-          </ChartPlaceholder>
-        </ChartCard>
-
-        <ChartCard>
-          <h3>질문 유형별 응답률</h3>
-          <ChartPlaceholder>
-            📊 차트 영역
-          </ChartPlaceholder>
-        </ChartCard>
-      </AnalyticsGrid>
-    </AnalyticsContainer>
-  );
+  };
 
   const handleEmailStatusChange = (emailId: string, status: 'sent' | 'cancelled') => {
     setScheduledEmails(emails =>
@@ -828,26 +919,12 @@ const QueryDailyManagement: React.FC = () => {
         >
           📮 발송 센터
         </Tab>
-        <Tab
-          className={activeTab === 'content' ? 'active' : ''}
-          onClick={() => setActiveTab('content')}
-        >
-          📝 콘텐츠
-        </Tab>
-        <Tab
-          className={activeTab === 'analytics' ? 'active' : ''}
-          onClick={() => setActiveTab('analytics')}
-        >
-          📊 분석
-        </Tab>
       </TabBar>
 
       <Content>
         {activeTab === 'dashboard' && renderDashboard()}
         {activeTab === 'users' && renderUsers()}
         {activeTab === 'emails' && renderEmails()}
-        {activeTab === 'content' && renderContent()}
-        {activeTab === 'analytics' && renderAnalytics()}
       </Content>
 
       {/* 사용자 상세 모달 */}
@@ -2357,5 +2434,57 @@ const SaveButton = styled.button`
 //   padding: 20px;
 //   border-top: 1px solid ${({ theme }) => theme.colors.gray[200]};
 // `;
+
+// Answer History Table
+const AnswerHistoryTable = styled.table`
+  width: 100%;
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+
+  thead {
+    background: ${({ theme }) => theme.colors.gray[50]};
+
+    th {
+      padding: 12px;
+      text-align: left;
+      font-size: 13px;
+      font-weight: 600;
+      color: ${({ theme }) => theme.colors.text.secondary};
+    }
+  }
+
+  tbody {
+    tr {
+      border-bottom: 1px solid ${({ theme }) => theme.colors.gray[100]};
+
+      &:last-child {
+        border-bottom: none;
+      }
+
+      &:hover {
+        background: ${({ theme }) => theme.colors.gray[50]};
+      }
+    }
+
+    td {
+      padding: 16px 12px;
+      font-size: 14px;
+      color: ${({ theme }) => theme.colors.text.primary};
+    }
+  }
+`;
+
+const TypeBadge = styled.span<{ type: string }>`
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  background: ${({ type }) =>
+    type === 'TRIAL' ? '#e0f2fe' : '#fef3c7'};
+  color: ${({ type }) =>
+    type === 'TRIAL' ? '#0369a1' : '#a16207'};
+`;
 
 export default QueryDailyManagement;
