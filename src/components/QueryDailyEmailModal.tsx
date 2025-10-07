@@ -822,7 +822,7 @@ export const EmailSendModal = memo(({
                               onClick={() => handleQuestionSelect(question)}
                               selected={selectedQuestion?.id === question.id}
                             >
-                              <ApplicantName>{question.member.name} ({question.member.email})</ApplicantName>
+                              <ApplicantName>{question.member?.name || 'Unknown'} ({question.member?.email || 'no-email'})</ApplicantName>
                               <ApplicantEmail>
                                 {question.content.substring(0, 80)}
                                 {question.content.length > 80 ? '...' : ''}
