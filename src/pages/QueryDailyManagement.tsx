@@ -118,14 +118,17 @@ const QueryDailyManagement: React.FC = () => {
   const [isLoadingAnswers, setIsLoadingAnswers] = useState(false);
 
   // Upcoming (예정됨) UI state
-  const [upcomingViewMode, setUpcomingViewMode] = useState<'combined' | 'split'>('combined');
-  const [upcomingTimeWindow, setUpcomingTimeWindow] = useState<'all' | '24h' | '7d'>('all');
+  const [upcomingViewMode, setUpcomingViewMode] = useState<'combined' | 'split'>('split');
+  const [upcomingTimeWindow, setUpcomingTimeWindow] = useState<'all' | '24h' | '7d'>('24h');
   const [upcomingKindFilter, setUpcomingKindFilter] = useState<'all' | 'question' | 'answer'>('all');
   const [upcomingTypeFilter, setUpcomingTypeFilter] = useState<'all' | 'TRIAL' | 'GROWTH_PLAN'>('all');
 
   // History (발송 이력) UI state
   const [historyKindFilter, setHistoryKindFilter] = useState<'all' | 'questions' | 'answers'>('answers');
   const [historyTimeWindow, setHistoryTimeWindow] = useState<'all' | 'today' | '7d' | '30d'>('7d');
+
+  // Emails sub-tabs (Option A)
+  const [emailsTab, setEmailsTab] = useState<'upcoming' | 'history'>('upcoming');
 
   // const { date: todayDate } = getCurrentDateTime();
 
@@ -627,8 +630,21 @@ const QueryDailyManagement: React.FC = () => {
         </div>
       </Header>
 
+      {/* Emails sub-tabs */}
+      <EmailSubTabs>
+        <EmailSubTab
+          className={emailsTab === 'upcoming' ? 'active' : ''}
+          onClick={() => setEmailsTab('upcoming')}
+        >예정</EmailSubTab>
+        <EmailSubTab
+          className={emailsTab === 'history' ? 'active' : ''}
+          onClick={() => setEmailsTab('history')}
+        >이력</EmailSubTab>
+      </EmailSubTabs>
+
       <EmailSections>
         {/* 발송 이력 */}
+        {emailsTab === 'history' && (
         <Section>
           <SectionTitle>
             <h3>📋 발송 이력</h3>
@@ -755,8 +771,10 @@ const QueryDailyManagement: React.FC = () => {
             </AnswerHistoryTable>
           )}
         </Section>
+        )}
 
         {/* 예정됨 (현재 이후) */}
+        {emailsTab === 'upcoming' && (
         <Section>
           <SectionTitle>
             <h3>📅 예정됨 (현재 이후)</h3>
@@ -949,6 +967,7 @@ const QueryDailyManagement: React.FC = () => {
             )
           )}
         </Section>
+        )}
       </EmailSections>
     </EmailsContainer>
   );
@@ -1863,6 +1882,28 @@ const EmailSections = styled.div`
   display: flex;
   flex-direction: column;
   gap: 32px;
+`;
+
+const EmailSubTabs = styled.div`
+  display: flex;
+  gap: 8px;
+  margin: 12px 0 20px;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.gray[200]};
+`;
+
+const EmailSubTab = styled.button`
+  padding: 10px 16px;
+  background: transparent;
+  border: none;
+  color: ${({ theme }) => theme.colors.text.secondary};
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  &.active {
+    color: ${({ theme }) => theme.colors.primary};
+    border-bottom-color: ${({ theme }) => theme.colors.primary};
+  }
 `;
 
 const Section = styled.section``;
