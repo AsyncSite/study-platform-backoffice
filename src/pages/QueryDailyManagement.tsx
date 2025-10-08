@@ -104,7 +104,7 @@ const getCurrentDateTime = () => {
 };
 
 const QueryDailyManagement: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'emails'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'users' | 'emails'>('emails');
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [showUserDetailModal, setShowUserDetailModal] = useState(false);
   const [showEmailModal, setShowEmailModal] = useState(false);
@@ -357,155 +357,13 @@ const QueryDailyManagement: React.FC = () => {
 
   const renderDashboard = () => (
     <DashboardContainer>
-      {/* 미션 컨트롤 섹션 */}
-      <MissionControlSection>
-        <SectionTitle>
-          <h2>🎯 미션 컨트롤</h2>
-          <span>오늘 해야 할 일을 한눈에</span>
-        </SectionTitle>
-
-        <TasksGrid>
-          <TaskCard>
-            <TaskIcon>📮</TaskIcon>
-            <TaskInfo>
-              <TaskLabel>오늘 질문 발송 대상</TaskLabel>
-              <TaskCount>{todayTasks.questionTargets}명</TaskCount>
-              <TaskDescription>챌린지 진행중 + 구독 멤버</TaskDescription>
-            </TaskInfo>
-            <TaskAction onClick={() => setActiveTab('emails')}>
-              발송 센터 →
-            </TaskAction>
-          </TaskCard>
-
-          <TaskCard $highlight>
-            <TaskIcon>🎯</TaskIcon>
-            <TaskInfo>
-              <TaskLabel>전환 제안 대상</TaskLabel>
-              <TaskCount>{todayTasks.conversionTargets}명</TaskCount>
-              <TaskDescription>7일 챌린지 완료자</TaskDescription>
-            </TaskInfo>
-            <TaskAction $primary onClick={() => setActiveTab('users')}>
-              전환 제안 →
-            </TaskAction>
-          </TaskCard>
-
-          <TaskCard>
-            <TaskIcon>💳</TaskIcon>
-            <TaskInfo>
-              <TaskLabel>결제 확인 대기</TaskLabel>
-              <TaskCount>{todayTasks.paymentPending}명</TaskCount>
-              <TaskDescription>입금 확인 필요</TaskDescription>
-            </TaskInfo>
-            <TaskAction onClick={() => setActiveTab('users')}>
-              확인하기 →
-            </TaskAction>
-          </TaskCard>
-        </TasksGrid>
-      </MissionControlSection>
-
-      {/* 핵심 지표 섹션 */}
-      <MetricsSection>
-        <SectionTitle>
-          <h3>📊 핵심 지표</h3>
-        </SectionTitle>
-
-        <MetricsGrid>
-          <MetricCard>
-            <MetricLabel>총 리드</MetricLabel>
-            <MetricValue>{stats.totalLeads}</MetricValue>
-            <MetricBadge type="lead">LEAD</MetricBadge>
-          </MetricCard>
-
-          <MetricCard>
-            <MetricLabel>활성 리드</MetricLabel>
-            <MetricValue>{stats.activeLeads}</MetricValue>
-            <MetricSubtext>챌린지 진행중</MetricSubtext>
-          </MetricCard>
-
-          <MetricCard>
-            <MetricLabel>총 멤버</MetricLabel>
-            <MetricValue>{stats.totalMembers}</MetricValue>
-            <MetricBadge type="member">MEMBER</MetricBadge>
-          </MetricCard>
-
-          <MetricCard $highlight>
-            <MetricLabel>전환율</MetricLabel>
-            <MetricValue>{stats.conversionRate}%</MetricValue>
-            <MetricSubtext>리드→멤버</MetricSubtext>
-          </MetricCard>
-        </MetricsGrid>
-      </MetricsSection>
-
-      {/* 담당자별 현황 */}
-      <OperatorSection>
-        <SectionTitle>
-          <h3>👥 담당자별 현황</h3>
-        </SectionTitle>
-
-        <OperatorGrid>
-          {operators.map(op => {
-            const assignedUsers = users.filter(u => u.assignedTo === op.id);
-            const activeLeads = assignedUsers.filter(u => u.type === 'LEAD' && u.leadStatus === '챌린지진행중').length;
-            const activeMembers = assignedUsers.filter(u => u.type === 'MEMBER' && u.memberStatus === '구독중').length;
-            const totalAssigned = assignedUsers.length;
-
-            return (
-              <OperatorCard key={op.id}>
-                <OperatorName>{op.name}</OperatorName>
-                <OperatorStats>
-                  <OperatorStat>
-                    <OperatorStatLabel>총 담당</OperatorStatLabel>
-                    <OperatorStatValue>{totalAssigned}명</OperatorStatValue>
-                  </OperatorStat>
-                  <OperatorStat>
-                    <OperatorStatLabel>활성 리드</OperatorStatLabel>
-                    <OperatorStatValue>{activeLeads}명</OperatorStatValue>
-                  </OperatorStat>
-                  <OperatorStat>
-                    <OperatorStatLabel>구독 멤버</OperatorStatLabel>
-                    <OperatorStatValue>{activeMembers}명</OperatorStatValue>
-                  </OperatorStat>
-                </OperatorStats>
-                <OperatorEmail>{op.email}</OperatorEmail>
-              </OperatorCard>
-            );
-          })}
-        </OperatorGrid>
-      </OperatorSection>
-
-      {/* 오늘 발송 예정 */}
-      <EmailSection>
-        <SectionTitle>
-          <h3>✉️ 오늘 발송 예정</h3>
-          <Badge $isEmpty={scheduledEmails.filter(e => e.scheduledDate === todayDate && e.status === 'scheduled').length === 0}>
-            {scheduledEmails.filter(e => e.scheduledDate === todayDate && e.status === 'scheduled').length}건
-          </Badge>
-        </SectionTitle>
-
-        <EmailList>
-          {scheduledEmails
-            .filter(e => e.scheduledDate === todayDate && e.status === 'scheduled')
-            .map(email => (
-              <EmailCard key={email.id}>
-                <EmailTime>{email.scheduledTime}</EmailTime>
-                <EmailInfo>
-                  <EmailRecipient>
-                    {email.userName} ({email.userEmail})
-                  </EmailRecipient>
-                  <EmailSubject>{email.subject}</EmailSubject>
-                </EmailInfo>
-                <EmailType type={email.type}>
-                  {email.type === 'daily_question' ? '일일질문' :
-                   email.type === 'answer_guide' ? '답변가이드' :
-                   email.type === 'conversion_offer' ? '전환제안' : email.type}
-                </EmailType>
-                <ActionButton $primary onClick={() => handleEmailStatusChange(email.id, 'sent')}>
-                  발송완료
-                </ActionButton>
-              </EmailCard>
-            ))}
-        </EmailList>
-      </EmailSection>
+      <div style={{ textAlign: 'center', padding: '100px 20px', color: '#999' }}>
+        <h2 style={{ fontSize: '24px', marginBottom: '16px' }}>🚧 대시보드 준비중</h2>
+        <p style={{ fontSize: '14px' }}>
+          대시보드 기능은 곧 추가될 예정입니다.<br/>
+          지금은 "발송 센터" 탭을 이용해주세요.
+        </p>
+      </div>
     </DashboardContainer>
   );
 
@@ -1136,10 +994,10 @@ const QueryDailyManagement: React.FC = () => {
 
       <TabBar>
         <Tab
-          className={activeTab === 'dashboard' ? 'active' : ''}
-          onClick={() => setActiveTab('dashboard')}
+          className={activeTab === 'emails' ? 'active' : ''}
+          onClick={() => setActiveTab('emails')}
         >
-          🎯 대시보드
+          📮 발송 센터
         </Tab>
         <Tab
           className={activeTab === 'users' ? 'active' : ''}
@@ -1147,16 +1005,9 @@ const QueryDailyManagement: React.FC = () => {
         >
           👥 사용자 관리
         </Tab>
-        <Tab
-          className={activeTab === 'emails' ? 'active' : ''}
-          onClick={() => setActiveTab('emails')}
-        >
-          📮 발송 센터
-        </Tab>
       </TabBar>
 
       <Content>
-        {activeTab === 'dashboard' && renderDashboard()}
         {activeTab === 'users' && renderUsers()}
         {activeTab === 'emails' && renderEmails()}
       </Content>
