@@ -117,6 +117,16 @@ const QueryDailyManagement: React.FC = () => {
   const [questions, setQuestions] = useState<QuestionWithMember[]>([]);
   const [isLoadingAnswers, setIsLoadingAnswers] = useState(false);
 
+  // Upcoming (예정됨) UI state
+  const [upcomingViewMode, setUpcomingViewMode] = useState<'combined' | 'split'>('combined');
+  const [upcomingTimeWindow, setUpcomingTimeWindow] = useState<'all' | '24h' | '7d'>('all');
+  const [upcomingKindFilter, setUpcomingKindFilter] = useState<'all' | 'question' | 'answer'>('all');
+  const [upcomingTypeFilter, setUpcomingTypeFilter] = useState<'all' | 'TRIAL' | 'GROWTH_PLAN'>('all');
+
+  // History (발송 이력) UI state
+  const [historyKindFilter, setHistoryKindFilter] = useState<'all' | 'questions' | 'answers'>('answers');
+  const [historyTimeWindow, setHistoryTimeWindow] = useState<'all' | 'today' | '7d' | '30d'>('7d');
+
   const { date: todayDate } = getCurrentDateTime();
 
   // Operators data
@@ -650,45 +660,85 @@ const QueryDailyManagement: React.FC = () => {
   const renderEmails = () => {
     // KST 기준 현재 시점
     const now = new Date();
-    const todayEnd = new Date();
-    todayEnd.setHours(23, 59, 59, 999);
 
-    // 오늘 발송 예정: 현재 시간 이후 && 오늘 자정 이전
-    const todayQuestions = questions.filter(q => {
-      // UTC로 저장된 시간이므로 'Z'를 붙여서 UTC로 파싱 → 그러면 자동으로 로컬(KST)로 변환됨
+    // Upcoming window (현재 이후, 선택적 범위)
+    const upcomingWindowMs: number | undefined =
+      upcomingTimeWindow === '24h' ? 24 * 60 * 60 * 1000 :
+      upcomingTimeWindow === '7d' ? 7 * 24 * 60 * 60 * 1000 :
+      undefined;
+
+    const isWithinUpcomingWindow = (t: Date): boolean => {
+      if (t < now) return false;
+      if (upcomingWindowMs === undefined) return true;
+      return (t.getTime() - now.getTime()) <= upcomingWindowMs;
+    };
+
+    const upcomingQuestions = questions.filter(q => {
+      if (!q.scheduledAt) return false; // scheduledAt이 null이면 제외
       const scheduledDateUTC = new Date(q.scheduledAt + 'Z');
-      const isAfterNow = scheduledDateUTC >= now;
-      const isBeforeTonight = scheduledDateUTC <= todayEnd;
-
-      console.log(`🔍 Q [${q.id.substring(0, 20)}...] scheduledAt="${q.scheduledAt}" → KST=${scheduledDateUTC.toLocaleString('ko-KR')} / now=${now.toLocaleString('ko-KR')} / isAfterNow=${isAfterNow} / isBeforeTonight=${isBeforeTonight}`);
-
-      return isAfterNow && isBeforeTonight;
+      return isWithinUpcomingWindow(scheduledDateUTC);
     });
 
-    const todayAnswers = answers.filter(a => {
+    const upcomingAnswers = answers.filter(a => {
+      if (!a.scheduledAt) return false; // scheduledAt이 null이면 제외
       const scheduledDateUTC = new Date(a.scheduledAt + 'Z');
-      const isAfterNow = scheduledDateUTC >= now;
-      const isBeforeTonight = scheduledDateUTC <= todayEnd;
-
-      console.log(`🔍 A [${a.id.substring(0, 20)}...] scheduledAt="${a.scheduledAt}" → KST=${scheduledDateUTC.toLocaleString('ko-KR')} / now=${now.toLocaleString('ko-KR')} / isAfterNow=${isAfterNow} / isBeforeTonight=${isBeforeTonight}`);
-
-      return isAfterNow && isBeforeTonight;
+      return isWithinUpcomingWindow(scheduledDateUTC);
     });
 
-    console.log(`✅ 필터링 결과: 질문 ${todayQuestions.length}건, 답변 ${todayAnswers.length}건, 총 ${todayQuestions.length + todayAnswers.length}건`);
-
-    // 통합된 발송 예정 목록 (시간순 정렬)
-    const todayScheduled = [
-      ...todayQuestions.map(q => ({ type: 'question' as const, data: q })),
-      ...todayAnswers.map(a => ({ type: 'answer' as const, data: a }))
+    const upcomingCombined = [
+      ...upcomingQuestions.map(q => ({ kind: 'question' as const, data: q })),
+      ...upcomingAnswers.map(a => ({ kind: 'answer' as const, data: a }))
     ].sort((a, b) => {
-      const dateA = new Date(a.data.scheduledAt).getTime();
-      const dateB = new Date(b.data.scheduledAt).getTime();
+      const dateA = new Date(a.data.scheduledAt + 'Z').getTime();
+      const dateB = new Date(b.data.scheduledAt + 'Z').getTime();
       return dateA - dateB;
     });
 
-    console.log('📊 오늘 발송 예정 필터링 결과:', todayScheduled.length, '건 (질문:', todayQuestions.length, ', 답변:', todayAnswers.length, ')');
-    console.log('🔥🔥🔥 === 디버깅 끝 ===');
+    const upcomingFilteredByKind = upcomingCombined.filter(item => {
+      if (upcomingKindFilter === 'all') return true;
+      return item.kind === upcomingKindFilter;
+    });
+
+    const upcomingFiltered = upcomingFilteredByKind.filter(item => {
+      if (upcomingTypeFilter === 'all') return true;
+      const itemType = item.kind === 'question' ? (item.data as QuestionWithMember).type : (item.data as AnswerWithMember).type;
+      return itemType === upcomingTypeFilter;
+    });
+
+    const upcomingCounts = {
+      total: upcomingFiltered.length,
+      questions: upcomingFiltered.filter(i => i.kind === 'question').length,
+      answers: upcomingFiltered.filter(i => i.kind === 'answer').length
+    };
+
+    // History window (과거 중심)
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+    const historyFromTime: Date | undefined =
+      historyTimeWindow === 'today' ? startOfToday :
+      historyTimeWindow === '7d' ? new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) :
+      historyTimeWindow === '30d' ? new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000) :
+      undefined;
+
+    const isWithinHistoryWindow = (t: Date): boolean => {
+      if (t > now) return false; // 이력은 현재 시점 이전만
+      if (!historyFromTime) return true;
+      return t >= historyFromTime;
+    };
+
+    const historyCombinedAll = [
+      ...questions.map(q => ({ kind: 'question' as const, data: q })),
+      ...answers.map(a => ({ kind: 'answer' as const, data: a }))
+    ].filter(item => {
+      if (!item.data.scheduledAt) return false; // scheduledAt이 null이면 제외
+      return isWithinHistoryWindow(new Date(item.data.scheduledAt + 'Z'));
+    })
+     .sort((a, b) => new Date(b.data.scheduledAt + 'Z').getTime() - new Date(a.data.scheduledAt + 'Z').getTime());
+
+    const historyFiltered = historyCombinedAll.filter(item => {
+      if (historyKindFilter === 'all') return true;
+      if (historyKindFilter === 'questions') return item.kind === 'question';
+      return item.kind === 'answer';
+    });
 
     return (
     <EmailsContainer>
@@ -720,27 +770,65 @@ const QueryDailyManagement: React.FC = () => {
       </Header>
 
       <EmailSections>
-        {/* 답변 발송 이력 (재발송 가능) */}
+        {/* 발송 이력 */}
         <Section>
           <SectionTitle>
-            <h3>📋 답변 발송 이력 (재발송 가능)</h3>
+            <h3>📋 발송 이력</h3>
             <span style={{ fontSize: '14px', color: '#666', fontWeight: 'normal' }}>
-              {answers.length}건
+              {historyFiltered.length}건
             </span>
           </SectionTitle>
+          {/* History filters */}
+          <FilterBar>
+            <ToggleGroup>
+              <ToggleLabel>종류</ToggleLabel>
+              <ToggleButton
+                className={historyKindFilter === 'all' ? 'active' : ''}
+                onClick={() => setHistoryKindFilter('all')}
+              >전체</ToggleButton>
+              <ToggleButton
+                className={historyKindFilter === 'questions' ? 'active' : ''}
+                onClick={() => setHistoryKindFilter('questions')}
+              >질문만</ToggleButton>
+              <ToggleButton
+                className={historyKindFilter === 'answers' ? 'active' : ''}
+                onClick={() => setHistoryKindFilter('answers')}
+              >답변만</ToggleButton>
+            </ToggleGroup>
+            <ToggleGroup>
+              <ToggleLabel>시간</ToggleLabel>
+              <ToggleButton
+                className={historyTimeWindow === 'today' ? 'active' : ''}
+                onClick={() => setHistoryTimeWindow('today')}
+              >오늘</ToggleButton>
+              <ToggleButton
+                className={historyTimeWindow === '7d' ? 'active' : ''}
+                onClick={() => setHistoryTimeWindow('7d')}
+              >7일</ToggleButton>
+              <ToggleButton
+                className={historyTimeWindow === '30d' ? 'active' : ''}
+                onClick={() => setHistoryTimeWindow('30d')}
+              >30일</ToggleButton>
+              <ToggleButton
+                className={historyTimeWindow === 'all' ? 'active' : ''}
+                onClick={() => setHistoryTimeWindow('all')}
+              >전체</ToggleButton>
+            </ToggleGroup>
+          </FilterBar>
           {isLoadingAnswers ? (
             <div style={{ textAlign: 'center', padding: '40px', color: '#999' }}>
               로딩 중...
             </div>
-          ) : answers.length === 0 ? (
+          ) : historyFiltered.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '40px', color: '#999' }}>
-              발송된 답변 가이드가 없습니다.
+              표시할 발송 이력이 없습니다.
             </div>
           ) : (
             <AnswerHistoryTable>
               <thead>
                 <tr>
                   <th>발송일시 (KST)</th>
+                  <th>종류</th>
                   <th>이메일</th>
                   <th>이름</th>
                   <th>질문 (일부)</th>
@@ -749,112 +837,258 @@ const QueryDailyManagement: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {answers.map(answer => {
-                  const scheduledDate = new Date(answer.scheduledAt + 'Z');
+                {historyFiltered.map(item => {
+                  const scheduledDate = new Date(item.data.scheduledAt + 'Z');
                   const dateTimeStr = scheduledDate.toLocaleString('ko-KR', {
-                    year: 'numeric',
-                    month: '2-digit',
-                    day: '2-digit',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    hour12: false
+                    year: 'numeric', month: '2-digit', day: '2-digit',
+                    hour: '2-digit', minute: '2-digit', hour12: false
                   });
-                  return (
-                    <tr key={answer.id}>
-                      <td>{dateTimeStr}</td>
-                      <td>{answer.member.email}</td>
-                      <td>{answer.member.name}</td>
-                      <td style={{ maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {answer.questionContent}
-                      </td>
-                      <td>
-                        <TypeBadge type={answer.type}>
-                          {answer.type === 'TRIAL' ? '무료체험' : '그로스 플랜'}
-                        </TypeBadge>
-                      </td>
-                      <td>
-                        <ActionButton
-                          $primary
-                          onClick={() => handleResendAnswerGuide(answer.id)}
-                          style={{ fontSize: '13px' }}
-                        >
-                          🔄 재발송
-                        </ActionButton>
-                      </td>
-                    </tr>
-                  );
+                  if (item.kind === 'answer') {
+                    const answer = item.data as AnswerWithMember;
+                    return (
+                      <tr key={`hist-a-${answer.id}`}>
+                        <td>{dateTimeStr}</td>
+                        <td><KindBadge kind="answer">답변</KindBadge></td>
+                        <td>{answer.member.email}</td>
+                        <td>{answer.member.name}</td>
+                        <td style={{ maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {answer.questionContent}
+                        </td>
+                        <td>
+                          <TypeBadge type={answer.type}>
+                            {answer.type === 'TRIAL' ? '무료체험' : '그로스 플랜'}
+                          </TypeBadge>
+                        </td>
+                        <td>
+                          <ActionButton
+                            $primary
+                            onClick={() => handleResendAnswerGuide(answer.id)}
+                            style={{ fontSize: '13px' }}
+                          >
+                            🔄 재발송
+                          </ActionButton>
+                        </td>
+                      </tr>
+                    );
+                  } else {
+                    const question = item.data as QuestionWithMember;
+                    return (
+                      <tr key={`hist-q-${question.id}`}>
+                        <td>{dateTimeStr}</td>
+                        <td><KindBadge kind="question">질문</KindBadge></td>
+                        <td>{question.member?.email}</td>
+                        <td>{question.member?.name}</td>
+                        <td style={{ maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {question.content}
+                        </td>
+                        <td>
+                          <TypeBadge type={question.type}>
+                            {question.type === 'TRIAL' ? '무료체험' : '그로스 플랜'}
+                          </TypeBadge>
+                        </td>
+                        <td>
+                          {/* 질문 이력: 액션 없음 */}
+                        </td>
+                      </tr>
+                    );
+                  }
                 })}
               </tbody>
             </AnswerHistoryTable>
           )}
         </Section>
 
-        {/* 오늘 발송 예정 */}
+        {/* 예정됨 (현재 이후) */}
         <Section>
           <SectionTitle>
-            <h3>📅 오늘 발송 예정</h3>
+            <h3>📅 예정됨 (현재 이후)</h3>
             <span style={{ fontSize: '14px', color: '#666', fontWeight: 'normal' }}>
-              {todayScheduled.length}건
+              총 {upcomingCounts.total}건 · 질문 {upcomingCounts.questions} · 답변 {upcomingCounts.answers}
             </span>
           </SectionTitle>
-          {todayScheduled.length === 0 ? (
+          {/* Upcoming filters */}
+          <FilterBar>
+            <ToggleGroup>
+              <ToggleLabel>시간</ToggleLabel>
+              <ToggleButton
+                className={upcomingTimeWindow === 'all' ? 'active' : ''}
+                onClick={() => setUpcomingTimeWindow('all')}
+              >전체</ToggleButton>
+              <ToggleButton
+                className={upcomingTimeWindow === '24h' ? 'active' : ''}
+                onClick={() => setUpcomingTimeWindow('24h')}
+              >24시간</ToggleButton>
+              <ToggleButton
+                className={upcomingTimeWindow === '7d' ? 'active' : ''}
+                onClick={() => setUpcomingTimeWindow('7d')}
+              >7일</ToggleButton>
+            </ToggleGroup>
+            <ToggleGroup>
+              <ToggleLabel>종류</ToggleLabel>
+              <ToggleButton
+                className={upcomingKindFilter === 'all' ? 'active' : ''}
+                onClick={() => setUpcomingKindFilter('all')}
+              >전체</ToggleButton>
+              <ToggleButton
+                className={upcomingKindFilter === 'question' ? 'active' : ''}
+                onClick={() => setUpcomingKindFilter('question')}
+              >질문만</ToggleButton>
+              <ToggleButton
+                className={upcomingKindFilter === 'answer' ? 'active' : ''}
+                onClick={() => setUpcomingKindFilter('answer')}
+              >답변만</ToggleButton>
+            </ToggleGroup>
+            <ToggleGroup>
+              <ToggleLabel>유형</ToggleLabel>
+              <ToggleButton
+                className={upcomingTypeFilter === 'all' ? 'active' : ''}
+                onClick={() => setUpcomingTypeFilter('all')}
+              >전체</ToggleButton>
+              <ToggleButton
+                className={upcomingTypeFilter === 'TRIAL' ? 'active' : ''}
+                onClick={() => setUpcomingTypeFilter('TRIAL')}
+              >TRIAL</ToggleButton>
+              <ToggleButton
+                className={upcomingTypeFilter === 'GROWTH_PLAN' ? 'active' : ''}
+                onClick={() => setUpcomingTypeFilter('GROWTH_PLAN')}
+              >GROWTH_PLAN</ToggleButton>
+            </ToggleGroup>
+            <ToggleGroup>
+              <ToggleLabel>보기</ToggleLabel>
+              <ToggleButton
+                className={upcomingViewMode === 'combined' ? 'active' : ''}
+                onClick={() => setUpcomingViewMode('combined')}
+              >모아 보기</ToggleButton>
+              <ToggleButton
+                className={upcomingViewMode === 'split' ? 'active' : ''}
+                onClick={() => setUpcomingViewMode('split')}
+              >구분 보기</ToggleButton>
+            </ToggleGroup>
+          </FilterBar>
+
+          {upcomingFiltered.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '40px', color: '#999' }}>
-              오늘 발송 예정된 메일이 없습니다.
+              예정된 메일이 없습니다.
             </div>
           ) : (
-            <EmailGrid>
-              {todayScheduled.map((item) => {
-                if (item.type === 'question') {
-                  const question = item.data as QuestionWithMember;
-                  const questionTime = new Date(question.scheduledAt + 'Z');
-                  return (
-                    <EmailDetailCard key={`q-${question.id}`}>
-                      <EmailHeader>
-                        <EmailTime>{questionTime.toLocaleTimeString('ko-KR', { hour: 'numeric', minute: '2-digit' })}</EmailTime>
-                        <EmailType type="daily_question">일일질문</EmailType>
-                      </EmailHeader>
-                      <EmailBody>
-                        <EmailTo>To: {question.member.name} ({question.member.email})</EmailTo>
-                        <EmailSubjectLine>
-                          [{question.type === 'TRIAL' ? '무료체험' : '그로스 플랜'}] Day {question.currentDay}/{question.totalDays} 질문
-                        </EmailSubjectLine>
-                        <EmailPreview>
-                          {question.content.substring(0, 100)}{question.content.length > 100 ? '...' : ''}
-                        </EmailPreview>
-                      </EmailBody>
-                    </EmailDetailCard>
-                  );
-                } else {
-                  const answer = item.data as AnswerWithMember;
-                  const answerTime = new Date(answer.scheduledAt + 'Z');
-                  return (
-                    <EmailDetailCard key={`a-${answer.id}`}>
-                      <EmailHeader>
-                        <EmailTime>{answerTime.toLocaleTimeString('ko-KR', { hour: 'numeric', minute: '2-digit' })}</EmailTime>
-                        <EmailType type="answer_guide">답변가이드</EmailType>
-                      </EmailHeader>
-                      <EmailBody>
-                        <EmailTo>To: {answer.member.name} ({answer.member.email})</EmailTo>
-                        <EmailSubjectLine>
-                          [{answer.type === 'TRIAL' ? '무료체험' : '그로스 플랜'}] 답변 가이드
-                        </EmailSubjectLine>
-                        <EmailPreview>
-                          {answer.questionContent ? answer.questionContent.substring(0, 100) + '...' : '질문 없음 (답변만 발송)'}
-                        </EmailPreview>
-                      </EmailBody>
-                      <EmailFooter>
-                        <ActionButton
-                          $primary
-                          onClick={() => handleResendAnswerGuide(answer.id)}
-                        >
-                          🔄 재발송
-                        </ActionButton>
-                      </EmailFooter>
-                    </EmailDetailCard>
-                  );
-                }
-              })}
-            </EmailGrid>
+            upcomingViewMode === 'combined' ? (
+              <EmailGrid>
+                {upcomingFiltered.map((item) => {
+                  if (item.kind === 'question') {
+                    const question = item.data as QuestionWithMember;
+                    const questionTime = new Date(question.scheduledAt + 'Z');
+                    return (
+                      <EmailDetailCard key={`q-${question.id}`}>
+                        <EmailHeader>
+                          <EmailTime>{questionTime.toLocaleTimeString('ko-KR', { hour: 'numeric', minute: '2-digit' })}</EmailTime>
+                          <EmailType type="daily_question">질문</EmailType>
+                        </EmailHeader>
+                        <EmailBody>
+                          <EmailTo>To: {question.member.name} ({question.member.email})</EmailTo>
+                          <EmailSubjectLine>
+                            [{question.type === 'TRIAL' ? '무료체험' : '그로스 플랜'}] Day {question.currentDay}/{question.totalDays} 질문
+                          </EmailSubjectLine>
+                          <EmailPreview>
+                            {question.content.substring(0, 100)}{question.content.length > 100 ? '...' : ''}
+                          </EmailPreview>
+                        </EmailBody>
+                      </EmailDetailCard>
+                    );
+                  } else {
+                    const answer = item.data as AnswerWithMember;
+                    const answerTime = new Date(answer.scheduledAt + 'Z');
+                    return (
+                      <EmailDetailCard key={`a-${answer.id}`}>
+                        <EmailHeader>
+                          <EmailTime>{answerTime.toLocaleTimeString('ko-KR', { hour: 'numeric', minute: '2-digit' })}</EmailTime>
+                          <EmailType type="answer_guide">답변</EmailType>
+                        </EmailHeader>
+                        <EmailBody>
+                          <EmailTo>To: {answer.member.name} ({answer.member.email})</EmailTo>
+                          <EmailSubjectLine>
+                            [{answer.type === 'TRIAL' ? '무료체험' : '그로스 플랜'}] 답변 가이드
+                          </EmailSubjectLine>
+                          <EmailPreview>
+                            {answer.questionContent ? answer.questionContent.substring(0, 100) + '...' : '질문 없음 (답변만 발송)'}
+                          </EmailPreview>
+                        </EmailBody>
+                        <EmailFooter>
+                          <ActionButton
+                            $primary
+                            onClick={() => handleResendAnswerGuide(answer.id)}
+                          >
+                            🔄 재발송
+                          </ActionButton>
+                        </EmailFooter>
+                      </EmailDetailCard>
+                    );
+                  }
+                })}
+              </EmailGrid>
+            ) : (
+              <SplitGrid>
+                <SplitColumn>
+                  <SplitTitle>질문 예정</SplitTitle>
+                  <EmailGrid>
+                    {upcomingFiltered.filter(i => i.kind === 'question').map(item => {
+                      const question = item.data as QuestionWithMember;
+                      const questionTime = new Date(question.scheduledAt + 'Z');
+                      return (
+                        <EmailDetailCard key={`sq-${question.id}`}>
+                          <EmailHeader>
+                            <EmailTime>{questionTime.toLocaleTimeString('ko-KR', { hour: 'numeric', minute: '2-digit' })}</EmailTime>
+                            <EmailType type="daily_question">질문</EmailType>
+                          </EmailHeader>
+                          <EmailBody>
+                            <EmailTo>To: {question.member.name} ({question.member.email})</EmailTo>
+                            <EmailSubjectLine>
+                              [{question.type === 'TRIAL' ? '무료체험' : '그로스 플랜'}] Day {question.currentDay}/{question.totalDays} 질문
+                            </EmailSubjectLine>
+                            <EmailPreview>
+                              {question.content.substring(0, 100)}{question.content.length > 100 ? '...' : ''}
+                            </EmailPreview>
+                          </EmailBody>
+                        </EmailDetailCard>
+                      );
+                    })}
+                  </EmailGrid>
+                </SplitColumn>
+                <SplitColumn>
+                  <SplitTitle>답변 예정</SplitTitle>
+                  <EmailGrid>
+                    {upcomingFiltered.filter(i => i.kind === 'answer').map(item => {
+                      const answer = item.data as AnswerWithMember;
+                      const answerTime = new Date(answer.scheduledAt + 'Z');
+                      return (
+                        <EmailDetailCard key={`sa-${answer.id}`}>
+                          <EmailHeader>
+                            <EmailTime>{answerTime.toLocaleTimeString('ko-KR', { hour: 'numeric', minute: '2-digit' })}</EmailTime>
+                            <EmailType type="answer_guide">답변</EmailType>
+                          </EmailHeader>
+                          <EmailBody>
+                            <EmailTo>To: {answer.member.name} ({answer.member.email})</EmailTo>
+                            <EmailSubjectLine>
+                              [{answer.type === 'TRIAL' ? '무료체험' : '그로스 플랜'}] 답변 가이드
+                            </EmailSubjectLine>
+                            <EmailPreview>
+                              {answer.questionContent ? answer.questionContent.substring(0, 100) + '...' : '질문 없음 (답변만 발송)'}
+                            </EmailPreview>
+                          </EmailBody>
+                          <EmailFooter>
+                            <ActionButton
+                              $primary
+                              onClick={() => handleResendAnswerGuide(answer.id)}
+                            >
+                              🔄 재발송
+                            </ActionButton>
+                          </EmailFooter>
+                        </EmailDetailCard>
+                      );
+                    })}
+                  </EmailGrid>
+                </SplitColumn>
+              </SplitGrid>
+            )
           )}
         </Section>
       </EmailSections>
@@ -2022,6 +2256,59 @@ const EmailDetailCard = styled.div<{ sent?: boolean }>`
   opacity: ${({ sent }) => sent ? 0.7 : 1};
 `;
 
+const FilterBar = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+  align-items: center;
+  margin: 12px 0 16px;
+`;
+
+const ToggleGroup = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`;
+
+const ToggleLabel = styled.span`
+  font-size: 12px;
+  color: ${({ theme }) => theme.colors.text.secondary};
+  margin-right: 4px;
+`;
+
+const ToggleButton = styled.button`
+  padding: 6px 10px;
+  border: 1px solid ${({ theme }) => theme.colors.gray[300]};
+  background: white;
+  color: ${({ theme }) => theme.colors.text.primary};
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  &.active {
+    background: ${({ theme }) => theme.colors.primary};
+    color: white;
+    border-color: ${({ theme }) => theme.colors.primary};
+  }
+`;
+
+const SplitGrid = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  @media (max-width: 1200px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const SplitColumn = styled.div``;
+
+const SplitTitle = styled.h4`
+  font-size: 14px;
+  font-weight: 600;
+  color: ${({ theme }) => theme.colors.text.secondary};
+  margin: 0 0 10px;
+`;
+
 const EmailHeader = styled.div`
   display: flex;
   justify-content: space-between;
@@ -2485,6 +2772,16 @@ const TypeBadge = styled.span<{ type: string }>`
     type === 'TRIAL' ? '#e0f2fe' : '#fef3c7'};
   color: ${({ type }) =>
     type === 'TRIAL' ? '#0369a1' : '#a16207'};
+`;
+
+const KindBadge = styled.span<{ kind: 'question' | 'answer' }>`
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  background: ${({ kind }) => kind === 'question' ? '#e0f2fe' : '#f0fdf4'};
+  color: ${({ kind }) => kind === 'question' ? '#0369a1' : '#166534'};
 `;
 
 export default QueryDailyManagement;
