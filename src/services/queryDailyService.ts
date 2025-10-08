@@ -298,6 +298,32 @@ class QueryDailyService {
       throw error;
     }
   }
+
+  /**
+   * 예약된 질문 취소
+   */
+  async cancelQuestion(questionId: string): Promise<void> {
+    try {
+      await apiClient.delete(`/api/query-daily/admin/questions/${questionId}`);
+      console.log('✅ Question cancelled:', questionId);
+    } catch (error: any) {
+      console.error('❌ Failed to cancel question:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 예약된 답변 취소
+   */
+  async cancelAnswer(answerId: string): Promise<void> {
+    try {
+      await apiClient.delete(`/api/query-daily/admin/answers/${answerId}`);
+      console.log('✅ Answer cancelled:', answerId);
+    } catch (error: any) {
+      console.error('❌ Failed to cancel answer:', error);
+      throw error;
+    }
+  }
 }
 
 export default new QueryDailyService();
