@@ -63,8 +63,8 @@ export interface Answer {
 
 export interface AnswerWithMember {
   id: string;
-  questionId: string;
-  questionContent: string;
+  questionId: string | null;
+  questionContent: string | null;
   member: {
     memberId: string;
     email: string;
@@ -77,18 +77,20 @@ export interface AnswerWithMember {
 }
 
 export interface CreateQuestionRequest {
-  memberId: string;
+  email: string;
   content: string;
   type: 'TRIAL' | 'GROWTH_PLAN';
   currentDay?: number;
   totalDays?: number;
-  scheduledAt: string;
+  scheduledAt?: string;  // Optional: null이면 즉시 발송
   displayName?: string;
 }
 
 export interface CreateAnswerRequest {
+  email?: string;  // NEW 모드용 (필수)
   answerId?: string;  // RESEND 모드용 (재발송 시에만 사용)
-  questionId?: string;  // NEW 모드용
+  questionId?: string;  // NEW 모드용 (선택사항: Question 없이 Answer만 발송 가능)
+  type?: 'TRIAL' | 'GROWTH_PLAN';  // NEW 모드용 (Question 없이 Answer만 생성할 때 필수)
   content?: {
     version?: string;
     question?: string;
@@ -186,7 +188,7 @@ class QueryDailyService {
   }
 
   /**
-   * 질문 생성 (Phase 1: 데이터 저장용)
+   * 질문 생성 및 이메일 발송 (Kafka 이벤트 자동 처리)
    */
   async createQuestion(request: CreateQuestionRequest): Promise<{ id: string }> {
     try {
@@ -240,7 +242,7 @@ class QueryDailyService {
   }
 
   /**
-   * 답변 생성 (Phase 1: 데이터 저장용) 또는 재발송
+   * 답변 생성 및 이메일 발송 (Kafka 이벤트 자동 처리) 또는 재발송
    */
   async createAnswer(request: CreateAnswerRequest): Promise<{ id: string }> {
     try {

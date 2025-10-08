@@ -112,18 +112,18 @@ export const EmailSendModal = memo(({
     console.log('✅ Selected applicant:', applicant.name, applicant.email, 'memberId:', applicant.memberId);
   };
 
-  // Phase 1: Handle question selection (for answer guide)
+  // Handle question selection (for answer guide)
   const handleQuestionSelect = (question: QuestionWithMember) => {
     setSelectedQuestion(question);
     // Auto-fill email and question content
-    setRecipientEmail(question.member.email);
+    setRecipientEmail(question.member?.email || '');
     setAnswerGuideData(prev => ({
       ...prev,
       question: question.content
     }));
     setQuestionData(prev => ({
       ...prev,
-      userName: question.member.name
+      userName: question.member?.name || ''
     }));
     setShowQuestionDropdown(false);
     console.log('✅ Selected question:', question.id, question.content);
@@ -251,15 +251,6 @@ export const EmailSendModal = memo(({
       const scheduledDateTime = new Date(`${scheduledDate}T${scheduledTime}:00`);
       const now = new Date();
 
-      console.log('🕐 [예약 발송 디버깅]', {
-        isScheduled,
-        scheduledDate,
-        scheduledTime,
-        scheduledDateTime: scheduledDateTime.toString(),
-        now: now.toString(),
-        isAfterNow: scheduledDateTime > now
-      });
-
       if (scheduledDateTime <= now) {
         setEmailError('예약 시간은 현재 시간 이후여야 합니다.');
         return;
@@ -268,10 +259,6 @@ export const EmailSendModal = memo(({
       // Convert to ISO string (will be handled as KST on server)
       // Add timezone information comment for clarity
       scheduledAt = scheduledDateTime.toISOString(); // Note: Server should interpret this as KST
-
-      console.log('📤 [전송될 scheduledAt]', scheduledAt);
-    } else {
-      console.log('⚡ [즉시 발송 모드] isScheduled =', isScheduled);
     }
 
     setSendingEmail(true);
@@ -286,20 +273,20 @@ export const EmailSendModal = memo(({
           return;
         }
 
-        if (!selectedMemberId) {
-          setEmailError('신청자를 선택해주세요.');
+        if (!recipientEmail) {
+          setEmailError('이메일을 입력해주세요.');
           setSendingEmail(false);
           return;
         }
 
-        // Phase 2: Create Question in query-daily-service (Kafka will trigger email)
+        // Create Question (Kafka will trigger email)
         const questionResponse = await queryDailyService.createQuestion({
-          memberId: selectedMemberId,
+          email: recipientEmail,
           content: questionData.question,
           type: 'TRIAL',
           currentDay: questionData.currentDay,
           totalDays: questionData.totalDays,
-          scheduledAt: scheduledAt || new Date().toISOString(),
+          scheduledAt: scheduledAt || undefined,
           displayName: questionData.userName || undefined  // 백오피스에서 입력한 표시 이름 전달
         });
 
@@ -317,15 +304,17 @@ export const EmailSendModal = memo(({
           return;
         }
 
-        if (!selectedQuestion) {
-          setEmailError('질문을 먼저 선택해주세요.');
+        if (!recipientEmail) {
+          setEmailError('이메일을 입력해주세요.');
           setSendingEmail(false);
           return;
         }
 
-        // Phase 2: Create Answer in query-daily-service (Kafka will trigger email)
+        // Question 선택은 선택사항 - questionId는 있으면 전달, 없으면 null
         const answerResponse = await queryDailyService.createAnswer({
-          questionId: selectedQuestion.id,
+          email: recipientEmail,
+          questionId: selectedQuestion?.id || undefined,
+          type: 'TRIAL',
           content: {
             version: '1.0',
             question: answerGuideData.question,
@@ -335,11 +324,11 @@ export const EmailSendModal = memo(({
             personaAnswers: answerGuideData.personaAnswers,
             followUpQuestions: answerGuideData.followUpQuestions.filter(q => q.trim() !== '')
           },
-          scheduledAt: scheduledAt || new Date().toISOString(),
+          scheduledAt: scheduledAt || undefined,
           displayName: questionData.userName || undefined  // 백오피스에서 입력한 표시 이름 전달
         });
 
-        console.log('✅ Answer created:', answerResponse.id);
+        console.log('✅ TRIAL Answer created:', answerResponse.id);
 
         // Email will be sent automatically via Kafka event → noti-service
         const successMessage = isScheduled
@@ -403,44 +392,30 @@ export const EmailSendModal = memo(({
           return;
         }
 
-        // 신청자 선택은 선택사항 - selectedMemberId가 있을 때만 API 호출
-        if (selectedMemberId) {
-          // Phase 2: Create Question in query-daily-service (Kafka will trigger email)
-          const questionResponse = await queryDailyService.createQuestion({
-            memberId: selectedMemberId,
-            content: questionData.question,
-            type: 'GROWTH_PLAN',
-            currentDay: questionData.currentDay,
-            totalDays: 20,
-            scheduledAt: scheduledAt || new Date().toISOString(),
-            displayName: questionData.userName || undefined  // 백오피스에서 입력한 표시 이름 전달
-          });
-
-          console.log('✅ Growth Plan Question created:', questionResponse.id);
-
-          // Email will be sent automatically via Kafka event → noti-service
-          const successMessage = isScheduled
-            ? `${recipientEmail}로 ${scheduledDate} ${scheduledTime} ${getRelativeTime(scheduledDate, scheduledTime)} KST에 그로스 플랜 질문 발송이 예약되었습니다.`
-            : `${recipientEmail}로 그로스 플랜 질문이 발송되었습니다.`;
-          setEmailSuccess(successMessage);
-        } else {
-          // 신청자를 선택하지 않은 경우 직접 이메일 발송
-          await emailService.sendGrowthPlanQuestion(
-            recipientEmail,
-            questionData.question,                             // 2번째: question
-            questionData.userName || recipientEmail.split('@')[0],  // 3번째: userName
-            questionData.currentDay,                           // 4번째: currentDay
-            questionData.totalDays,                            // 5번째: totalDays
-            undefined,                                         // 6번째: dayIntroMessage (기본값 사용)
-            undefined,                                         // 7번째: dayMotivationMessage (기본값 사용)
-            scheduledAt                                        // 8번째: scheduledAt
-          );
-
-          const successMessage = isScheduled
-            ? `${recipientEmail}로 ${scheduledDate} ${scheduledTime} ${getRelativeTime(scheduledDate, scheduledTime)} KST에 그로스 플랜 질문 발송이 예약되었습니다.`
-            : `${recipientEmail}로 그로스 플랜 질문이 발송되었습니다.`;
-          setEmailSuccess(successMessage);
+        if (!recipientEmail) {
+          setEmailError('이메일을 입력해주세요.');
+          setSendingEmail(false);
+          return;
         }
+
+        // Create Question (Kafka will trigger email)
+        const questionResponse = await queryDailyService.createQuestion({
+          email: recipientEmail,
+          content: questionData.question,
+          type: 'GROWTH_PLAN',
+          currentDay: questionData.currentDay,
+          totalDays: 20,
+          scheduledAt: scheduledAt || undefined,
+          displayName: questionData.userName || undefined  // 백오피스에서 입력한 표시 이름 전달
+        });
+
+        console.log('✅ Growth Plan Question created:', questionResponse.id);
+
+        // Email will be sent automatically via Kafka event → noti-service
+        const successMessage = isScheduled
+          ? `${recipientEmail}로 ${scheduledDate} ${scheduledTime} ${getRelativeTime(scheduledDate, scheduledTime)} KST에 그로스 플랜 질문 발송이 예약되었습니다.`
+          : `${recipientEmail}로 그로스 플랜 질문이 발송되었습니다.`;
+        setEmailSuccess(successMessage);
       } else if (emailModalType === 'growthPlanAnswerGuide') {
         if (!answerGuideData.question || !answerGuideData.analysis) {
           setEmailError('질문과 질문 해부는 필수 항목입니다.');
@@ -448,15 +423,17 @@ export const EmailSendModal = memo(({
           return;
         }
 
-        if (!selectedQuestion) {
-          setEmailError('질문을 먼저 선택해주세요.');
+        if (!recipientEmail) {
+          setEmailError('이메일을 입력해주세요.');
           setSendingEmail(false);
           return;
         }
 
-        // Phase 2: Create Answer in query-daily-service (Kafka will trigger email)
+        // Question 선택은 선택사항 - questionId는 있으면 전달, 없으면 null
         const answerResponse = await queryDailyService.createAnswer({
-          questionId: selectedQuestion.id,
+          email: recipientEmail,
+          questionId: selectedQuestion?.id || undefined,
+          type: 'GROWTH_PLAN',
           content: {
             version: '1.0',
             question: answerGuideData.question,
@@ -466,7 +443,7 @@ export const EmailSendModal = memo(({
             personaAnswers: answerGuideData.personaAnswers,
             followUpQuestions: answerGuideData.followUpQuestions.filter(q => q.trim() !== '')
           },
-          scheduledAt: scheduledAt || new Date().toISOString(),
+          scheduledAt: scheduledAt || undefined,
           displayName: questionData.userName || undefined  // 백오피스에서 입력한 표시 이름 전달
         });
 
@@ -810,7 +787,7 @@ export const EmailSendModal = memo(({
           {(emailModalType === 'answerGuide' || emailModalType === 'growthPlanAnswerGuide') && (
             <>
               <FormGroup>
-                <Label>질문 선택 (Phase 1: 필수) *</Label>
+                <Label>질문 선택 (선택사항)</Label>
                 <ApplicantDropdownWrapper className="question-dropdown-wrapper">
                   <ApplicantSelectButton
                     onClick={() => setShowQuestionDropdown(!showQuestionDropdown)}
@@ -845,7 +822,7 @@ export const EmailSendModal = memo(({
                               onClick={() => handleQuestionSelect(question)}
                               selected={selectedQuestion?.id === question.id}
                             >
-                              <ApplicantName>{question.member.name} ({question.member.email})</ApplicantName>
+                              <ApplicantName>{question.member?.name || 'Unknown'} ({question.member?.email || 'no-email'})</ApplicantName>
                               <ApplicantEmail>
                                 {question.content.substring(0, 80)}
                                 {question.content.length > 80 ? '...' : ''}
@@ -865,17 +842,14 @@ export const EmailSendModal = memo(({
               </FormGroup>
 
               <FormGroup>
-                <Label>질문 *</Label>
+                <Label>질문</Label>
                 <Textarea
                   value={answerGuideData.question}
                   onChange={e => setAnswerGuideData({...answerGuideData, question: e.target.value})}
                   placeholder="예: JWT를 사용한 인증 방식의 장단점은?"
                   rows={2}
-                  disabled={!selectedQuestion}
                 />
-                {!selectedQuestion && (
-                  <HelperText>먼저 질문을 선택하면 자동으로 입력됩니다</HelperText>
-                )}
+                <HelperText>질문을 선택하거나 직접 입력하세요</HelperText>
               </FormGroup>
 
               <FormGroup>

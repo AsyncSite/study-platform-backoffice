@@ -40,13 +40,13 @@ const NotiDashboard: React.FC = () => {
     fetchTotalStats();
   }, [currentPage]);
 
-  const fetchNotifications = async (isSearch = false) => {
+  const fetchNotifications = async (isSearch = false, criteria = searchCriteria) => {
     try {
       setLoading(true);
       let response: any;
 
-      if (isSearch && Object.keys(searchCriteria).some(key => searchCriteria[key as keyof NotificationSearchCriteria])) {
-        response = await notiApi.searchNotifications(searchCriteria, currentPage, 20);
+      if (isSearch && Object.keys(criteria).some(key => criteria[key as keyof NotificationSearchCriteria])) {
+        response = await notiApi.searchNotifications(criteria, currentPage, 20);
       } else {
         response = await notiApi.getAllNotifications(currentPage, 20);
       }
@@ -88,7 +88,7 @@ const NotiDashboard: React.FC = () => {
   const handleSearch = () => {
     setSearchCriteria(tempCriteria);
     setCurrentPage(0);
-    fetchNotifications(true);
+    fetchNotifications(true, tempCriteria);
     setShowFilters(false);
   };
 
