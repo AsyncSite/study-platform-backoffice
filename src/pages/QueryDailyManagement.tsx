@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { EmailSendModal } from '../components/QueryDailyEmailModal';
 import queryDailyService, { type AnswerWithMember, type QuestionWithMember } from '../services/queryDailyService';
@@ -60,21 +60,21 @@ interface User {
   lastEmailSentAt?: string;
 }
 
-interface ScheduledEmail {
-  id: string;
-  userId: string;
-  userName: string;
-  userEmail: string;
-  scheduledDate: string;
-  scheduledTime: string;
-  type: 'daily_question' | 'answer_guide' | 'welcome' | 'conversion_offer' | 'completion';
-  subject: string;
-  content: string;
-  status: 'scheduled' | 'sent' | 'failed' | 'cancelled';
-  dayNumber?: number;
-  sentAt?: string;
-  error?: string;
-}
+// interface ScheduledEmail {
+//   id: string;
+//   userId: string;
+//   userName: string;
+//   userEmail: string;
+//   scheduledDate: string;
+//   scheduledTime: string;
+//   type: 'daily_question' | 'answer_guide' | 'welcome' | 'conversion_offer' | 'completion';
+//   subject: string;
+//   content: string;
+//   status: 'scheduled' | 'sent' | 'failed' | 'cancelled';
+//   dayNumber?: number;
+//   sentAt?: string;
+//   error?: string;
+// }
 
 // interface AnswerGuide {
 //   id: string;
@@ -127,7 +127,7 @@ const QueryDailyManagement: React.FC = () => {
   const [historyKindFilter, setHistoryKindFilter] = useState<'all' | 'questions' | 'answers'>('answers');
   const [historyTimeWindow, setHistoryTimeWindow] = useState<'all' | 'today' | '7d' | '30d'>('7d');
 
-  const { date: todayDate } = getCurrentDateTime();
+  // const { date: todayDate } = getCurrentDateTime();
 
   // Operators data
   const operators: Operator[] = [
@@ -214,45 +214,45 @@ const QueryDailyManagement: React.FC = () => {
     loadEmailData();
   }, [activeTab]);
 
-  const [scheduledEmails, setScheduledEmails] = useState<ScheduledEmail[]>([]);
+  // const [scheduledEmails, setScheduledEmails] = useState<ScheduledEmail[]>([]);
 
-  // 계산된 통계
-  const stats = useMemo(() => {
-    const leads = users.filter(u => u.type === 'LEAD');
-    const members = users.filter(u => u.type === 'MEMBER');
-    const activeLeads = leads.filter(u => u.leadStatus === '챌린지진행중');
-    const completedLeads = leads.filter(u => u.leadStatus === '챌린지완료' || u.leadStatus === '전환됨');
-    const conversionRate = completedLeads.length > 0
-      ? (members.length / completedLeads.length * 100).toFixed(1)
-      : '0';
+  // // 계산된 통계
+  // const stats = useMemo(() => {
+  //   const leads = users.filter(u => u.type === 'LEAD');
+  //   const members = users.filter(u => u.type === 'MEMBER');
+  //   const activeLeads = leads.filter(u => u.leadStatus === '챌린지진행중');
+  //   const completedLeads = leads.filter(u => u.leadStatus === '챌린지완료' || u.leadStatus === '전환됨');
+  //   const conversionRate = completedLeads.length > 0
+  //     ? (members.length / completedLeads.length * 100).toFixed(1)
+  //     : '0';
 
-    return {
-      totalLeads: leads.length,
-      totalMembers: members.length,
-      activeLeads: activeLeads.length,
-      conversionRate
-    };
-  }, [users]);
+  //   return {
+  //     totalLeads: leads.length,
+  //     totalMembers: members.length,
+  //     activeLeads: activeLeads.length,
+  //     conversionRate
+  //   };
+  // }, [users]);
 
-  // 오늘의 할 일
-  const todayTasks = useMemo(() => {
-    const questionTargets = users.filter(u =>
-      (u.type === 'LEAD' && u.leadStatus === '챌린지진행중') ||
-      (u.type === 'MEMBER' && u.memberStatus === '구독중')
-    );
-    const conversionTargets = users.filter(u =>
-      u.type === 'LEAD' && u.leadStatus === '챌린지완료'
-    );
-    const paymentPending = users.filter(u =>
-      u.type === 'LEAD' && u.leadStatus === '전환제안발송'
-    );
+  // // 오늘의 할 일
+  // const todayTasks = useMemo(() => {
+  //   const questionTargets = users.filter(u =>
+  //     (u.type === 'LEAD' && u.leadStatus === '챌린지진행중') ||
+  //     (u.type === 'MEMBER' && u.memberStatus === '구독중')
+  //   );
+  //   const conversionTargets = users.filter(u =>
+  //     u.type === 'LEAD' && u.leadStatus === '챌린지완료'
+  //   );
+  //   const paymentPending = users.filter(u =>
+  //     u.type === 'LEAD' && u.leadStatus === '전환제안발송'
+  //   );
 
-    return {
-      questionTargets: questionTargets.length,
-      conversionTargets: conversionTargets.length,
-      paymentPending: paymentPending.length
-    };
-  }, [users]);
+  //   return {
+  //     questionTargets: questionTargets.length,
+  //     conversionTargets: conversionTargets.length,
+  //     paymentPending: paymentPending.length
+  //   };
+  // }, [users]);
 
   // 다음 액션 결정 함수
   const getTimeAgo = (date: Date) => {
@@ -355,17 +355,17 @@ const QueryDailyManagement: React.FC = () => {
     setShowUserDetailModal(false);
   };
 
-  const renderDashboard = () => (
-    <DashboardContainer>
-      <div style={{ textAlign: 'center', padding: '100px 20px', color: '#999' }}>
-        <h2 style={{ fontSize: '24px', marginBottom: '16px' }}>🚧 대시보드 준비중</h2>
-        <p style={{ fontSize: '14px' }}>
-          대시보드 기능은 곧 추가될 예정입니다.<br/>
-          지금은 "발송 센터" 탭을 이용해주세요.
-        </p>
-      </div>
-    </DashboardContainer>
-  );
+  // const renderDashboard = () => (
+  //   <DashboardContainer>
+  //     <div style={{ textAlign: 'center', padding: '100px 20px', color: '#999' }}>
+  //       <h2 style={{ fontSize: '24px', marginBottom: '16px' }}>🚧 대시보드 준비중</h2>
+  //       <p style={{ fontSize: '14px' }}>
+  //         대시보드 기능은 곧 추가될 예정입니다.<br/>
+  //         지금은 "발송 센터" 탭을 이용해주세요.
+  //       </p>
+  //     </div>
+  //   </DashboardContainer>
+  // );
 
   const renderUsers = () => (
     <UsersContainer>
@@ -954,15 +954,15 @@ const QueryDailyManagement: React.FC = () => {
   );
   };
 
-  const handleEmailStatusChange = (emailId: string, status: 'sent' | 'cancelled') => {
-    setScheduledEmails(emails =>
-      emails.map(email =>
-        email.id === emailId
-          ? { ...email, status, sentAt: status === 'sent' ? new Date().toISOString() : undefined }
-          : email
-      )
-    );
-  };
+  // const handleEmailStatusChange = (emailId: string, status: 'sent' | 'cancelled') => {
+  //   setScheduledEmails(emails =>
+  //     emails.map(email =>
+  //       email.id === emailId
+  //         ? { ...email, status, sentAt: status === 'sent' ? new Date().toISOString() : undefined }
+  //         : email
+  //     )
+  //   );
+  // };
 
   const handleKeywordAdd = () => {
     if (keywordInput.trim() && !guideKeywords.includes(keywordInput.trim())) {
@@ -1336,13 +1336,11 @@ const Content = styled.div`
 `;
 
 // Dashboard Components
-const DashboardContainer = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 32px;
-`;
-
-const MissionControlSection = styled.section``;
+// const DashboardContainer = styled.div`
+//   display: flex;
+//   flex-direction: column;
+//   gap: 32px;
+// `;
 
 const SectionTitle = styled.div`
   margin-bottom: 20px;
@@ -1360,175 +1358,11 @@ const SectionTitle = styled.div`
   }
 `;
 
-const TasksGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 20px;
-
-  @media (max-width: 1200px) {
-    grid-template-columns: 1fr;
-  }
-`;
-
-const TaskCard = styled.div<{ $highlight?: boolean }>`
-  background: white;
-  border-radius: 12px;
-  padding: 24px;
-  border: 2px solid ${({ $highlight, theme }) =>
-    $highlight ? theme.colors.primary : theme.colors.gray[200]};
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  transition: all 0.2s;
-
-  &:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  }
-`;
-
-const TaskIcon = styled.div`
-  font-size: 32px;
-`;
-
-const TaskInfo = styled.div`
-  flex: 1;
-`;
-
-const TaskLabel = styled.div`
-  font-size: 14px;
-  color: ${({ theme }) => theme.colors.text.secondary};
-  margin-bottom: 8px;
-`;
-
-const TaskCount = styled.div`
-  font-size: 32px;
-  font-weight: 700;
-  color: ${({ theme }) => theme.colors.text.primary};
-  margin-bottom: 4px;
-`;
-
-const TaskDescription = styled.div`
-  font-size: 12px;
-  color: ${({ theme }) => theme.colors.text.tertiary};
-`;
-
-const TaskAction = styled.button<{ $primary?: boolean }>`
-  width: 100%;
-  padding: 10px;
-  background: ${({ $primary, theme }) =>
-    $primary ? theme.colors.primary : 'white'};
-  color: ${({ $primary, theme }) =>
-    $primary ? 'white' : theme.colors.primary};
-  border: 1px solid ${({ theme }) => theme.colors.primary};
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-
-  &:hover {
-    opacity: 0.9;
-  }
-`;
-
-const MetricsSection = styled.section``;
-
-const MetricsGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-
-  @media (max-width: 1200px) {
-    grid-template-columns: repeat(2, 1fr);
-  }
-`;
-
-const MetricCard = styled.div<{ $highlight?: boolean }>`
-  background: white;
-  border-radius: 8px;
-  padding: 20px;
-  border: 1px solid ${({ $highlight, theme }) =>
-    $highlight ? theme.colors.primary : theme.colors.gray[200]};
-`;
-
-const MetricLabel = styled.div`
-  font-size: 13px;
-  color: ${({ theme }) => theme.colors.text.secondary};
-  margin-bottom: 8px;
-`;
-
-const MetricValue = styled.div`
-  font-size: 28px;
-  font-weight: 700;
-  color: ${({ theme }) => theme.colors.text.primary};
-  margin-bottom: 8px;
-`;
-
-const MetricSubtext = styled.div`
-  font-size: 12px;
-  color: ${({ theme }) => theme.colors.text.tertiary};
-`;
-
-const MetricBadge = styled.span<{ type: 'lead' | 'member' }>`
-  display: inline-block;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 10px;
-  font-weight: 600;
-  background: ${({ type }) =>
-    type === 'lead' ? '#fef3c7' : '#dbeafe'};
-  color: ${({ type }) =>
-    type === 'lead' ? '#a16207' : '#1e40af'};
-`;
-
-const EmailSection = styled.section``;
-
-const Badge = styled.span<{ $isEmpty?: boolean }>`
-  background: ${({ theme, $isEmpty }) => $isEmpty ? theme.colors.gray[200] : theme.colors.primary};
-  color: ${({ theme, $isEmpty }) => $isEmpty ? theme.colors.text.secondary : 'white'};
-  padding: 4px 12px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 600;
-`;
-
-const EmailList = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-`;
-
-const EmailCard = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 16px;
-  background: white;
-  border-radius: 8px;
-  border: 1px solid ${({ theme }) => theme.colors.gray[200]};
-`;
-
 const EmailTime = styled.div`
   font-size: 18px;
   font-weight: 600;
   color: ${({ theme }) => theme.colors.primary};
   min-width: 60px;
-`;
-
-const EmailInfo = styled.div`
-  flex: 1;
-`;
-
-const EmailRecipient = styled.div`
-  font-size: 14px;
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.text.primary};
-  margin-bottom: 4px;
-`;
-
-const EmailSubject = styled.div`
-  font-size: 13px;
-  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const EmailType = styled.span<{ type: string }>`
@@ -1567,65 +1401,6 @@ const Header = styled.div`
 const FilterGroup = styled.div`
   display: flex;
   gap: 8px;
-`;
-
-const OperatorSection = styled.section`
-  margin-top: 32px;
-`;
-
-const OperatorGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-
-  @media (max-width: 1200px) {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  @media (max-width: 768px) {
-    grid-template-columns: 1fr;
-  }
-`;
-
-const OperatorCard = styled.div`
-  background: white;
-  border-radius: 8px;
-  padding: 20px;
-  border: 1px solid ${({ theme }) => theme.colors.gray[200]};
-`;
-
-const OperatorName = styled.div`
-  font-size: 18px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.text.primary};
-  margin-bottom: 12px;
-`;
-
-const OperatorStats = styled.div`
-  display: flex;
-  gap: 16px;
-  margin-bottom: 12px;
-`;
-
-const OperatorStat = styled.div``;
-
-const OperatorStatLabel = styled.div`
-  font-size: 11px;
-  color: ${({ theme }) => theme.colors.text.secondary};
-  margin-bottom: 4px;
-`;
-
-const OperatorStatValue = styled.div`
-  font-size: 16px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.text.primary};
-`;
-
-const OperatorEmail = styled.div`
-  font-size: 12px;
-  color: ${({ theme }) => theme.colors.text.secondary};
-  padding-top: 8px;
-  border-top: 1px solid ${({ theme }) => theme.colors.gray[200]};
 `;
 
 const OperatorCell = styled.div`
