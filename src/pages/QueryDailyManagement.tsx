@@ -518,6 +518,34 @@ const QueryDailyManagement: React.FC = () => {
     }
   };
 
+  const handleCancelQuestion = async (questionId: string) => {
+    if (!confirm('이 질문을 취소하시겠습니까?\n예약된 이메일도 함께 취소됩니다.')) return;
+
+    try {
+      await queryDailyService.cancelQuestion(questionId);
+      alert('질문이 취소되었습니다.');
+      // 목록 새로고침
+      const questionsResponse = await queryDailyService.getQuestions({ page: 0, size: 50 });
+      setQuestions(questionsResponse.content);
+    } catch (error: any) {
+      alert('취소 실패: ' + (error.response?.data?.message || error.message));
+    }
+  };
+
+  const handleCancelAnswer = async (answerId: string) => {
+    if (!confirm('이 답변을 취소하시겠습니까?\n예약된 이메일도 함께 취소됩니다.')) return;
+
+    try {
+      await queryDailyService.cancelAnswer(answerId);
+      alert('답변이 취소되었습니다.');
+      // 목록 새로고침
+      const answersResponse = await queryDailyService.getAnswers({ page: 0, size: 50 });
+      setAnswers(answersResponse.content);
+    } catch (error: any) {
+      alert('취소 실패: ' + (error.response?.data?.message || error.message));
+    }
+  };
+
   const renderEmails = () => {
     // KST 기준 현재 시점
     const now = new Date();
@@ -868,6 +896,14 @@ const QueryDailyManagement: React.FC = () => {
                             {question.content.substring(0, 100)}{question.content.length > 100 ? '...' : ''}
                           </EmailPreview>
                         </EmailBody>
+                        <EmailFooter>
+                          <ActionButton
+                            onClick={() => handleCancelQuestion(question.id)}
+                            style={{ background: '#dc2626', color: 'white', border: 'none' }}
+                          >
+                            ❌ 취소
+                          </ActionButton>
+                        </EmailFooter>
                       </EmailDetailCard>
                     );
                   } else {
@@ -894,6 +930,12 @@ const QueryDailyManagement: React.FC = () => {
                             onClick={() => handleResendAnswerGuide(answer.id)}
                           >
                             🔄 재발송
+                          </ActionButton>
+                          <ActionButton
+                            onClick={() => handleCancelAnswer(answer.id)}
+                            style={{ background: '#dc2626', color: 'white', border: 'none' }}
+                          >
+                            ❌ 취소
                           </ActionButton>
                         </EmailFooter>
                       </EmailDetailCard>
@@ -924,6 +966,14 @@ const QueryDailyManagement: React.FC = () => {
                               {question.content.substring(0, 100)}{question.content.length > 100 ? '...' : ''}
                             </EmailPreview>
                           </EmailBody>
+                          <EmailFooter>
+                            <ActionButton
+                              onClick={() => handleCancelQuestion(question.id)}
+                              style={{ background: '#dc2626', color: 'white', border: 'none' }}
+                            >
+                              ❌ 취소
+                            </ActionButton>
+                          </EmailFooter>
                         </EmailDetailCard>
                       );
                     })}
@@ -956,6 +1006,12 @@ const QueryDailyManagement: React.FC = () => {
                               onClick={() => handleResendAnswerGuide(answer.id)}
                             >
                               🔄 재발송
+                            </ActionButton>
+                            <ActionButton
+                              onClick={() => handleCancelAnswer(answer.id)}
+                              style={{ background: '#dc2626', color: 'white', border: 'none' }}
+                            >
+                              ❌ 취소
                             </ActionButton>
                           </EmailFooter>
                         </EmailDetailCard>
