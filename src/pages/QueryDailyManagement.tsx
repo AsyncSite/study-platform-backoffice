@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { EmailSendModal } from '../components/QueryDailyEmailModal';
-import queryDailyService, { type AnswerWithMember, type QuestionWithMember } from '../services/queryDailyService';
+import queryDailyService, { type AnswerWithMember, type QuestionWithMember, type PurchaseAdmin } from '../services/queryDailyService';
 
 // Types
 type UserType = 'LEAD' | 'MEMBER';
@@ -104,7 +104,7 @@ const getCurrentDateTime = () => {
 };
 
 const QueryDailyManagement: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'users' | 'emails'>('emails');
+  const [activeTab, setActiveTab] = useState<'users' | 'emails' | 'purchases'>('emails');
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [showUserDetailModal, setShowUserDetailModal] = useState(false);
   const [showEmailModal, setShowEmailModal] = useState(false);
@@ -116,6 +116,9 @@ const QueryDailyManagement: React.FC = () => {
   const [answers, setAnswers] = useState<AnswerWithMember[]>([]);
   const [questions, setQuestions] = useState<QuestionWithMember[]>([]);
   const [isLoadingAnswers, setIsLoadingAnswers] = useState(false);
+  const [purchases, setPurchases] = useState<PurchaseAdmin[]>([]);
+  const [purchaseFilter, setPurchaseFilter] = useState<'all' | 'TRIAL' | 'PAID'>('all');
+  const [isLoadingPurchases, setIsLoadingPurchases] = useState(false);
 
   // Upcoming (예정됨) UI state
   const [upcomingViewMode, setUpcomingViewMode] = useState<'combined' | 'split'>('split');
@@ -216,6 +219,27 @@ const QueryDailyManagement: React.FC = () => {
 
     loadEmailData();
   }, [activeTab]);
+
+  // 구매 내역 로드
+  useEffect(() => {
+    const loadPurchases = async () => {
+      if (activeTab !== 'purchases') return;
+
+      setIsLoadingPurchases(true);
+      try {
+        const params = purchaseFilter !== 'all' ? { type: purchaseFilter } : undefined;
+        const purchasesData = await queryDailyService.getPurchases(params);
+        setPurchases(purchasesData);
+        console.log('✅ Loaded', purchasesData.length, 'purchases');
+      } catch (error) {
+        console.error('❌ Failed to load purchases:', error);
+      } finally {
+        setIsLoadingPurchases(false);
+      }
+    };
+
+    loadPurchases();
+  }, [activeTab, purchaseFilter]);
 
   // const [scheduledEmails, setScheduledEmails] = useState<ScheduledEmail[]>([]);
 
@@ -369,6 +393,128 @@ const QueryDailyManagement: React.FC = () => {
   //     </div>
   //   </DashboardContainer>
   // );
+
+  const renderPurchases = () => (
+    <UsersContainer>
+      <Header>
+        <div>
+          <h2>구매 내역</h2>
+          <Subtitle>모든 구매 내역을 조회하고 관리</Subtitle>
+        </div>
+        <FilterGroup>
+          <FilterButton
+            className={purchaseFilter === 'all' ? 'active' : ''}
+            onClick={() => setPurchaseFilter('all')}
+          >
+            전체
+          </FilterButton>
+          <FilterButton
+            className={purchaseFilter === 'TRIAL' ? 'active' : ''}
+            onClick={() => setPurchaseFilter('TRIAL')}
+          >
+            무료 체험
+          </FilterButton>
+          <FilterButton
+            className={purchaseFilter === 'PAID' ? 'active' : ''}
+            onClick={() => setPurchaseFilter('PAID')}
+          >
+            유료 구매
+          </FilterButton>
+        </FilterGroup>
+      </Header>
+
+      {isLoadingPurchases ? (
+        <div style={{ textAlign: 'center', padding: '40px' }}>로딩 중...</div>
+      ) : (
+        <UsersTable>
+          <thead>
+            <tr>
+              <th>회원</th>
+              <th>상품</th>
+              <th>타입</th>
+              <th>금액</th>
+              <th>구매일</th>
+              <th>만료일</th>
+              <th>이력서</th>
+              <th>트랜잭션ID</th>
+            </tr>
+          </thead>
+          <tbody>
+            {purchases.length === 0 ? (
+              <tr>
+                <td colSpan={8} style={{ textAlign: 'center', padding: '40px' }}>
+                  구매 내역이 없습니다
+                </td>
+              </tr>
+            ) : (
+              purchases.map(purchase => (
+                <tr key={purchase.purchaseId}>
+                  <td>
+                    <div style={{ fontWeight: 500 }}>{purchase.memberName}</div>
+                    <div style={{ fontSize: '12px', color: '#6b7280' }}>{purchase.memberEmail}</div>
+                  </td>
+                  <td>{purchase.productName}</td>
+                  <td>
+                    <UserTypeBadge type={purchase.productType === 'TRIAL' ? 'LEAD' : 'MEMBER'}>
+                      {purchase.productType}
+                    </UserTypeBadge>
+                  </td>
+                  <td>{purchase.purchasedPrice.toLocaleString()}원</td>
+                  <td>{new Date(purchase.purchasedAt).toLocaleDateString('ko-KR')}</td>
+                  <td>
+                    {purchase.expiresAt ? (
+                      <span style={{ color: purchase.isExpired ? '#ef4444' : '#10b981' }}>
+                        {new Date(purchase.expiresAt).toLocaleDateString('ko-KR')}
+                        {purchase.isExpired && ' (만료)'}
+                      </span>
+                    ) : '-'}
+                  </td>
+                  <td>
+                    {purchase.resumeId ? (
+                      <button
+                        style={{
+                          padding: '4px 8px',
+                          backgroundColor: '#3b82f6',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '12px'
+                        }}
+                        onClick={async () => {
+                          try {
+                            await queryDailyService.downloadAsset(
+                              purchase.resumeId!,
+                              purchase.resumeFilename || 'resume.pdf'
+                            );
+                          } catch (error) {
+                            alert('이력서 다운로드 중 오류가 발생했습니다.');
+                          }
+                        }}
+                      >
+                        📄 다운로드
+                      </button>
+                    ) : (
+                      <span style={{ color: '#9ca3af' }}>-</span>
+                    )}
+                  </td>
+                  <td>
+                    {purchase.transactionId ? (
+                      <code style={{ fontSize: '11px', color: '#6b7280' }}>
+                        {purchase.transactionId.substring(0, 20)}...
+                      </code>
+                    ) : (
+                      <span style={{ color: '#9ca3af' }}>-</span>
+                    )}
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </UsersTable>
+      )}
+    </UsersContainer>
+  );
 
   const renderUsers = () => (
     <UsersContainer>
@@ -1080,11 +1226,18 @@ const QueryDailyManagement: React.FC = () => {
         >
           👥 사용자 관리
         </Tab>
+        <Tab
+          className={activeTab === 'purchases' ? 'active' : ''}
+          onClick={() => setActiveTab('purchases')}
+        >
+          💳 구매 내역
+        </Tab>
       </TabBar>
 
       <Content>
         {activeTab === 'users' && renderUsers()}
         {activeTab === 'emails' && renderEmails()}
+        {activeTab === 'purchases' && renderPurchases()}
       </Content>
 
       {/* 사용자 상세 모달 */}
