@@ -106,6 +106,7 @@ const getCurrentDateTime = () => {
 const QueryDailyManagement: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'users' | 'emails' | 'purchases'>('emails');
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [selectedPurchaseId, setSelectedPurchaseId] = useState<string>('');
   const [showUserDetailModal, setShowUserDetailModal] = useState(false);
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [emailModalType, setEmailModalType] = useState<'question' | 'answerGuide' | 'welcome' | 'midFeedback' | 'complete' | 'purchaseConfirmation' | 'growthPlanQuestion' | 'growthPlanAnswerGuide'>('question');
@@ -117,8 +118,10 @@ const QueryDailyManagement: React.FC = () => {
   const [questions, setQuestions] = useState<QuestionWithMember[]>([]);
   const [isLoadingAnswers, setIsLoadingAnswers] = useState(false);
   const [purchases, setPurchases] = useState<PurchaseAdmin[]>([]);
-  const [purchaseFilter, setPurchaseFilter] = useState<'all' | 'TRIAL' | 'PAID'>('all');
   const [isLoadingPurchases, setIsLoadingPurchases] = useState(false);
+
+  // Purchase sub-tabs (상품별 탭)
+  const [purchaseProductTab, setPurchaseProductTab] = useState<'all' | 'TRIAL' | 'GROWTH_PLAN' | 'REAL_INTERVIEW' | 'CRITICAL_HIT' | 'LAST_CHECK'>('all');
 
   // Upcoming (예정됨) UI state
   const [upcomingViewMode, setUpcomingViewMode] = useState<'combined' | 'split'>('split');
@@ -227,8 +230,7 @@ const QueryDailyManagement: React.FC = () => {
 
       setIsLoadingPurchases(true);
       try {
-        const params = purchaseFilter !== 'all' ? { type: purchaseFilter } : undefined;
-        const purchasesData = await queryDailyService.getPurchases(params);
+        const purchasesData = await queryDailyService.getPurchases();
         setPurchases(purchasesData);
         console.log('✅ Loaded', purchasesData.length, 'purchases');
       } catch (error) {
@@ -239,7 +241,7 @@ const QueryDailyManagement: React.FC = () => {
     };
 
     loadPurchases();
-  }, [activeTab, purchaseFilter]);
+  }, [activeTab]);
 
   // const [scheduledEmails, setScheduledEmails] = useState<ScheduledEmail[]>([]);
 
@@ -394,81 +396,481 @@ const QueryDailyManagement: React.FC = () => {
   //   </DashboardContainer>
   // );
 
-  const renderPurchases = () => (
-    <UsersContainer>
-      <Header>
-        <div>
-          <h2>구매 내역</h2>
-          <Subtitle>모든 구매 내역을 조회하고 관리</Subtitle>
-        </div>
-        <FilterGroup>
-          <FilterButton
-            className={purchaseFilter === 'all' ? 'active' : ''}
-            onClick={() => setPurchaseFilter('all')}
-          >
-            전체
-          </FilterButton>
-          <FilterButton
-            className={purchaseFilter === 'TRIAL' ? 'active' : ''}
-            onClick={() => setPurchaseFilter('TRIAL')}
-          >
-            무료 체험
-          </FilterButton>
-          <FilterButton
-            className={purchaseFilter === 'PAID' ? 'active' : ''}
-            onClick={() => setPurchaseFilter('PAID')}
-          >
-            유료 구매
-          </FilterButton>
-        </FilterGroup>
-      </Header>
+  const renderPurchases = () => {
+    // 상품별 필터링
+    const filteredPurchases = purchases.filter(purchase => {
+      if (purchaseProductTab === 'all') return true;
+      return purchase.productCode === purchaseProductTab;
+    });
 
-      {isLoadingPurchases ? (
-        <div style={{ textAlign: 'center', padding: '40px' }}>로딩 중...</div>
-      ) : (
+    // 상품별 테이블 렌더링 함수
+    const renderProductTable = () => {
+      if (purchaseProductTab === 'TRIAL') {
+        return (
+          <UsersTable>
+            <thead>
+              <tr>
+                <th>회원</th>
+                <th>구매일</th>
+                <th>발송진행</th>
+                <th>최근발송</th>
+                <th>액션</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredPurchases.length === 0 ? (
+                <tr>
+                  <td colSpan={5} style={{ textAlign: 'center', padding: '40px' }}>
+                    무료 체험 구매 내역이 없습니다
+                  </td>
+                </tr>
+              ) : (
+                filteredPurchases.map(purchase => (
+                  <tr key={purchase.purchaseId}>
+                    <td>
+                      <div style={{ fontWeight: 500 }}>{purchase.memberName}</div>
+                      <div style={{ fontSize: '12px', color: '#6b7280' }}>{purchase.memberEmail}</div>
+                    </td>
+                    <td>{new Date(purchase.purchasedAt).toLocaleDateString('ko-KR')}</td>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{ flex: 1, height: '8px', backgroundColor: '#e5e7eb', borderRadius: '4px', overflow: 'hidden' }}>
+                          <div style={{ height: '100%', width: '67%', backgroundColor: '#10b981' }}></div>
+                        </div>
+                        <span style={{ fontSize: '12px', color: '#6b7280', whiteSpace: 'nowrap' }}>2/3일</span>
+                      </div>
+                    </td>
+                    <td style={{ fontSize: '13px', color: '#6b7280' }}>
+                      2025-10-08 09:00
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        <button
+                          style={{
+                            padding: '4px 8px',
+                            backgroundColor: '#10b981',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '12px'
+                          }}
+                          onClick={() => {
+                            setSelectedPurchaseId(purchase.purchaseId);
+                            setSelectedUser({ email: purchase.memberEmail } as User);
+                            setEmailModalType('question');
+                            setShowEmailModal(true);
+                          }}
+                        >
+                          📤 질문
+                        </button>
+                        <button
+                          style={{
+                            padding: '4px 8px',
+                            backgroundColor: '#f59e0b',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '12px'
+                          }}
+                          onClick={() => {
+                            setSelectedPurchaseId(purchase.purchaseId);
+                            setSelectedUser({ email: purchase.memberEmail } as User);
+                            setEmailModalType('answerGuide');
+                            setShowEmailModal(true);
+                          }}
+                        >
+                          ⭐ 답변
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </UsersTable>
+        );
+      }
+
+      if (purchaseProductTab === 'GROWTH_PLAN') {
+        return (
+          <UsersTable>
+            <thead>
+              <tr>
+                <th>회원</th>
+                <th>구매일</th>
+                <th>발송진행</th>
+                <th>최근발송</th>
+                <th>이력서</th>
+                <th>액션</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredPurchases.length === 0 ? (
+                <tr>
+                  <td colSpan={6} style={{ textAlign: 'center', padding: '40px' }}>
+                    그로스 플랜 구매 내역이 없습니다
+                  </td>
+                </tr>
+              ) : (
+                filteredPurchases.map(purchase => (
+                  <tr key={purchase.purchaseId}>
+                    <td>
+                      <div style={{ fontWeight: 500 }}>{purchase.memberName}</div>
+                      <div style={{ fontSize: '12px', color: '#6b7280' }}>{purchase.memberEmail}</div>
+                    </td>
+                    <td>{new Date(purchase.purchasedAt).toLocaleDateString('ko-KR')}</td>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{ flex: 1, height: '8px', backgroundColor: '#e5e7eb', borderRadius: '4px', overflow: 'hidden' }}>
+                          <div style={{ height: '100%', width: '35%', backgroundColor: '#3b82f6' }}></div>
+                        </div>
+                        <span style={{ fontSize: '12px', color: '#6b7280', whiteSpace: 'nowrap' }}>7/20일</span>
+                      </div>
+                    </td>
+                    <td style={{ fontSize: '13px', color: '#6b7280' }}>
+                      2025-10-09 09:00
+                    </td>
+                    <td>
+                      {purchase.resumeId ? (
+                        <button
+                          style={{
+                            padding: '4px 8px',
+                            backgroundColor: '#3b82f6',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '12px'
+                          }}
+                          onClick={async () => {
+                            try {
+                              await queryDailyService.downloadAsset(
+                                purchase.resumeId!,
+                                purchase.resumeFilename || 'resume.pdf'
+                              );
+                            } catch (error) {
+                              alert('이력서 다운로드 중 오류가 발생했습니다.');
+                            }
+                          }}
+                        >
+                          📄 다운로드
+                        </button>
+                      ) : (
+                        <span style={{ color: '#9ca3af' }}>-</span>
+                      )}
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        <button
+                          style={{
+                            padding: '4px 8px',
+                            backgroundColor: '#10b981',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '12px'
+                          }}
+                          onClick={() => {
+                            setSelectedPurchaseId(purchase.purchaseId);
+                            setSelectedUser({ email: purchase.memberEmail } as User);
+                            setEmailModalType('growthPlanQuestion');
+                            setShowEmailModal(true);
+                          }}
+                        >
+                          📤 질문
+                        </button>
+                        <button
+                          style={{
+                            padding: '4px 8px',
+                            backgroundColor: '#f59e0b',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '12px'
+                          }}
+                          onClick={() => {
+                            setSelectedPurchaseId(purchase.purchaseId);
+                            setSelectedUser({ email: purchase.memberEmail } as User);
+                            setEmailModalType('growthPlanAnswerGuide');
+                            setShowEmailModal(true);
+                          }}
+                        >
+                          ⭐ 답변
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </UsersTable>
+        );
+      }
+
+      if (purchaseProductTab === 'REAL_INTERVIEW') {
+        return (
+          <UsersTable>
+            <thead>
+              <tr>
+                <th>회원</th>
+                <th>구매일</th>
+                <th>면접일정</th>
+                <th>진행상태</th>
+                <th>이력서</th>
+                <th>액션</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredPurchases.length === 0 ? (
+                <tr>
+                  <td colSpan={6} style={{ textAlign: 'center', padding: '40px' }}>
+                    리얼 인터뷰 구매 내역이 없습니다
+                  </td>
+                </tr>
+              ) : (
+                filteredPurchases.map(purchase => (
+                  <tr key={purchase.purchaseId}>
+                    <td>
+                      <div style={{ fontWeight: 500 }}>{purchase.memberName}</div>
+                      <div style={{ fontSize: '12px', color: '#6b7280' }}>{purchase.memberEmail}</div>
+                    </td>
+                    <td>{new Date(purchase.purchasedAt).toLocaleDateString('ko-KR')}</td>
+                    <td style={{ fontSize: '13px', color: '#6b7280' }}>미정</td>
+                    <td>
+                      <UserTypeBadge type="LEAD" style={{ backgroundColor: '#fbbf24' }}>
+                        일정대기
+                      </UserTypeBadge>
+                    </td>
+                    <td>
+                      {purchase.resumeId ? (
+                        <button
+                          style={{
+                            padding: '4px 8px',
+                            backgroundColor: '#3b82f6',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '12px'
+                          }}
+                          onClick={async () => {
+                            try {
+                              await queryDailyService.downloadAsset(
+                                purchase.resumeId!,
+                                purchase.resumeFilename || 'resume.pdf'
+                              );
+                            } catch (error) {
+                              alert('이력서 다운로드 중 오류가 발생했습니다.');
+                            }
+                          }}
+                        >
+                          📄 다운로드
+                        </button>
+                      ) : (
+                        <span style={{ color: '#9ca3af' }}>-</span>
+                      )}
+                    </td>
+                    <td>
+                      <button
+                        style={{
+                          padding: '4px 8px',
+                          backgroundColor: '#8b5cf6',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '12px'
+                        }}
+                        onClick={() => alert('면접 일정 등록 기능 준비 중입니다.')}
+                      >
+                        📅 일정등록
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </UsersTable>
+        );
+      }
+
+      if (purchaseProductTab === 'CRITICAL_HIT') {
+        return (
+          <UsersTable>
+            <thead>
+              <tr>
+                <th>회원</th>
+                <th>구매일</th>
+                <th>발송상태</th>
+                <th>발송일시</th>
+                <th>이력서</th>
+                <th>액션</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredPurchases.length === 0 ? (
+                <tr>
+                  <td colSpan={6} style={{ textAlign: 'center', padding: '40px' }}>
+                    크리티컬 히트 구매 내역이 없습니다
+                  </td>
+                </tr>
+              ) : (
+                filteredPurchases.map(purchase => (
+                  <tr key={purchase.purchaseId}>
+                    <td>
+                      <div style={{ fontWeight: 500 }}>{purchase.memberName}</div>
+                      <div style={{ fontSize: '12px', color: '#6b7280' }}>{purchase.memberEmail}</div>
+                    </td>
+                    <td>{new Date(purchase.purchasedAt).toLocaleDateString('ko-KR')}</td>
+                    <td>
+                      <UserTypeBadge type="LEAD" style={{ backgroundColor: '#fbbf24' }}>
+                        ⏳ 발송대기
+                      </UserTypeBadge>
+                    </td>
+                    <td style={{ fontSize: '13px', color: '#6b7280' }}>-</td>
+                    <td>
+                      {purchase.resumeId ? (
+                        <button
+                          style={{
+                            padding: '4px 8px',
+                            backgroundColor: '#3b82f6',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '12px'
+                          }}
+                          onClick={async () => {
+                            try {
+                              await queryDailyService.downloadAsset(
+                                purchase.resumeId!,
+                                purchase.resumeFilename || 'resume.pdf'
+                              );
+                            } catch (error) {
+                              alert('이력서 다운로드 중 오류가 발생했습니다.');
+                            }
+                          }}
+                        >
+                          📄 다운로드
+                        </button>
+                      ) : (
+                        <span style={{ color: '#9ca3af' }}>-</span>
+                      )}
+                    </td>
+                    <td>
+                      <button
+                        style={{
+                          padding: '4px 8px',
+                          backgroundColor: '#10b981',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '12px'
+                        }}
+                        onClick={() => alert('즉시 발송 기능 준비 중입니다.')}
+                      >
+                        📤 즉시발송
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </UsersTable>
+        );
+      }
+
+      if (purchaseProductTab === 'LAST_CHECK') {
+        return (
+          <UsersTable>
+            <thead>
+              <tr>
+                <th>회원</th>
+                <th>구매일</th>
+                <th>발송상태</th>
+                <th>발송일시</th>
+                <th>액션</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredPurchases.length === 0 ? (
+                <tr>
+                  <td colSpan={5} style={{ textAlign: 'center', padding: '40px' }}>
+                    라스트 체크 구매 내역이 없습니다
+                  </td>
+                </tr>
+              ) : (
+                filteredPurchases.map(purchase => (
+                  <tr key={purchase.purchaseId}>
+                    <td>
+                      <div style={{ fontWeight: 500 }}>{purchase.memberName}</div>
+                      <div style={{ fontSize: '12px', color: '#6b7280' }}>{purchase.memberEmail}</div>
+                    </td>
+                    <td>{new Date(purchase.purchasedAt).toLocaleDateString('ko-KR')}</td>
+                    <td>
+                      <UserTypeBadge type="LEAD" style={{ backgroundColor: '#fbbf24' }}>
+                        ⏳ 발송대기
+                      </UserTypeBadge>
+                    </td>
+                    <td style={{ fontSize: '13px', color: '#6b7280' }}>-</td>
+                    <td>
+                      <button
+                        style={{
+                          padding: '4px 8px',
+                          backgroundColor: '#10b981',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '12px'
+                        }}
+                        onClick={() => alert('즉시 발송 기능 준비 중입니다.')}
+                      >
+                        📤 즉시발송
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </UsersTable>
+        );
+      }
+
+      // 전체 탭
+      return (
         <UsersTable>
           <thead>
             <tr>
               <th>회원</th>
               <th>상품</th>
-              <th>타입</th>
               <th>금액</th>
               <th>구매일</th>
-              <th>만료일</th>
               <th>이력서</th>
-              <th>트랜잭션ID</th>
             </tr>
           </thead>
           <tbody>
-            {purchases.length === 0 ? (
+            {filteredPurchases.length === 0 ? (
               <tr>
-                <td colSpan={8} style={{ textAlign: 'center', padding: '40px' }}>
+                <td colSpan={5} style={{ textAlign: 'center', padding: '40px' }}>
                   구매 내역이 없습니다
                 </td>
               </tr>
             ) : (
-              purchases.map(purchase => (
+              filteredPurchases.map(purchase => (
                 <tr key={purchase.purchaseId}>
                   <td>
                     <div style={{ fontWeight: 500 }}>{purchase.memberName}</div>
                     <div style={{ fontSize: '12px', color: '#6b7280' }}>{purchase.memberEmail}</div>
                   </td>
                   <td>{purchase.productName}</td>
-                  <td>
-                    <UserTypeBadge type={purchase.productType === 'TRIAL' ? 'LEAD' : 'MEMBER'}>
-                      {purchase.productType}
-                    </UserTypeBadge>
-                  </td>
                   <td>{purchase.purchasedPrice.toLocaleString()}원</td>
                   <td>{new Date(purchase.purchasedAt).toLocaleDateString('ko-KR')}</td>
-                  <td>
-                    {purchase.expiresAt ? (
-                      <span style={{ color: purchase.isExpired ? '#ef4444' : '#10b981' }}>
-                        {new Date(purchase.expiresAt).toLocaleDateString('ko-KR')}
-                        {purchase.isExpired && ' (만료)'}
-                      </span>
-                    ) : '-'}
-                  </td>
                   <td>
                     {purchase.resumeId ? (
                       <button
@@ -498,23 +900,71 @@ const QueryDailyManagement: React.FC = () => {
                       <span style={{ color: '#9ca3af' }}>-</span>
                     )}
                   </td>
-                  <td>
-                    {purchase.transactionId ? (
-                      <code style={{ fontSize: '11px', color: '#6b7280' }}>
-                        {purchase.transactionId.substring(0, 20)}...
-                      </code>
-                    ) : (
-                      <span style={{ color: '#9ca3af' }}>-</span>
-                    )}
-                  </td>
                 </tr>
               ))
             )}
           </tbody>
         </UsersTable>
-      )}
-    </UsersContainer>
-  );
+      );
+    };
+
+    return (
+      <UsersContainer>
+        <Header>
+          <div>
+            <h2>💳 구매 내역 관리</h2>
+            <Subtitle>상품별 맞춤 관리 및 발송 처리</Subtitle>
+          </div>
+        </Header>
+
+        {/* Product Tabs */}
+        <EmailSubTabs>
+          <EmailSubTab
+            className={purchaseProductTab === 'all' ? 'active' : ''}
+            onClick={() => setPurchaseProductTab('all')}
+          >
+            전체 ({purchases.length})
+          </EmailSubTab>
+          <EmailSubTab
+            className={purchaseProductTab === 'TRIAL' ? 'active' : ''}
+            onClick={() => setPurchaseProductTab('TRIAL')}
+          >
+            🎁 무료 체험 ({purchases.filter(p => p.productCode === 'TRIAL').length})
+          </EmailSubTab>
+          <EmailSubTab
+            className={purchaseProductTab === 'GROWTH_PLAN' ? 'active' : ''}
+            onClick={() => setPurchaseProductTab('GROWTH_PLAN')}
+          >
+            🚀 그로스 플랜 ({purchases.filter(p => p.productCode === 'GROWTH_PLAN').length})
+          </EmailSubTab>
+          <EmailSubTab
+            className={purchaseProductTab === 'REAL_INTERVIEW' ? 'active' : ''}
+            onClick={() => setPurchaseProductTab('REAL_INTERVIEW')}
+          >
+            🎤 리얼 인터뷰 ({purchases.filter(p => p.productCode === 'REAL_INTERVIEW').length})
+          </EmailSubTab>
+          <EmailSubTab
+            className={purchaseProductTab === 'CRITICAL_HIT' ? 'active' : ''}
+            onClick={() => setPurchaseProductTab('CRITICAL_HIT')}
+          >
+            🎯 크리티컬 히트 ({purchases.filter(p => p.productCode === 'CRITICAL_HIT').length})
+          </EmailSubTab>
+          <EmailSubTab
+            className={purchaseProductTab === 'LAST_CHECK' ? 'active' : ''}
+            onClick={() => setPurchaseProductTab('LAST_CHECK')}
+          >
+            🚨 라스트 체크 ({purchases.filter(p => p.productCode === 'LAST_CHECK').length})
+          </EmailSubTab>
+        </EmailSubTabs>
+
+        {isLoadingPurchases ? (
+          <div style={{ textAlign: 'center', padding: '40px' }}>로딩 중...</div>
+        ) : (
+          renderProductTable()
+        )}
+      </UsersContainer>
+    );
+  };
 
   const renderUsers = () => (
     <UsersContainer>
@@ -1389,6 +1839,7 @@ const QueryDailyManagement: React.FC = () => {
           setShowEmailModal={setShowEmailModal}
           emailModalType={emailModalType}
           selectedUserEmail={selectedUser?.email}
+          selectedPurchaseId={selectedPurchaseId}
         />
       )}
 

@@ -78,6 +78,7 @@ export interface AnswerWithMember {
 
 export interface CreateQuestionRequest {
   email: string;
+  purchaseId: string;  // 구매 ID (필수)
   content: string;
   type: 'TRIAL' | 'GROWTH_PLAN';
   currentDay?: number;
@@ -88,6 +89,7 @@ export interface CreateQuestionRequest {
 
 export interface CreateAnswerRequest {
   email?: string;  // NEW 모드용 (필수)
+  purchaseId?: string;  // NEW 모드용 (Question 없이 Answer만 생성할 때 필수)
   answerId?: string;  // RESEND 모드용 (재발송 시에만 사용)
   questionId?: string;  // NEW 모드용 (선택사항: Question 없이 Answer만 발송 가능)
   type?: 'TRIAL' | 'GROWTH_PLAN';  // NEW 모드용 (Question 없이 Answer만 생성할 때 필수)

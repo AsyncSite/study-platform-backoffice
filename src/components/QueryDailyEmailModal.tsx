@@ -11,15 +11,18 @@ interface EmailSendModalProps {
   setShowEmailModal: (show: boolean) => void;
   emailModalType: 'question' | 'answerGuide' | 'welcome' | 'midFeedback' | 'complete' | 'purchaseConfirmation' | 'growthPlanQuestion' | 'growthPlanAnswerGuide';
   selectedUserEmail?: string;
+  selectedPurchaseId?: string;  // 구매 ID (선택사항)
 }
 
 export const EmailSendModal = memo(({
   showEmailModal,
   setShowEmailModal,
   emailModalType,
-  selectedUserEmail = ''
+  selectedUserEmail = '',
+  selectedPurchaseId = ''
 }: EmailSendModalProps) => {
   const [recipientEmail, setRecipientEmail] = useState(selectedUserEmail);
+  const [purchaseId] = useState(selectedPurchaseId);
   const [sendingEmail, setSendingEmail] = useState(false);
   const [emailError, setEmailError] = useState<string | null>(null);
   const [emailSuccess, setEmailSuccess] = useState<string | null>(null);
@@ -279,9 +282,16 @@ export const EmailSendModal = memo(({
           return;
         }
 
+        if (!purchaseId) {
+          setEmailError('구매 ID가 필요합니다. 구매 탭에서 발송해주세요.');
+          setSendingEmail(false);
+          return;
+        }
+
         // Create Question (Kafka will trigger email)
         const questionResponse = await queryDailyService.createQuestion({
           email: recipientEmail,
+          purchaseId: purchaseId,
           content: questionData.question,
           type: 'TRIAL',
           currentDay: questionData.currentDay,
@@ -310,9 +320,17 @@ export const EmailSendModal = memo(({
           return;
         }
 
+        // Question 없이 Answer만 발송하는 경우 purchaseId 필수
+        if (!selectedQuestion?.id && !purchaseId) {
+          setEmailError('질문을 선택하거나 구매 탭에서 발송해주세요.');
+          setSendingEmail(false);
+          return;
+        }
+
         // Question 선택은 선택사항 - questionId는 있으면 전달, 없으면 null
         const answerResponse = await queryDailyService.createAnswer({
           email: recipientEmail,
+          purchaseId: purchaseId || undefined,
           questionId: selectedQuestion?.id || undefined,
           type: 'TRIAL',
           content: {
@@ -398,9 +416,16 @@ export const EmailSendModal = memo(({
           return;
         }
 
+        if (!purchaseId) {
+          setEmailError('구매 ID가 필요합니다. 구매 탭에서 발송해주세요.');
+          setSendingEmail(false);
+          return;
+        }
+
         // Create Question (Kafka will trigger email)
         const questionResponse = await queryDailyService.createQuestion({
           email: recipientEmail,
+          purchaseId: purchaseId,
           content: questionData.question,
           type: 'GROWTH_PLAN',
           currentDay: questionData.currentDay,
@@ -429,9 +454,17 @@ export const EmailSendModal = memo(({
           return;
         }
 
+        // Question 없이 Answer만 발송하는 경우 purchaseId 필수
+        if (!selectedQuestion?.id && !purchaseId) {
+          setEmailError('질문을 선택하거나 구매 탭에서 발송해주세요.');
+          setSendingEmail(false);
+          return;
+        }
+
         // Question 선택은 선택사항 - questionId는 있으면 전달, 없으면 null
         const answerResponse = await queryDailyService.createAnswer({
           email: recipientEmail,
+          purchaseId: purchaseId || undefined,
           questionId: selectedQuestion?.id || undefined,
           type: 'GROWTH_PLAN',
           content: {
