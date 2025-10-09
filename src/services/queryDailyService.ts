@@ -112,6 +112,25 @@ export interface CreateAnswerRequest {
   displayName?: string;
 }
 
+export interface PurchaseAdmin {
+  purchaseId: string;
+  memberId: string;
+  memberEmail: string;
+  memberName: string;
+  productCode: string;
+  productName: string;
+  productType: 'TRIAL' | 'PAID';
+  purchasedPrice: number;
+  transactionId: string | null;
+  resumeId: string | null;
+  resumeFilename: string | null;
+  resumeDownloadUrl: string | null;
+  subscriptionId: string | null;
+  purchasedAt: string;
+  expiresAt: string;
+  isExpired: boolean;
+}
+
 class QueryDailyService {
   /**
    * 전체 베타 테스트 신청자 목록 조회
@@ -321,6 +340,28 @@ class QueryDailyService {
       console.log('✅ Answer cancelled:', answerId);
     } catch (error: any) {
       console.error('❌ Failed to cancel answer:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 전체 구매 내역 조회 (필터링 가능)
+   */
+  async getPurchases(params?: {
+    type?: 'TRIAL' | 'PAID';
+    hasResume?: boolean;
+  }): Promise<PurchaseAdmin[]> {
+    try {
+      const response = await apiClient.get('/api/query-daily/admin/purchases', {
+        params: {
+          ...(params?.type && { type: params.type }),
+          ...(params?.hasResume !== undefined && { hasResume: params.hasResume })
+        }
+      });
+      console.log('✅ Fetched purchases:', response.data.data);
+      return response.data.data || [];
+    } catch (error: any) {
+      console.error('❌ Failed to fetch purchases:', error);
       throw error;
     }
   }

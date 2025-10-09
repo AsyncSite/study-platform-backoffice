@@ -106,12 +106,14 @@ const PaymentTransactionManagement: React.FC = () => {
     if (!confirmed) return;
 
     try {
-      // Checkout Service Internal API 호출 (transactionId로 수동 입금 확인)
+      // Checkout Service Admin API 호출 (Gateway 경유, transactionId로 수동 입금 확인)
+      const token = localStorage.getItem('authToken');
       const response = await fetch(
-        `http://localhost:6081/internal/api/v1/checkout/payment-intents/by-transaction/${transaction.transactionId}/manual-confirm`,
+        `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'}/api/checkout/admin/payment-intents/by-transaction/${transaction.transactionId}/manual-confirm`,
         {
           method: 'POST',
           headers: {
+            'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           }
         }
@@ -120,6 +122,14 @@ const PaymentTransactionManagement: React.FC = () => {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         console.error('Manual confirm failed:', errorData);
+
+        // 409 Conflict 에러 처리 (이미 확인됨)
+        if (response.status === 409) {
+          alert('⚠️ 이미 입금 확인이 완료된 트랜잭션입니다.\n\n목록을 새로고침합니다.');
+          fetchTransactions(currentPage); // 목록 새로고침
+          return;
+        }
+
         throw new Error(errorData.message || '입금 확인 처리에 실패했습니다.');
       }
 
