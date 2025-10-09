@@ -546,8 +546,15 @@ const QueryDailyManagement: React.FC = () => {
                           }}
                           onClick={async () => {
                             try {
+                              if (!purchase.resumeDownloadUrl) {
+                                alert('이력서 다운로드 URL을 찾을 수 없습니다.');
+                                return;
+                              }
+
+                              // resumeDownloadUrl: /api/assets/{assetId}/download
+                              const assetId = purchase.resumeDownloadUrl.split('/')[3];
                               await queryDailyService.downloadAsset(
-                                purchase.resumeId!,
+                                assetId,
                                 purchase.resumeFilename || 'resume.pdf'
                               );
                             } catch (error) {
@@ -659,8 +666,15 @@ const QueryDailyManagement: React.FC = () => {
                           }}
                           onClick={async () => {
                             try {
+                              if (!purchase.resumeDownloadUrl) {
+                                alert('이력서 다운로드 URL을 찾을 수 없습니다.');
+                                return;
+                              }
+
+                              // resumeDownloadUrl: /api/assets/{assetId}/download
+                              const assetId = purchase.resumeDownloadUrl.split('/')[3];
                               await queryDailyService.downloadAsset(
-                                purchase.resumeId!,
+                                assetId,
                                 purchase.resumeFilename || 'resume.pdf'
                               );
                             } catch (error) {
@@ -746,8 +760,15 @@ const QueryDailyManagement: React.FC = () => {
                           }}
                           onClick={async () => {
                             try {
+                              if (!purchase.resumeDownloadUrl) {
+                                alert('이력서 다운로드 URL을 찾을 수 없습니다.');
+                                return;
+                              }
+
+                              // resumeDownloadUrl: /api/assets/{assetId}/download
+                              const assetId = purchase.resumeDownloadUrl.split('/')[3];
                               await queryDailyService.downloadAsset(
-                                purchase.resumeId!,
+                                assetId,
                                 purchase.resumeFilename || 'resume.pdf'
                               );
                             } catch (error) {
@@ -885,8 +906,15 @@ const QueryDailyManagement: React.FC = () => {
                         }}
                         onClick={async () => {
                           try {
+                            if (!purchase.resumeDownloadUrl) {
+                              alert('이력서 다운로드 URL을 찾을 수 없습니다.');
+                              return;
+                            }
+
+                            // resumeDownloadUrl: /api/assets/{assetId}/download
+                            const assetId = purchase.resumeDownloadUrl.split('/')[3];
                             await queryDailyService.downloadAsset(
-                              purchase.resumeId!,
+                              assetId,
                               purchase.resumeFilename || 'resume.pdf'
                             );
                           } catch (error) {
