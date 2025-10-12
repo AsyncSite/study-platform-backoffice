@@ -22,7 +22,7 @@ export const EmailSendModal = memo(({
   selectedPurchaseId = ''
 }: EmailSendModalProps) => {
   const [recipientEmail, setRecipientEmail] = useState(selectedUserEmail);
-  const [purchaseId] = useState(selectedPurchaseId);
+  const [purchaseId, setPurchaseId] = useState(selectedPurchaseId);
   const [sendingEmail, setSendingEmail] = useState(false);
   const [emailError, setEmailError] = useState<string | null>(null);
   const [emailSuccess, setEmailSuccess] = useState<string | null>(null);
@@ -39,6 +39,14 @@ export const EmailSendModal = memo(({
   const [questions, setQuestions] = useState<QuestionWithMember[]>([]);
   const [selectedQuestion, setSelectedQuestion] = useState<QuestionWithMember | null>(null);
   const [showQuestionDropdown, setShowQuestionDropdown] = useState(false);
+
+  // Update purchaseId when selectedPurchaseId changes
+  useEffect(() => {
+    if (selectedPurchaseId) {
+      setPurchaseId(selectedPurchaseId);
+      console.log('✅ Purchase ID set from props:', selectedPurchaseId);
+    }
+  }, [selectedPurchaseId]);
 
   // Fetch applicants on component mount
   useEffect(() => {
@@ -626,6 +634,16 @@ export const EmailSendModal = memo(({
               <HelperText>신청자를 선택하면 이메일이 자동으로 입력됩니다</HelperText>
             )}
           </FormGroup>
+
+          {purchaseId && (
+            <FormGroup>
+              <Label>구매 ID</Label>
+              <SelectedInfo>
+                📦 {purchaseId}
+              </SelectedInfo>
+              <HelperText>구매 내역에서 선택된 구매 ID가 자동으로 설정되었습니다</HelperText>
+            </FormGroup>
+          )}
 
           <FormGroup>
             <Label>발송 방식</Label>
