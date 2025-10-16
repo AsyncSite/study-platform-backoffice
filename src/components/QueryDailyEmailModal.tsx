@@ -140,21 +140,39 @@ export const EmailSendModal = memo(({
     console.log('✅ Selected question:', question.id, question.content);
   };
 
-  // Helper function to set quick schedule times
+  // Helper function to get current KST time
+  const getKSTDate = (date: Date = new Date()): Date => {
+    // Get current time in milliseconds
+    const utcTime = date.getTime();
+    // KST is UTC+9 (9 hours * 60 minutes * 60 seconds * 1000 milliseconds)
+    const kstOffset = 9 * 60 * 60 * 1000;
+    // Return KST date
+    return new Date(utcTime + kstOffset);
+  };
+
+  // Helper function to set quick schedule times (KST based)
   const setQuickSchedule = (minutes: number) => {
     const now = new Date();
     const scheduled = new Date(now.getTime() + minutes * 60000);
 
-    // Format date as YYYY-MM-DD
-    const dateStr = scheduled.toISOString().split('T')[0];
+    // Convert to KST for display
+    const kstScheduled = getKSTDate(scheduled);
 
-    // Format time as HH:MM (rounded to nearest 15 minutes)
-    const roundedMinutes = Math.ceil(scheduled.getMinutes() / 15) * 15;
-    scheduled.setMinutes(roundedMinutes);
-    scheduled.setSeconds(0);
+    // Format date as YYYY-MM-DD in KST
+    const year = kstScheduled.getUTCFullYear();
+    const month = String(kstScheduled.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(kstScheduled.getUTCDate()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}`;
 
-    const hours = scheduled.getHours().toString().padStart(2, '0');
-    const mins = scheduled.getMinutes().toString().padStart(2, '0');
+    // Format time as HH:MM (rounded to nearest 15 minutes) in KST
+    const roundedMinutes = Math.ceil(kstScheduled.getUTCMinutes() / 15) * 15;
+    const adjustedHours = roundedMinutes >= 60
+      ? kstScheduled.getUTCHours() + 1
+      : kstScheduled.getUTCHours();
+    const finalMinutes = roundedMinutes >= 60 ? 0 : roundedMinutes;
+
+    const hours = String(adjustedHours).padStart(2, '0');
+    const mins = String(finalMinutes).padStart(2, '0');
     const timeStr = `${hours}:${mins}`;
 
     setScheduledDate(dateStr);
@@ -243,6 +261,73 @@ export const EmailSendModal = memo(({
     },
     followUpQuestions: ['']
   });
+
+  // Answer input mode: FORM or JSON
+  const [answerInputMode, setAnswerInputMode] = useState<'FORM' | 'JSON'>('FORM');
+  const [jsonInput, setJsonInput] = useState('');
+  const [jsonError, setJsonError] = useState<string | null>(null);
+
+  // JSON ↔ State bidirectional sync
+  useEffect(() => {
+    if (answerInputMode === 'JSON' && (emailModalType === 'answerGuide' || emailModalType === 'growthPlanAnswerGuide')) {
+      // State → JSON (when switching to JSON mode)
+      const jsonObject = {
+        question: answerGuideData.question,
+        analysis: answerGuideData.analysis,
+        keywords: answerGuideData.keywords.filter(k => k.trim() !== ''),
+        starStructure: answerGuideData.starStructure,
+        personaAnswers: answerGuideData.personaAnswers,
+        followUpQuestions: answerGuideData.followUpQuestions.filter(q => q.trim() !== '')
+      };
+      setJsonInput(JSON.stringify(jsonObject, null, 2));
+      setJsonError(null);
+    }
+  }, [answerInputMode, emailModalType]);
+
+  // Handle JSON input change
+  const handleJsonInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const input = e.target.value;
+    setJsonInput(input);
+
+    // Don't validate empty input
+    if (!input.trim()) {
+      setJsonError(null);
+      return;
+    }
+
+    try {
+      const parsed = JSON.parse(input);
+
+      // Validation: analysis is required
+      if (!parsed.analysis || typeof parsed.analysis !== 'string' || !parsed.analysis.trim()) {
+        setJsonError('❌ analysis 필드는 필수입니다.');
+        return;
+      }
+
+      // Update answerGuideData state
+      setAnswerGuideData({
+        question: parsed.question || '',
+        analysis: parsed.analysis,
+        keywords: Array.isArray(parsed.keywords) ? parsed.keywords : [''],
+        starStructure: {
+          situation: parsed.starStructure?.situation || '',
+          task: parsed.starStructure?.task || '',
+          action: parsed.starStructure?.action || '',
+          result: parsed.starStructure?.result || ''
+        },
+        personaAnswers: {
+          bigTech: parsed.personaAnswers?.bigTech || '',
+          unicorn: parsed.personaAnswers?.unicorn || ''
+        },
+        followUpQuestions: Array.isArray(parsed.followUpQuestions) ? parsed.followUpQuestions : ['']
+      });
+
+      setJsonError(null);
+      console.log('✅ JSON parsed successfully and state updated');
+    } catch (error) {
+      setJsonError('❌ 유효하지 않은 JSON 형식입니다. 올바른 JSON 구조를 입력해주세요.');
+    }
+  };
 
   const handleSend = async () => {
     if (!recipientEmail || !recipientEmail.includes('@')) {
@@ -674,21 +759,39 @@ export const EmailSendModal = memo(({
                 <QuickSelectButtons>
                   <QuickButton onClick={() => setQuickSchedule(60)}>1시간 후</QuickButton>
                   <QuickButton onClick={() => {
-                    const tomorrow = new Date();
-                    tomorrow.setDate(tomorrow.getDate() + 1);
-                    tomorrow.setHours(7, 0, 0, 0);
+                    // Get current time in KST
                     const now = new Date();
-                    const diffMinutes = Math.floor((tomorrow.getTime() - now.getTime()) / 60000);
+                    const kstNow = getKSTDate(now);
+
+                    // Calculate tomorrow at 7:00 AM in KST
+                    const tomorrowKST = new Date(kstNow);
+                    tomorrowKST.setUTCDate(tomorrowKST.getUTCDate() + 1);
+                    tomorrowKST.setUTCHours(7, 0, 0, 0);
+
+                    // Convert back to local time for calculation
+                    const kstOffset = 9 * 60 * 60 * 1000;
+                    const targetTime = new Date(tomorrowKST.getTime() - kstOffset);
+
+                    const diffMinutes = Math.floor((targetTime.getTime() - now.getTime()) / 60000);
                     setQuickSchedule(diffMinutes);
-                  }}>내일 오전 7시</QuickButton>
+                  }}>내일 오전 7시 (KST)</QuickButton>
                   <QuickButton onClick={() => {
-                    const tomorrow = new Date();
-                    tomorrow.setDate(tomorrow.getDate() + 1);
-                    tomorrow.setHours(17, 0, 0, 0);
+                    // Get current time in KST
                     const now = new Date();
-                    const diffMinutes = Math.floor((tomorrow.getTime() - now.getTime()) / 60000);
+                    const kstNow = getKSTDate(now);
+
+                    // Calculate tomorrow at 5:00 PM in KST
+                    const tomorrowKST = new Date(kstNow);
+                    tomorrowKST.setUTCDate(tomorrowKST.getUTCDate() + 1);
+                    tomorrowKST.setUTCHours(17, 0, 0, 0);
+
+                    // Convert back to local time for calculation
+                    const kstOffset = 9 * 60 * 60 * 1000;
+                    const targetTime = new Date(tomorrowKST.getTime() - kstOffset);
+
+                    const diffMinutes = Math.floor((targetTime.getTime() - now.getTime()) / 60000);
                     setQuickSchedule(diffMinutes);
-                  }}>내일 오후 5시</QuickButton>
+                  }}>내일 오후 5시 (KST)</QuickButton>
                 </QuickSelectButtons>
               </FormGroup>
 
@@ -845,7 +948,7 @@ export const EmailSendModal = memo(({
                     $hasSelection={!!selectedQuestion}
                   >
                     {selectedQuestion
-                      ? `${selectedQuestion.member.name} - ${selectedQuestion.content.substring(0, 50)}...`
+                      ? `${selectedQuestion.member?.name || 'Unknown'} - ${selectedQuestion.content.substring(0, 50)}...`
                       : '답변할 질문을 선택하세요'}
                     <DropdownArrow>▼</DropdownArrow>
                   </ApplicantSelectButton>
@@ -887,24 +990,81 @@ export const EmailSendModal = memo(({
                 </ApplicantDropdownWrapper>
                 {selectedQuestion && (
                   <SelectedInfo>
-                    ✅ 선택됨: {selectedQuestion.member.name} - Day {selectedQuestion.currentDay}/{selectedQuestion.totalDays}
+                    ✅ 선택됨: {selectedQuestion.member?.name || 'Unknown'} - Day {selectedQuestion.currentDay}/{selectedQuestion.totalDays}
                   </SelectedInfo>
                 )}
               </FormGroup>
 
+              {/* Answer Input Mode Tabs */}
               <FormGroup>
-                <Label>질문</Label>
-                <Textarea
-                  value={answerGuideData.question}
-                  onChange={e => setAnswerGuideData({...answerGuideData, question: e.target.value})}
-                  placeholder="예: JWT를 사용한 인증 방식의 장단점은?"
-                  rows={2}
-                />
-                <HelperText>질문을 선택하거나 직접 입력하세요</HelperText>
+                <Label>답변 양식 선택</Label>
+                <AnswerModeTabs>
+                  <AnswerModeTab
+                    $active={answerInputMode === 'FORM'}
+                    onClick={() => setAnswerInputMode('FORM')}
+                  >
+                    일반 양식
+                  </AnswerModeTab>
+                  <AnswerModeTab
+                    $active={answerInputMode === 'JSON'}
+                    onClick={() => setAnswerInputMode('JSON')}
+                  >
+                    JSON 입력
+                  </AnswerModeTab>
+                </AnswerModeTabs>
               </FormGroup>
 
-              <FormGroup>
-                <Label>질문 해부 *</Label>
+              {answerInputMode === 'JSON' ? (
+                /* JSON Input Mode */
+                <>
+                  <FormGroup>
+                    <Label>답변 가이드 JSON *</Label>
+                    <JsonTextarea
+                      value={jsonInput}
+                      onChange={handleJsonInputChange}
+                      placeholder={`{
+  "question": "JWT를 사용한 인증 방식의 장단점은?",
+  "analysis": "이 질문은 '트레이드오프형' 질문으로...",
+  "keywords": ["JWT", "인증", "보안", "확장성"],
+  "starStructure": {
+    "situation": "RESTful API 인증이 필요한 상황",
+    "task": "안전하고 확장 가능한 인증 구현",
+    "action": "JWT 도입 및 Refresh Token 전략 수립",
+    "result": "무상태 인증으로 서버 부하 50% 감소"
+  },
+  "personaAnswers": {
+    "bigTech": "대규모 트래픽 처리 중심 답변...",
+    "unicorn": "빠른 실행력 중심 답변..."
+  },
+  "followUpQuestions": [
+    "Refresh Token은 어떻게 관리하시나요?",
+    "Token 탈취 시 대응 방안은?"
+  ]
+}`}
+                      rows={25}
+                    />
+                    {jsonError && <JsonErrorMessage>{jsonError}</JsonErrorMessage>}
+                    <HelperText>
+                      위 형식에 맞춰 JSON을 입력하면 자동으로 파싱됩니다. analysis 필드는 필수입니다.
+                    </HelperText>
+                  </FormGroup>
+                </>
+              ) : (
+                /* Form Input Mode */
+                <>
+                  <FormGroup>
+                    <Label>질문</Label>
+                    <Textarea
+                      value={answerGuideData.question}
+                      onChange={e => setAnswerGuideData({...answerGuideData, question: e.target.value})}
+                      placeholder="예: JWT를 사용한 인증 방식의 장단점은?"
+                      rows={2}
+                    />
+                    <HelperText>질문을 선택하거나 직접 입력하세요</HelperText>
+                  </FormGroup>
+
+                  <FormGroup>
+                    <Label>질문 해부 *</Label>
                 <Textarea
                   value={answerGuideData.analysis}
                   onChange={e => setAnswerGuideData({...answerGuideData, analysis: e.target.value})}
@@ -941,40 +1101,44 @@ export const EmailSendModal = memo(({
 
               <FormGroup>
                 <Label>STAR 구조</Label>
-                <Input
+                <Textarea
                   value={answerGuideData.starStructure.situation}
                   onChange={e => setAnswerGuideData({
                     ...answerGuideData,
                     starStructure: {...answerGuideData.starStructure, situation: e.target.value}
                   })}
                   placeholder="Situation: 상황 설명"
+                  rows={2}
                   style={{ marginBottom: '8px' }}
                 />
-                <Input
+                <Textarea
                   value={answerGuideData.starStructure.task}
                   onChange={e => setAnswerGuideData({
                     ...answerGuideData,
                     starStructure: {...answerGuideData.starStructure, task: e.target.value}
                   })}
                   placeholder="Task: 과제 설명"
+                  rows={2}
                   style={{ marginBottom: '8px' }}
                 />
-                <Input
+                <Textarea
                   value={answerGuideData.starStructure.action}
                   onChange={e => setAnswerGuideData({
                     ...answerGuideData,
                     starStructure: {...answerGuideData.starStructure, action: e.target.value}
                   })}
                   placeholder="Action: 행동 설명"
+                  rows={2}
                   style={{ marginBottom: '8px' }}
                 />
-                <Input
+                <Textarea
                   value={answerGuideData.starStructure.result}
                   onChange={e => setAnswerGuideData({
                     ...answerGuideData,
                     starStructure: {...answerGuideData.starStructure, result: e.target.value}
                   })}
                   placeholder="Result: 결과 설명"
+                  rows={2}
                 />
               </FormGroup>
 
@@ -1027,6 +1191,8 @@ export const EmailSendModal = memo(({
                   + 질문 추가
                 </ActionButton>
               </FormGroup>
+                </>
+              )}
             </>
           )}
 
@@ -1606,4 +1772,66 @@ const HelperText = styled.div`
   font-size: 12px;
   color: ${({ theme }) => theme.colors.text.secondary};
   font-style: italic;
+`;
+
+// Answer Input Mode Styled Components
+const AnswerModeTabs = styled.div`
+  display: flex;
+  gap: 16px;
+  padding: 8px;
+  background: ${({ theme }) => theme.colors.gray[50]};
+  border-radius: 8px;
+`;
+
+const AnswerModeTab = styled.button<{ $active: boolean }>`
+  flex: 1;
+  padding: 12px;
+  border: 2px solid ${({ theme, $active }) =>
+    $active ? theme.colors.primary : theme.colors.gray[300]};
+  border-radius: 6px;
+  background: ${({ $active }) => $active ? 'rgba(99, 102, 241, 0.05)' : 'white'};
+  color: ${({ theme, $active }) => $active ? theme.colors.primary : theme.colors.text.primary};
+  font-size: 14px;
+  font-weight: ${({ $active }) => $active ? '500' : '400'};
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: ${({ theme }) => theme.colors.primary};
+    background: ${({ $active, theme }) => $active ? 'rgba(99, 102, 241, 0.08)' : theme.colors.gray[50]};
+  }
+`;
+
+const JsonTextarea = styled.textarea`
+  width: 100%;
+  padding: 12px;
+  border: 1px solid ${({ theme }) => theme.colors.gray[300]};
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;
+  line-height: 1.5;
+  resize: vertical;
+  background: ${({ theme }) => theme.colors.gray[50]};
+
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.primary};
+    background: white;
+  }
+
+  &::placeholder {
+    color: ${({ theme }) => theme.colors.text.tertiary};
+    font-size: 12px;
+  }
+`;
+
+const JsonErrorMessage = styled.div`
+  margin-top: 8px;
+  padding: 10px 12px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  color: #dc2626;
+  font-size: 13px;
+  font-weight: 500;
 `;
