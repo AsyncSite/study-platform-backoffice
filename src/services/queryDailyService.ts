@@ -65,6 +65,8 @@ export interface AnswerWithMember {
   id: string;
   questionId: string | null;
   questionContent: string | null;
+  currentDay: number | null;
+  totalDays: number | null;
   member: {
     memberId: string;
     email: string;

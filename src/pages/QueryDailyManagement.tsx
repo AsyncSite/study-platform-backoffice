@@ -1358,6 +1358,7 @@ const QueryDailyManagement: React.FC = () => {
                   <th>이메일</th>
                   <th>이름</th>
                   <th>질문 (일부)</th>
+                  <th>진행률</th>
                   <th>타입</th>
                   <th>액션</th>
                 </tr>
@@ -1379,6 +1380,15 @@ const QueryDailyManagement: React.FC = () => {
                         <td>{answer.member.name}</td>
                         <td style={{ maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {answer.questionContent}
+                        </td>
+                        <td>
+                          {answer.currentDay && answer.totalDays ? (
+                            <ProgressBadge>
+                              {answer.currentDay}일차 / {answer.totalDays}일
+                            </ProgressBadge>
+                          ) : (
+                            <ProgressBadge $empty>-</ProgressBadge>
+                          )}
                         </td>
                         <td>
                           <TypeBadge type={answer.type}>
@@ -1406,6 +1416,15 @@ const QueryDailyManagement: React.FC = () => {
                         <td>{question.member?.name}</td>
                         <td style={{ maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {question.content}
+                        </td>
+                        <td>
+                          {question.currentDay && question.totalDays ? (
+                            <ProgressBadge>
+                              {question.currentDay}일차 / {question.totalDays}일
+                            </ProgressBadge>
+                          ) : (
+                            <ProgressBadge $empty>-</ProgressBadge>
+                          )}
                         </td>
                         <td>
                           <TypeBadge type={question.type}>
@@ -1514,7 +1533,8 @@ const QueryDailyManagement: React.FC = () => {
                         <EmailBody>
                           <EmailTo>To: {question.member.name} ({question.member.email})</EmailTo>
                           <EmailSubjectLine>
-                            [{question.type === 'TRIAL' ? '무료체험' : '그로스 플랜'}] Day {question.currentDay}/{question.totalDays} 질문
+                            [{question.type === 'TRIAL' ? '무료체험' : '그로스 플랜'}]
+                            {question.currentDay && question.totalDays ? ` Day ${question.currentDay}/${question.totalDays}` : ''} 질문
                           </EmailSubjectLine>
                           <EmailPreview>
                             {question.content.substring(0, 100)}{question.content.length > 100 ? '...' : ''}
@@ -1542,7 +1562,8 @@ const QueryDailyManagement: React.FC = () => {
                         <EmailBody>
                           <EmailTo>To: {answer.member.name} ({answer.member.email})</EmailTo>
                           <EmailSubjectLine>
-                            [{answer.type === 'TRIAL' ? '무료체험' : '그로스 플랜'}] 답변 가이드
+                            [{answer.type === 'TRIAL' ? '무료체험' : '그로스 플랜'}]
+                            {answer.currentDay && answer.totalDays ? ` Day ${answer.currentDay}/${answer.totalDays}` : ''} 답변 가이드
                           </EmailSubjectLine>
                           <EmailPreview>
                             {answer.questionContent ? answer.questionContent.substring(0, 100) + '...' : '질문 없음 (답변만 발송)'}
@@ -1584,7 +1605,8 @@ const QueryDailyManagement: React.FC = () => {
                           <EmailBody>
                             <EmailTo>To: {question.member.name} ({question.member.email})</EmailTo>
                             <EmailSubjectLine>
-                              [{question.type === 'TRIAL' ? '무료체험' : '그로스 플랜'}] Day {question.currentDay}/{question.totalDays} 질문
+                              [{question.type === 'TRIAL' ? '무료체험' : '그로스 플랜'}]
+                              {question.currentDay && question.totalDays ? ` Day ${question.currentDay}/${question.totalDays}` : ''} 질문
                             </EmailSubjectLine>
                             <EmailPreview>
                               {question.content.substring(0, 100)}{question.content.length > 100 ? '...' : ''}
@@ -1618,7 +1640,8 @@ const QueryDailyManagement: React.FC = () => {
                           <EmailBody>
                             <EmailTo>To: {answer.member.name} ({answer.member.email})</EmailTo>
                             <EmailSubjectLine>
-                              [{answer.type === 'TRIAL' ? '무료체험' : '그로스 플랜'}] 답변 가이드
+                              [{answer.type === 'TRIAL' ? '무료체험' : '그로스 플랜'}]
+                              {answer.currentDay && answer.totalDays ? ` Day ${answer.currentDay}/${answer.totalDays}` : ''} 답변 가이드
                             </EmailSubjectLine>
                             <EmailPreview>
                               {answer.questionContent ? answer.questionContent.substring(0, 100) + '...' : '질문 없음 (답변만 발송)'}
@@ -3137,6 +3160,17 @@ const KindBadge = styled.span<{ kind: 'question' | 'answer' }>`
   font-weight: 700;
   background: ${({ kind }) => kind === 'question' ? '#e0f2fe' : '#f0fdf4'};
   color: ${({ kind }) => kind === 'question' ? '#0369a1' : '#166534'};
+`;
+
+const ProgressBadge = styled.span<{ $empty?: boolean }>`
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  background: ${({ $empty }) => $empty ? '#f3f4f6' : '#dbeafe'};
+  color: ${({ $empty }) => $empty ? '#9ca3af' : '#1e40af'};
+  white-space: nowrap;
 `;
 
 export default QueryDailyManagement;
