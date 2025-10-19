@@ -121,7 +121,7 @@ const QueryDailyManagement: React.FC = () => {
   const [isLoadingPurchases, setIsLoadingPurchases] = useState(false);
 
   // Purchase sub-tabs (상품별 탭)
-  const [purchaseProductTab, setPurchaseProductTab] = useState<'all' | 'TRIAL' | 'GROWTH_PLAN' | 'REAL_INTERVIEW' | 'CRITICAL_HIT' | 'LAST_CHECK'>('all');
+  const [purchaseProductTab, setPurchaseProductTab] = useState<'all' | 'TRIAL' | 'GROWTH_PLAN' | 'REAL_INTERVIEW' | 'CRITICAL_HIT' | 'LAST_CHECK' | 'RESUME_FIT'>('all');
 
   // Upcoming (예정됨) UI state
   const [upcomingViewMode, setUpcomingViewMode] = useState<'combined' | 'split'>('split');
@@ -806,6 +806,63 @@ const QueryDailyManagement: React.FC = () => {
         );
       }
 
+      if (purchaseProductTab === 'RESUME_FIT') {
+        return (
+          <UsersTable>
+            <thead>
+              <tr>
+                <th>회원</th>
+                <th>구매일</th>
+                <th>발송상태</th>
+                <th>발송일시</th>
+                <th>액션</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredPurchases.length === 0 ? (
+                <tr>
+                  <td colSpan={5} style={{ textAlign: 'center', padding: '40px' }}>
+                    레주메 핏 구매 내역이 없습니다
+                  </td>
+                </tr>
+              ) : (
+                filteredPurchases.map(purchase => (
+                  <tr key={purchase.purchaseId}>
+                    <td>
+                      <div style={{ fontWeight: 500 }}>{purchase.memberName}</div>
+                      <div style={{ fontSize: '12px', color: '#6b7280' }}>{purchase.memberEmail}</div>
+                    </td>
+                    <td>{new Date(purchase.purchasedAt).toLocaleDateString('ko-KR')}</td>
+                    <td>
+                      <UserTypeBadge type="LEAD" style={{ backgroundColor: '#fbbf24' }}>
+                        ⏳ 발송대기
+                      </UserTypeBadge>
+                    </td>
+                    <td style={{ fontSize: '13px', color: '#6b7280' }}>-</td>
+                    <td>
+                      <button
+                        style={{
+                          padding: '4px 8px',
+                          backgroundColor: '#10b981',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '12px'
+                        }}
+                        onClick={() => alert('즉시 발송 기능 준비 중입니다.')}
+                      >
+                        📤 즉시발송
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </UsersTable>
+        );
+      }
+
       if (purchaseProductTab === 'LAST_CHECK') {
         return (
           <UsersTable>
@@ -982,6 +1039,12 @@ const QueryDailyManagement: React.FC = () => {
             onClick={() => setPurchaseProductTab('LAST_CHECK')}
           >
             🚨 라스트 체크 ({purchases.filter(p => p.productCode === 'LAST_CHECK').length})
+          </EmailSubTab>
+          <EmailSubTab
+            className={purchaseProductTab === 'RESUME_FIT' ? 'active' : ''}
+            onClick={() => setPurchaseProductTab('RESUME_FIT')}
+          >
+            📄 레주메 핏 ({purchases.filter(p => p.productCode === 'RESUME_FIT').length})
           </EmailSubTab>
         </EmailSubTabs>
 
