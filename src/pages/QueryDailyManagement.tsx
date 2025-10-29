@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { EmailSendModal } from '../components/QueryDailyEmailModal';
+import { ServiceLaunchEmailModal } from '../components/ServiceLaunchEmailModal';
 import queryDailyService, { type AnswerWithMember, type QuestionWithMember, type PurchaseAdmin } from '../services/queryDailyService';
 
 // Types
@@ -111,6 +112,7 @@ const QueryDailyManagement: React.FC = () => {
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [emailModalType, setEmailModalType] = useState<'question' | 'answerGuide' | 'welcome' | 'midFeedback' | 'complete' | 'purchaseConfirmation' | 'growthPlanQuestion' | 'growthPlanAnswerGuide'>('question');
   const [showAnswerGuideModal, setShowAnswerGuideModal] = useState(false);
+  const [showServiceLaunchModal, setShowServiceLaunchModal] = useState(false);
   const [guideKeywords, setGuideKeywords] = useState<string[]>([]);
   const [keywordInput, setKeywordInput] = useState('');
   const [currentOperator] = useState<string>('르네'); // 현재 로그인한 사용자 (임시)
@@ -1342,6 +1344,11 @@ const QueryDailyManagement: React.FC = () => {
           }} style={{ background: '#0066CC' }}>
             💳 그로스 플랜 구매 확인
           </AddButton>
+          <AddButton onClick={() => {
+            setShowServiceLaunchModal(true);
+          }} style={{ background: 'linear-gradient(135deg, #667EEA 0%, #764BA2 100%)', color: 'white', border: 'none' }}>
+            🚀 서비스 오픈 안내 발송
+          </AddButton>
         </div>
       </Header>
 
@@ -1956,6 +1963,12 @@ const QueryDailyManagement: React.FC = () => {
           selectedPurchaseId={selectedPurchaseId}
         />
       )}
+
+      {/* 서비스 오픈 안내 메일 발송 모달 */}
+      <ServiceLaunchEmailModal
+        isOpen={showServiceLaunchModal}
+        onClose={() => setShowServiceLaunchModal(false)}
+      />
 
       {/* 답변 가이드 작성 모달 */}
       {showAnswerGuideModal && (

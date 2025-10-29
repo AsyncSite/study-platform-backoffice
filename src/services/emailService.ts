@@ -335,6 +335,26 @@ class EmailService {
       ...(scheduledAt && { scheduledAt })
     });
   }
+
+  /**
+   * Send QueryDaily Service Launch email (1회성 베타 테스터 오픈 안내)
+   */
+  async sendServiceLaunchEmail(
+    email: string,
+    userName: string = '개발자',
+    scheduledAt?: string
+  ): Promise<void> {
+    return this.sendEmail({
+      templateId: 'querydaily-service-launch',
+      to: email,
+      variables: {
+        userName,
+        queryDailyBaseUrl: 'https://querydaily.asyncsite.com',
+        kakaoChannelUrl: 'https://pf.kakao.com/_zxkxmUn/chat'
+      },
+      ...(scheduledAt && { scheduledAt })
+    });
+  }
 }
 
 export default new EmailService();
