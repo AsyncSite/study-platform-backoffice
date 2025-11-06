@@ -13,6 +13,7 @@ const tabs: Tab[] = [
   { id: 'dashboard', label: '대시보드', icon: '📊', path: '/dashboard' },
   { id: 'studies', label: '스터디 관리', icon: '📚', path: '/studies' },
   { id: 'query-daily', label: 'QueryDaily', icon: '❓', path: '/query-daily' },
+  { id: 'querydaily-mobile', label: 'QueryDaily Mobile', icon: '📱', path: '/querydaily-mobile-management' },
   { id: 'noti-management', label: '알림 관리', icon: '📥', path: '/noti-management' },
   { id: 'members', label: '회원 관리', icon: '👥', path: '/members' },
   { id: 'payments', label: '결제 관리', icon: '💳', path: '/payments' },

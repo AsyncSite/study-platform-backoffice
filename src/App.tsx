@@ -14,6 +14,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import NotiManagement from './pages/NotiManagement';
 import QueryDailyManagement from './pages/QueryDailyManagement';
+import QueryDailyMobileManagement from './pages/QueryDailyMobileManagement';
 import PaymentTransactionManagement from './pages/PaymentTransactionManagement';
 
 function App() {
@@ -62,6 +63,16 @@ function App() {
                 <PrivateRoute>
                   <Layout>
                     <QueryDailyManagement />
+                  </Layout>
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/querydaily-mobile-management"
+              element={
+                <PrivateRoute>
+                  <Layout>
+                    <QueryDailyMobileManagement />
                   </Layout>
                 </PrivateRoute>
               }
