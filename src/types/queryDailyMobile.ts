@@ -16,8 +16,9 @@ export interface CompanyEmailVerification {
   companyName: string;
   verifiedAt: string;  // ISO datetime string (코드 인증 완료 시각)
   createdAt: string;   // ISO datetime string (인증 요청 시각)
-  status?: VerificationStatus;
+  status?: string;     // 인증 상태 (PENDING, CODE_VERIFIED, APPROVED, REJECTED)
   rejectionReason?: string;
+  rejectedReason?: string;  // Backend compatibility
   approvedAt?: string;
   rejectedAt?: string;
 }

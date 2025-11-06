@@ -22,21 +22,25 @@ const QueryDailyMobileManagement: React.FC = () => {
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
   const [verificationToReject, setVerificationToReject] = useState<CompanyEmailVerification | null>(null);
 
-  // Load verifications on mount
+  // Load verifications on mount and when tab changes
   useEffect(() => {
     loadVerifications();
-  }, []);
+  }, [activeTab]);
 
   const loadVerifications = async () => {
     try {
       setLoading(true);
-      const response = await queryDailyMobileApi.getPendingVerifications();
 
-      if (response && response.pendingVerifications) {
-        setVerifications(response.pendingVerifications);
-      } else {
-        console.warn('No content in response:', response);
-        setVerifications([]);
+      let response;
+      if (activeTab === 'PENDING') {
+        response = await queryDailyMobileApi.getPendingVerifications();
+        setVerifications(response?.pendingVerifications || []);
+      } else if (activeTab === 'APPROVED') {
+        response = await queryDailyMobileApi.getApprovedVerifications();
+        setVerifications(response?.approvedVerifications || []);
+      } else if (activeTab === 'REJECTED') {
+        response = await queryDailyMobileApi.getRejectedVerifications();
+        setVerifications(response?.rejectedVerifications || []);
       }
     } catch (error: any) {
       console.error('Failed to load company email verifications:', error);
@@ -108,7 +112,9 @@ const QueryDailyMobileManagement: React.FC = () => {
   };
 
   // Count verifications by status
-  const pendingCount = verifications.length;
+  const pendingCount = activeTab === 'PENDING' ? verifications.length : 0;
+  const approvedCount = activeTab === 'APPROVED' ? verifications.length : 0;
+  const rejectedCount = activeTab === 'REJECTED' ? verifications.length : 0;
 
   return (
     <Container>
@@ -138,14 +144,14 @@ const QueryDailyMobileManagement: React.FC = () => {
               onClick={() => setActiveTab('APPROVED')}
             >
               승인됨
-              <Badge $variant="success">준비중</Badge>
+              <Badge $variant="success">{approvedCount}</Badge>
             </Tab>
             <Tab
               $active={activeTab === 'REJECTED'}
               onClick={() => setActiveTab('REJECTED')}
             >
               거절됨
-              <Badge $variant="error">준비중</Badge>
+              <Badge $variant="error">{rejectedCount}</Badge>
             </Tab>
           </TabsContainer>
         </HeaderContent>
@@ -169,15 +175,19 @@ const QueryDailyMobileManagement: React.FC = () => {
         )}
 
         {activeTab === 'APPROVED' && (
-          <PlaceholderContent>
-            <PlaceholderText>승인된 회사 이메일 목록은 준비 중입니다.</PlaceholderText>
-          </PlaceholderContent>
+          <ApprovedContent
+            verifications={verifications}
+            loading={loading}
+            onView={handleView}
+          />
         )}
 
         {activeTab === 'REJECTED' && (
-          <PlaceholderContent>
-            <PlaceholderText>거절된 회사 이메일 목록은 준비 중입니다.</PlaceholderText>
-          </PlaceholderContent>
+          <RejectedContent
+            verifications={verifications}
+            loading={loading}
+            onView={handleView}
+          />
         )}
       </MainCard>
 
@@ -264,6 +274,110 @@ const PendingContent: React.FC<{
                     onClick={() => onReject(v.verificationId)}
                   >
                     거절
+                  </ActionButton>
+                </ActionButtons>
+              </Td>
+            </tr>
+          ))}
+        </tbody>
+      </Table>
+    </TableContainer>
+  );
+};
+
+// ApprovedContent component
+const ApprovedContent: React.FC<{
+  verifications: CompanyEmailVerification[];
+  loading: boolean;
+  onView: (id: string) => void;
+}> = ({ verifications, loading, onView }) => {
+  if (loading) {
+    return <LoadingText>로딩 중...</LoadingText>;
+  }
+
+  if (verifications.length === 0) {
+    return <EmptyText>승인된 회사 이메일이 없습니다.</EmptyText>;
+  }
+
+  return (
+    <TableContainer>
+      <Table>
+        <thead>
+          <tr>
+            <Th>회사명</Th>
+            <Th>회사 이메일</Th>
+            <Th>사용자 ID</Th>
+            <Th>승인 날짜</Th>
+            <Th>액션</Th>
+          </tr>
+        </thead>
+        <tbody>
+          {verifications.map((v) => (
+            <tr key={v.verificationId}>
+              <Td>{v.companyName}</Td>
+              <Td>{v.companyEmail}</Td>
+              <Td>{v.userId}</Td>
+              <Td>{new Date(v.verifiedAt).toLocaleString()}</Td>
+              <Td>
+                <ActionButtons>
+                  <ActionButton
+                    $variant="view"
+                    onClick={() => onView(v.verificationId)}
+                  >
+                    보기
+                  </ActionButton>
+                </ActionButtons>
+              </Td>
+            </tr>
+          ))}
+        </tbody>
+      </Table>
+    </TableContainer>
+  );
+};
+
+// RejectedContent component
+const RejectedContent: React.FC<{
+  verifications: CompanyEmailVerification[];
+  loading: boolean;
+  onView: (id: string) => void;
+}> = ({ verifications, loading, onView }) => {
+  if (loading) {
+    return <LoadingText>로딩 중...</LoadingText>;
+  }
+
+  if (verifications.length === 0) {
+    return <EmptyText>거절된 회사 이메일이 없습니다.</EmptyText>;
+  }
+
+  return (
+    <TableContainer>
+      <Table>
+        <thead>
+          <tr>
+            <Th>회사명</Th>
+            <Th>회사 이메일</Th>
+            <Th>사용자 ID</Th>
+            <Th>거절 날짜</Th>
+            <Th>거절 사유</Th>
+            <Th>액션</Th>
+          </tr>
+        </thead>
+        <tbody>
+          {verifications.map((v) => (
+            <tr key={v.verificationId}>
+              <Td>{v.companyName}</Td>
+              <Td>{v.companyEmail}</Td>
+              <Td>{v.userId}</Td>
+              <Td>{new Date(v.verifiedAt).toLocaleString()}</Td>
+              <Td>{v.rejectedReason || v.rejectionReason || '관리자에 의해 거절됨'}</Td>
+              <Td>
+                <ActionButtons>
+                  <ActionButton
+                    $variant="view"
+                    onClick={() => onView(v.verificationId)}
+                  >
+                    보기
                   </ActionButton>
                 </ActionButtons>
               </Td>
@@ -444,16 +558,6 @@ const MainCard = styled(Card)`
       padding: 24px;
     }
   }
-`;
-
-const PlaceholderContent = styled.div`
-  text-align: center;
-  padding: 80px 40px !important;
-`;
-
-const PlaceholderText = styled.p`
-  color: ${({ theme }) => theme.colors.text.secondary};
-  font-size: 16px;
 `;
 
 const LoadingText = styled.div`

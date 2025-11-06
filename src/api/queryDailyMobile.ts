@@ -1,7 +1,9 @@
 import { request } from './client';
 import type {
   CompanyEmailVerification,
-  PendingVerificationsResponse
+  PendingVerificationsResponse,
+  ApprovedVerificationsResponse,
+  RejectedVerificationsResponse
 } from '../types/queryDailyMobile';
 
 // Gateway를 통한 querydaily-mobile-service 접근 경로
@@ -46,6 +48,30 @@ export const queryDailyMobileApi = {
       method: 'POST',
       url: `${QUERYDAILY_MOBILE_API_PATH}/${verificationId}/reject`,
       data: { reason },
+    });
+    return response.data;
+  },
+
+  /**
+   * 승인된 회사 이메일 인증 목록 조회
+   * GET /api/querydaily-mobile/admin/company-emails/approved
+   */
+  getApprovedVerifications: async (): Promise<ApprovedVerificationsResponse> => {
+    const response = await request<ApprovedVerificationsResponse>({
+      method: 'GET',
+      url: `${QUERYDAILY_MOBILE_API_PATH}/approved`,
+    });
+    return response.data;
+  },
+
+  /**
+   * 거절된 회사 이메일 인증 목록 조회
+   * GET /api/querydaily-mobile/admin/company-emails/rejected
+   */
+  getRejectedVerifications: async (): Promise<RejectedVerificationsResponse> => {
+    const response = await request<RejectedVerificationsResponse>({
+      method: 'GET',
+      url: `${QUERYDAILY_MOBILE_API_PATH}/rejected`,
     });
     return response.data;
   },
