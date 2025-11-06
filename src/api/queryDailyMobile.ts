@@ -1,10 +1,7 @@
 import { request } from './client';
-import type { ApiResponse } from '../types/api';
 import type {
   CompanyEmailVerification,
-  PendingVerificationsResponse,
-  ApproveCompanyEmailRequest,
-  RejectCompanyEmailRequest
+  PendingVerificationsResponse
 } from '../types/queryDailyMobile';
 
 // Gateway를 통한 querydaily-mobile-service 접근 경로
