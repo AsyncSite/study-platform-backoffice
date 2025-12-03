@@ -11,6 +11,7 @@ interface EmailSendModalProps {
   setShowEmailModal: (show: boolean) => void;
   emailModalType: 'question' | 'answerGuide' | 'welcome' | 'midFeedback' | 'complete' | 'purchaseConfirmation' | 'growthPlanQuestion' | 'growthPlanAnswerGuide';
   selectedUserEmail?: string;
+  selectedUserName?: string;  // 회원 이름 (이메일 템플릿에 표시)
   selectedPurchaseId?: string;  // 구매 ID (선택사항)
 }
 
@@ -19,6 +20,7 @@ export const EmailSendModal = memo(({
   setShowEmailModal,
   emailModalType,
   selectedUserEmail = '',
+  selectedUserName = '',
   selectedPurchaseId = ''
 }: EmailSendModalProps) => {
   const [recipientEmail, setRecipientEmail] = useState(selectedUserEmail);
@@ -47,6 +49,14 @@ export const EmailSendModal = memo(({
       console.log('✅ Purchase ID set from props:', selectedPurchaseId);
     }
   }, [selectedPurchaseId]);
+
+  // Update userName when selectedUserName changes
+  useEffect(() => {
+    if (selectedUserName) {
+      setQuestionData(prev => ({ ...prev, userName: selectedUserName }));
+      console.log('✅ User name set from props:', selectedUserName);
+    }
+  }, [selectedUserName]);
 
   // Fetch applicants on component mount
   useEffect(() => {
@@ -863,7 +873,21 @@ export const EmailSendModal = memo(({
             </>
           )}
 
-          {(emailModalType === 'question' || emailModalType === 'growthPlanQuestion') && (
+          {/* TRIAL 질문 - 1회만 발송하므로 일차 필드 불필요, 이름은 신청자 선택 시 자동 세팅됨 */}
+          {emailModalType === 'question' && (
+            <FormGroup>
+              <Label>질문 *</Label>
+              <Textarea
+                value={questionData.question}
+                onChange={e => setQuestionData({...questionData, question: e.target.value})}
+                placeholder="면접 질문을 입력하세요"
+                rows={3}
+              />
+            </FormGroup>
+          )}
+
+          {/* 그로스 플랜 질문 - 20일 발송하므로 일차 필드 필요 */}
+          {emailModalType === 'growthPlanQuestion' && (
             <>
               <FormGroup>
                 <Label>질문 *</Label>
@@ -881,7 +905,7 @@ export const EmailSendModal = memo(({
                   <Input
                     value={questionData.userName}
                     onChange={e => setQuestionData({...questionData, userName: e.target.value})}
-                    placeholder="홍길동 (기본: 이메일 앞부분)"
+                    placeholder="홍길동 (기본: 회원 이름)"
                   />
                 </FormGroup>
                 <FormGroup>
@@ -913,7 +937,7 @@ export const EmailSendModal = memo(({
               <Input
                 value={questionData.userName}
                 onChange={e => setQuestionData({...questionData, userName: e.target.value})}
-                placeholder="홍길동 (기본: 이메일 앞부분)"
+                placeholder="홍길동 (기본: 회원 이름)"
               />
               <HelperText>
                 {emailModalType === 'welcome' && '환영 메일에 표시될 사용자 이름입니다.'}
@@ -1203,7 +1227,7 @@ export const EmailSendModal = memo(({
                 <Input
                   value={questionData.userName}
                   onChange={e => setQuestionData({...questionData, userName: e.target.value})}
-                  placeholder="홍길동 (기본: 이메일 앞부분)"
+                  placeholder="홍길동 (기본: 회원 이름)"
                 />
                 <HelperText>구매 확인 메일에 표시될 사용자 이름입니다.</HelperText>
               </FormGroup>

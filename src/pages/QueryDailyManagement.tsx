@@ -106,6 +106,7 @@ const getCurrentDateTime = () => {
 const QueryDailyManagement: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'users' | 'emails' | 'purchases'>('emails');
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [selectedUserName, setSelectedUserName] = useState<string>('');
   const [selectedPurchaseId, setSelectedPurchaseId] = useState<string>('');
   const [showUserDetailModal, setShowUserDetailModal] = useState(false);
   const [showEmailModal, setShowEmailModal] = useState(false);
@@ -444,8 +445,8 @@ const QueryDailyManagement: React.FC = () => {
                       -
                     </td>
                     <td>
-                      {purchase.questionSentCount < purchase.maxDeliveries ? (
-                        <div style={{ display: 'flex', gap: '4px' }}>
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        {purchase.questionSentCount < purchase.maxDeliveries && (
                           <button
                             style={{
                               padding: '4px 8px',
@@ -459,12 +460,15 @@ const QueryDailyManagement: React.FC = () => {
                             onClick={() => {
                               setSelectedPurchaseId(purchase.purchaseId);
                               setSelectedUser({ email: purchase.memberEmail } as User);
+                              setSelectedUserName(purchase.memberName);
                               setEmailModalType('question');
                               setShowEmailModal(true);
                             }}
                           >
                             📤 질문
                           </button>
+                        )}
+                        {purchase.answerSentCount < purchase.maxDeliveries && (
                           <button
                             style={{
                               padding: '4px 8px',
@@ -478,16 +482,21 @@ const QueryDailyManagement: React.FC = () => {
                             onClick={() => {
                               setSelectedPurchaseId(purchase.purchaseId);
                               setSelectedUser({ email: purchase.memberEmail } as User);
+                              setSelectedUserName(purchase.memberName);
                               setEmailModalType('answerGuide');
                               setShowEmailModal(true);
                             }}
                           >
                             ⭐ 답변
                           </button>
-                        </div>
-                      ) : (
-                        <span style={{ fontSize: '12px', color: '#9ca3af' }}>발송 완료</span>
-                      )}
+                        )}
+                        {purchase.questionSentCount >= purchase.maxDeliveries && purchase.answerSentCount >= purchase.maxDeliveries && (
+                          <span style={{ fontSize: '11px', color: '#10b981', marginLeft: '4px', alignSelf: 'center' }}>발송완료</span>
+                        )}
+                        {purchase.questionSentCount >= purchase.maxDeliveries && purchase.answerSentCount < purchase.maxDeliveries && (
+                          <span style={{ fontSize: '11px', color: '#9ca3af', marginLeft: '4px', alignSelf: 'center' }}>질문완료</span>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -588,6 +597,7 @@ const QueryDailyManagement: React.FC = () => {
                             onClick={() => {
                               setSelectedPurchaseId(purchase.purchaseId);
                               setSelectedUser({ email: purchase.memberEmail } as User);
+                              setSelectedUserName(purchase.memberName);
                               setEmailModalType('growthPlanQuestion');
                               setShowEmailModal(true);
                             }}
@@ -607,6 +617,7 @@ const QueryDailyManagement: React.FC = () => {
                             onClick={() => {
                               setSelectedPurchaseId(purchase.purchaseId);
                               setSelectedUser({ email: purchase.memberEmail } as User);
+                              setSelectedUserName(purchase.memberName);
                               setEmailModalType('growthPlanAnswerGuide');
                               setShowEmailModal(true);
                             }}
@@ -1961,6 +1972,7 @@ const QueryDailyManagement: React.FC = () => {
           setShowEmailModal={setShowEmailModal}
           emailModalType={emailModalType}
           selectedUserEmail={selectedUser?.email}
+          selectedUserName={selectedUserName}
           selectedPurchaseId={selectedPurchaseId}
         />
       )}

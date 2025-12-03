@@ -134,6 +134,7 @@ export interface PurchaseAdmin {
   expiresAt: string;
   isExpired: boolean;
   questionSentCount: number;  // 질문 발송 횟수
+  answerSentCount: number;    // 답변 발송 횟수
   maxDeliveries: number;      // 최대 발송 횟수 (상품별 정책)
 }
 
