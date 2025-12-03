@@ -133,6 +133,8 @@ export interface PurchaseAdmin {
   purchasedAt: string;
   expiresAt: string;
   isExpired: boolean;
+  questionSentCount: number;  // 질문 발송 횟수
+  maxDeliveries: number;      // 최대 발송 횟수 (상품별 정책)
 }
 
 class QueryDailyService {

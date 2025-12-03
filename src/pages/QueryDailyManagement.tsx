@@ -181,7 +181,7 @@ const QueryDailyManagement: React.FC = () => {
             resumeAssetId: app.resumeAssetId,
             resumeFileName: app.resumeFileName,
             leadStatus: '신청완료',
-            totalDays: 7,
+            totalDays: 1,
             currentDay: 0,
             notes: `이력서: ${app.resumeFileName}`
           }
@@ -435,55 +435,59 @@ const QueryDailyManagement: React.FC = () => {
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <div style={{ flex: 1, height: '8px', backgroundColor: '#e5e7eb', borderRadius: '4px', overflow: 'hidden' }}>
-                          <div style={{ height: '100%', width: '67%', backgroundColor: '#10b981' }}></div>
+                          <div style={{ height: '100%', width: `${(purchase.questionSentCount / purchase.maxDeliveries) * 100}%`, backgroundColor: purchase.questionSentCount >= purchase.maxDeliveries ? '#10b981' : '#3b82f6' }}></div>
                         </div>
-                        <span style={{ fontSize: '12px', color: '#6b7280', whiteSpace: 'nowrap' }}>2/3일</span>
+                        <span style={{ fontSize: '12px', color: '#6b7280', whiteSpace: 'nowrap' }}>{purchase.questionSentCount}/{purchase.maxDeliveries}회</span>
                       </div>
                     </td>
                     <td style={{ fontSize: '13px', color: '#6b7280' }}>
-                      2025-10-08 09:00
+                      -
                     </td>
                     <td>
-                      <div style={{ display: 'flex', gap: '4px' }}>
-                        <button
-                          style={{
-                            padding: '4px 8px',
-                            backgroundColor: '#10b981',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            fontSize: '12px'
-                          }}
-                          onClick={() => {
-                            setSelectedPurchaseId(purchase.purchaseId);
-                            setSelectedUser({ email: purchase.memberEmail } as User);
-                            setEmailModalType('question');
-                            setShowEmailModal(true);
-                          }}
-                        >
-                          📤 질문
-                        </button>
-                        <button
-                          style={{
-                            padding: '4px 8px',
-                            backgroundColor: '#f59e0b',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            fontSize: '12px'
-                          }}
-                          onClick={() => {
-                            setSelectedPurchaseId(purchase.purchaseId);
-                            setSelectedUser({ email: purchase.memberEmail } as User);
-                            setEmailModalType('answerGuide');
-                            setShowEmailModal(true);
-                          }}
-                        >
-                          ⭐ 답변
-                        </button>
-                      </div>
+                      {purchase.questionSentCount < purchase.maxDeliveries ? (
+                        <div style={{ display: 'flex', gap: '4px' }}>
+                          <button
+                            style={{
+                              padding: '4px 8px',
+                              backgroundColor: '#10b981',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '12px'
+                            }}
+                            onClick={() => {
+                              setSelectedPurchaseId(purchase.purchaseId);
+                              setSelectedUser({ email: purchase.memberEmail } as User);
+                              setEmailModalType('question');
+                              setShowEmailModal(true);
+                            }}
+                          >
+                            📤 질문
+                          </button>
+                          <button
+                            style={{
+                              padding: '4px 8px',
+                              backgroundColor: '#f59e0b',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '12px'
+                            }}
+                            onClick={() => {
+                              setSelectedPurchaseId(purchase.purchaseId);
+                              setSelectedUser({ email: purchase.memberEmail } as User);
+                              setEmailModalType('answerGuide');
+                              setShowEmailModal(true);
+                            }}
+                          >
+                            ⭐ 답변
+                          </button>
+                        </div>
+                      ) : (
+                        <span style={{ fontSize: '12px', color: '#9ca3af' }}>발송 완료</span>
+                      )}
                     </td>
                   </tr>
                 ))
@@ -524,13 +528,13 @@ const QueryDailyManagement: React.FC = () => {
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <div style={{ flex: 1, height: '8px', backgroundColor: '#e5e7eb', borderRadius: '4px', overflow: 'hidden' }}>
-                          <div style={{ height: '100%', width: '35%', backgroundColor: '#3b82f6' }}></div>
+                          <div style={{ height: '100%', width: `${(purchase.questionSentCount / purchase.maxDeliveries) * 100}%`, backgroundColor: purchase.questionSentCount >= purchase.maxDeliveries ? '#10b981' : '#3b82f6' }}></div>
                         </div>
-                        <span style={{ fontSize: '12px', color: '#6b7280', whiteSpace: 'nowrap' }}>7/20일</span>
+                        <span style={{ fontSize: '12px', color: '#6b7280', whiteSpace: 'nowrap' }}>{purchase.questionSentCount}/{purchase.maxDeliveries}회</span>
                       </div>
                     </td>
                     <td style={{ fontSize: '13px', color: '#6b7280' }}>
-                      2025-10-09 09:00
+                      -
                     </td>
                     <td>
                       {purchase.resumeId ? (
@@ -569,46 +573,50 @@ const QueryDailyManagement: React.FC = () => {
                       )}
                     </td>
                     <td>
-                      <div style={{ display: 'flex', gap: '4px' }}>
-                        <button
-                          style={{
-                            padding: '4px 8px',
-                            backgroundColor: '#10b981',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            fontSize: '12px'
-                          }}
-                          onClick={() => {
-                            setSelectedPurchaseId(purchase.purchaseId);
-                            setSelectedUser({ email: purchase.memberEmail } as User);
-                            setEmailModalType('growthPlanQuestion');
-                            setShowEmailModal(true);
-                          }}
-                        >
-                          📤 질문
-                        </button>
-                        <button
-                          style={{
-                            padding: '4px 8px',
-                            backgroundColor: '#f59e0b',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            fontSize: '12px'
-                          }}
-                          onClick={() => {
-                            setSelectedPurchaseId(purchase.purchaseId);
-                            setSelectedUser({ email: purchase.memberEmail } as User);
-                            setEmailModalType('growthPlanAnswerGuide');
-                            setShowEmailModal(true);
-                          }}
-                        >
-                          ⭐ 답변
-                        </button>
-                      </div>
+                      {purchase.questionSentCount < purchase.maxDeliveries ? (
+                        <div style={{ display: 'flex', gap: '4px' }}>
+                          <button
+                            style={{
+                              padding: '4px 8px',
+                              backgroundColor: '#10b981',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '12px'
+                            }}
+                            onClick={() => {
+                              setSelectedPurchaseId(purchase.purchaseId);
+                              setSelectedUser({ email: purchase.memberEmail } as User);
+                              setEmailModalType('growthPlanQuestion');
+                              setShowEmailModal(true);
+                            }}
+                          >
+                            📤 질문
+                          </button>
+                          <button
+                            style={{
+                              padding: '4px 8px',
+                              backgroundColor: '#f59e0b',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '12px'
+                            }}
+                            onClick={() => {
+                              setSelectedPurchaseId(purchase.purchaseId);
+                              setSelectedUser({ email: purchase.memberEmail } as User);
+                              setEmailModalType('growthPlanAnswerGuide');
+                              setShowEmailModal(true);
+                            }}
+                          >
+                            ⭐ 답변
+                          </button>
+                        </div>
+                      ) : (
+                        <span style={{ fontSize: '12px', color: '#9ca3af' }}>발송 완료</span>
+                      )}
                     </td>
                   </tr>
                 ))
