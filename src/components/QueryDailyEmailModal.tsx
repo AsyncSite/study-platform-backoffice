@@ -9,7 +9,7 @@ import { ko } from 'date-fns/locale';
 interface EmailSendModalProps {
   showEmailModal: boolean;
   setShowEmailModal: (show: boolean) => void;
-  emailModalType: 'question' | 'answerGuide' | 'welcome' | 'midFeedback' | 'complete' | 'purchaseConfirmation' | 'growthPlanQuestion' | 'growthPlanAnswerGuide';
+  emailModalType: 'question' | 'answerGuide' | 'welcome' | 'midFeedback' | 'complete' | 'purchaseConfirmation' | 'growthPlanQuestion' | 'growthPlanAnswerGuide' | 'feedbackRequest';
   selectedUserEmail?: string;
   selectedUserName?: string;  // 회원 이름 (이메일 템플릿에 표시)
   selectedPurchaseId?: string;  // 구매 ID (선택사항)
@@ -253,6 +253,11 @@ export const EmailSendModal = memo(({
     confirmDate: '',
     startDate: '',
     endDate: ''
+  });
+
+  const [feedbackRequestData, setFeedbackRequestData] = useState({
+    questionSentDate: '',
+    feedbackFormUrl: 'https://forms.gle/AKGegYc9rT6GgfaD9'
   });
 
   const [answerGuideData, setAnswerGuideData] = useState({
@@ -590,6 +595,24 @@ export const EmailSendModal = memo(({
           ? `${recipientEmail}로 ${scheduledDate} ${scheduledTime} ${getRelativeTime(scheduledDate, scheduledTime)} KST에 그로스 플랜 답변 가이드 발송이 예약되었습니다.`
           : `${recipientEmail}로 그로스 플랜 답변 가이드가 발송되었습니다.`;
         setEmailSuccess(successMessage);
+      } else if (emailModalType === 'feedbackRequest') {
+        if (!feedbackRequestData.questionSentDate) {
+          setEmailError('질문 발송일은 필수 항목입니다.');
+          setSendingEmail(false);
+          return;
+        }
+
+        await emailService.sendFreeTrialFeedbackRequest(
+          recipientEmail,
+          questionData.userName || recipientEmail.split('@')[0],
+          feedbackRequestData.questionSentDate,
+          feedbackRequestData.feedbackFormUrl,
+          scheduledAt
+        );
+        const successMessage = isScheduled
+          ? `${recipientEmail}로 ${scheduledDate} ${scheduledTime} ${getRelativeTime(scheduledDate, scheduledTime)} KST에 피드백 요청 메일 발송 예약되었습니다.`
+          : `${recipientEmail}로 피드백 요청 메일을 발송했습니다.`;
+        setEmailSuccess(successMessage);
       }
 
       // Clear form data only on success
@@ -654,7 +677,8 @@ export const EmailSendModal = memo(({
              emailModalType === 'complete' ? 'QueryDaily 완료 메일 발송' :
              emailModalType === 'purchaseConfirmation' ? '그로스 플랜 구매 확인 메일 발송' :
              emailModalType === 'growthPlanQuestion' ? '그로스 플랜 질문 발송' :
-             emailModalType === 'growthPlanAnswerGuide' ? '그로스 플랜 답변 가이드 발송' : 'QueryDaily 메일 발송'}
+             emailModalType === 'growthPlanAnswerGuide' ? '그로스 플랜 답변 가이드 발송' :
+             emailModalType === 'feedbackRequest' ? '2주 후 피드백 요청 메일 발송' : 'QueryDaily 메일 발송'}
           </h3>
           <CloseButton onClick={() => {
             setShowEmailModal(false);
@@ -1266,6 +1290,44 @@ export const EmailSendModal = memo(({
             </>
           )}
 
+          {emailModalType === 'feedbackRequest' && (
+            <>
+              <FormGroup>
+                <Label>사용자 이름</Label>
+                <Input
+                  value={questionData.userName}
+                  onChange={e => setQuestionData({...questionData, userName: e.target.value})}
+                  placeholder="홍길동 (기본: 회원 이름)"
+                />
+                <HelperText>피드백 요청 메일에 표시될 사용자 이름입니다.</HelperText>
+              </FormGroup>
+
+              <FormGroup>
+                <Label>질문 발송일 *</Label>
+                <Input
+                  value={feedbackRequestData.questionSentDate}
+                  onChange={e => setFeedbackRequestData({...feedbackRequestData, questionSentDate: e.target.value})}
+                  placeholder="2025년 1월 15일"
+                />
+                <HelperText>맞춤 면접 질문이 발송된 날짜 (예: 2025년 1월 15일)</HelperText>
+              </FormGroup>
+
+              <FormGroup>
+                <Label>피드백 폼 URL</Label>
+                <Input
+                  value={feedbackRequestData.feedbackFormUrl}
+                  onChange={e => setFeedbackRequestData({...feedbackRequestData, feedbackFormUrl: e.target.value})}
+                  placeholder="https://forms.gle/..."
+                />
+                <HelperText>피드백을 받을 Google Form 등의 URL</HelperText>
+              </FormGroup>
+
+              <QuickScheduleInfo>
+                💡 <strong>2주 후 발송을 원하시면</strong> 위의 "예약 발송"을 선택하고 날짜를 설정하세요.
+              </QuickScheduleInfo>
+            </>
+          )}
+
           {emailError && <ErrorMessage>{emailError}</ErrorMessage>}
           {emailSuccess && <SuccessMessage>{emailSuccess}</SuccessMessage>}
         </ModalBody>
@@ -1858,4 +1920,19 @@ const JsonErrorMessage = styled.div`
   color: #dc2626;
   font-size: 13px;
   font-weight: 500;
+`;
+
+const QuickScheduleInfo = styled.div`
+  margin-top: 16px;
+  padding: 16px;
+  background: linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%);
+  border: 1px solid #C7D2FE;
+  border-radius: 10px;
+  color: #4338CA;
+  font-size: 14px;
+  line-height: 1.5;
+
+  strong {
+    color: #3730A3;
+  }
 `;

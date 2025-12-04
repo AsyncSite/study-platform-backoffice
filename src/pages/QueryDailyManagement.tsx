@@ -110,7 +110,7 @@ const QueryDailyManagement: React.FC = () => {
   const [selectedPurchaseId, setSelectedPurchaseId] = useState<string>('');
   const [showUserDetailModal, setShowUserDetailModal] = useState(false);
   const [showEmailModal, setShowEmailModal] = useState(false);
-  const [emailModalType, setEmailModalType] = useState<'question' | 'answerGuide' | 'welcome' | 'midFeedback' | 'complete' | 'purchaseConfirmation' | 'growthPlanQuestion' | 'growthPlanAnswerGuide'>('question');
+  const [emailModalType, setEmailModalType] = useState<'question' | 'answerGuide' | 'welcome' | 'midFeedback' | 'complete' | 'purchaseConfirmation' | 'growthPlanQuestion' | 'growthPlanAnswerGuide' | 'feedbackRequest'>('question');
   const [showAnswerGuideModal, setShowAnswerGuideModal] = useState(false);
   const [guideKeywords, setGuideKeywords] = useState<string[]>([]);
   const [keywordInput, setKeywordInput] = useState('');
@@ -491,7 +491,30 @@ const QueryDailyManagement: React.FC = () => {
                           </button>
                         )}
                         {purchase.questionSentCount >= purchase.maxDeliveries && purchase.answerSentCount >= purchase.maxDeliveries && (
-                          <span style={{ fontSize: '11px', color: '#10b981', marginLeft: '4px', alignSelf: 'center' }}>발송완료</span>
+                          <>
+                            <span style={{ fontSize: '11px', color: '#10b981', marginLeft: '4px', alignSelf: 'center' }}>발송완료</span>
+                            <button
+                              style={{
+                                background: 'linear-gradient(135deg, #8B5CF6 0%, #6366F1 100%)',
+                                border: 'none',
+                                borderRadius: '6px',
+                                color: 'white',
+                                padding: '4px 8px',
+                                cursor: 'pointer',
+                                fontSize: '12px',
+                                marginLeft: '8px'
+                              }}
+                              onClick={() => {
+                                setSelectedPurchaseId(purchase.purchaseId);
+                                setSelectedUser({ email: purchase.memberEmail } as User);
+                                setSelectedUserName(purchase.memberName);
+                                setEmailModalType('feedbackRequest');
+                                setShowEmailModal(true);
+                              }}
+                            >
+                              📮 2주후
+                            </button>
+                          </>
                         )}
                         {purchase.questionSentCount >= purchase.maxDeliveries && purchase.answerSentCount < purchase.maxDeliveries && (
                           <span style={{ fontSize: '11px', color: '#9ca3af', marginLeft: '4px', alignSelf: 'center' }}>질문완료</span>

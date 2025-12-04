@@ -335,6 +335,29 @@ class EmailService {
       ...(scheduledAt && { scheduledAt })
     });
   }
+
+  /**
+   * Send Free Trial Feedback Request email (2주 후 광고/피드백 메일)
+   */
+  async sendFreeTrialFeedbackRequest(
+    email: string,
+    userName: string = '개발자',
+    questionSentDate: string,
+    feedbackFormUrl: string = 'https://forms.gle/AKGegYc9rT6GgfaD9',
+    scheduledAt?: string
+  ): Promise<void> {
+    return this.sendEmail({
+      templateId: 'free-trial-feedback-request',
+      to: email,
+      variables: {
+        userName,
+        questionSentDate,
+        feedbackFormUrl,
+        kakaoChannelUrl: 'https://pf.kakao.com/_zxkxmUn/chat'
+      },
+      ...(scheduledAt && { scheduledAt })
+    });
+  }
 }
 
 export default new EmailService();
