@@ -415,13 +415,14 @@ const QueryDailyManagement: React.FC = () => {
                 <th>구매일</th>
                 <th>발송진행</th>
                 <th>최근발송</th>
+                <th>이력서</th>
                 <th>액션</th>
               </tr>
             </thead>
             <tbody>
               {filteredPurchases.length === 0 ? (
                 <tr>
-                  <td colSpan={5} style={{ textAlign: 'center', padding: '40px' }}>
+                  <td colSpan={6} style={{ textAlign: 'center', padding: '40px' }}>
                     무료 체험 구매 내역이 없습니다
                   </td>
                 </tr>
@@ -443,6 +444,39 @@ const QueryDailyManagement: React.FC = () => {
                     </td>
                     <td style={{ fontSize: '13px', color: '#6b7280' }}>
                       -
+                    </td>
+                    <td>
+                      <button
+                        style={{
+                          padding: '4px 8px',
+                          backgroundColor: purchase.resumeDownloadUrl ? '#e5e7eb' : '#f3f4f6',
+                          border: '1px solid #d1d5db',
+                          borderRadius: '4px',
+                          cursor: purchase.resumeDownloadUrl ? 'pointer' : 'not-allowed',
+                          fontSize: '12px',
+                          opacity: purchase.resumeDownloadUrl ? 1 : 0.5
+                        }}
+                        onClick={async () => {
+                          try {
+                            if (!purchase.resumeDownloadUrl) {
+                              alert('이력서 다운로드 URL을 찾을 수 없습니다.');
+                              return;
+                            }
+
+                            // resumeDownloadUrl: /api/assets/{assetId}/download
+                            const assetId = purchase.resumeDownloadUrl.split('/')[3];
+                            await queryDailyService.downloadAsset(
+                              assetId,
+                              purchase.resumeFilename || 'resume.pdf'
+                            );
+                          } catch (error) {
+                            alert('이력서 다운로드 중 오류가 발생했습니다.');
+                          }
+                        }}
+                        disabled={!purchase.resumeDownloadUrl}
+                      >
+                        📄 다운로드
+                      </button>
                     </td>
                     <td>
                       <div style={{ display: 'flex', gap: '4px' }}>
