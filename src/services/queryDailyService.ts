@@ -111,6 +111,7 @@ export interface CreateAnswerRequest {
       unicorn: string;
     };
     followUpQuestions: string[];
+    nextDayPreview: string;
   };
   scheduledAt?: string;
   displayName?: string;

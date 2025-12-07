@@ -451,22 +451,21 @@ export const EmailSendModal = memo(({
         }
 
         // Question 선택은 선택사항 - questionId는 있으면 전달, 없으면 null
-        const answerContent: Record<string, any> = {
-          version: '1.0',
-          question: answerGuideData.question,
-          analysis: answerGuideData.analysis,
-          keywords: answerGuideData.keywords.filter(k => k.trim() !== ''),
-          starStructure: answerGuideData.starStructure,
-          personaAnswers: answerGuideData.personaAnswers,
-          followUpQuestions: answerGuideData.followUpQuestions.filter(q => q.trim() !== ''),
-          nextDayPreview: answerGuideData.nextDayPreview
-        };
         const answerResponse = await queryDailyService.createAnswer({
           email: recipientEmail,
           purchaseId: purchaseId || undefined,
           questionId: selectedQuestion?.id || undefined,
           type: 'TRIAL',
-          content: answerContent,
+          content: {
+            version: '1.0',
+            question: answerGuideData.question,
+            analysis: answerGuideData.analysis,
+            keywords: answerGuideData.keywords.filter(k => k.trim() !== ''),
+            starStructure: answerGuideData.starStructure,
+            personaAnswers: answerGuideData.personaAnswers,
+            followUpQuestions: answerGuideData.followUpQuestions.filter(q => q.trim() !== ''),
+            nextDayPreview: answerGuideData.nextDayPreview
+          },
           scheduledAt: scheduledAt || undefined,
           displayName: questionData.userName || undefined  // 백오피스에서 입력한 표시 이름 전달
         });
@@ -593,22 +592,21 @@ export const EmailSendModal = memo(({
         }
 
         // Question 선택은 선택사항 - questionId는 있으면 전달, 없으면 null
-        const growthPlanAnswerContent: Record<string, any> = {
-          version: '1.0',
-          question: answerGuideData.question,
-          analysis: answerGuideData.analysis,
-          keywords: answerGuideData.keywords.filter(k => k.trim() !== ''),
-          starStructure: answerGuideData.starStructure,
-          personaAnswers: answerGuideData.personaAnswers,
-          followUpQuestions: answerGuideData.followUpQuestions.filter(q => q.trim() !== ''),
-          nextDayPreview: answerGuideData.nextDayPreview
-        };
         const answerResponse = await queryDailyService.createAnswer({
           email: recipientEmail,
           purchaseId: purchaseId || undefined,
           questionId: selectedQuestion?.id || undefined,
           type: 'GROWTH_PLAN',
-          content: growthPlanAnswerContent,
+          content: {
+            version: '1.0',
+            question: answerGuideData.question,
+            analysis: answerGuideData.analysis,
+            keywords: answerGuideData.keywords.filter(k => k.trim() !== ''),
+            starStructure: answerGuideData.starStructure,
+            personaAnswers: answerGuideData.personaAnswers,
+            followUpQuestions: answerGuideData.followUpQuestions.filter(q => q.trim() !== ''),
+            nextDayPreview: answerGuideData.nextDayPreview
+          },
           scheduledAt: scheduledAt || undefined,
           displayName: questionData.userName || undefined  // 백오피스에서 입력한 표시 이름 전달
         });
