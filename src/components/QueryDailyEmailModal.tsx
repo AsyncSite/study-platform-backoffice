@@ -274,7 +274,8 @@ export const EmailSendModal = memo(({
       bigTech: '',
       unicorn: ''
     },
-    followUpQuestions: ['']
+    followUpQuestions: [''],
+    nextDayPreview: ''
   });
 
   // Answer input mode: FORM or JSON
@@ -286,13 +287,14 @@ export const EmailSendModal = memo(({
   useEffect(() => {
     if (answerInputMode === 'JSON' && (emailModalType === 'answerGuide' || emailModalType === 'growthPlanAnswerGuide')) {
       // State → JSON (when switching to JSON mode)
-      const jsonObject = {
+      const jsonObject: Record<string, any> = {
         question: answerGuideData.question,
         analysis: answerGuideData.analysis,
         keywords: answerGuideData.keywords.filter(k => k.trim() !== ''),
         starStructure: answerGuideData.starStructure,
         personaAnswers: answerGuideData.personaAnswers,
-        followUpQuestions: answerGuideData.followUpQuestions.filter(q => q.trim() !== '')
+        followUpQuestions: answerGuideData.followUpQuestions.filter(q => q.trim() !== ''),
+        nextDayPreview: answerGuideData.nextDayPreview || ''
       };
       setJsonInput(JSON.stringify(jsonObject, null, 2));
       setJsonError(null);
@@ -319,6 +321,12 @@ export const EmailSendModal = memo(({
         return;
       }
 
+      // Validation: nextDayPreview is required
+      if (!parsed.nextDayPreview || typeof parsed.nextDayPreview !== 'string' || !parsed.nextDayPreview.trim()) {
+        setJsonError('❌ nextDayPreview 필드는 필수입니다. (이력서 속 약점/주제 입력)');
+        return;
+      }
+
       // Update answerGuideData state
       setAnswerGuideData({
         question: parsed.question || '',
@@ -334,7 +342,8 @@ export const EmailSendModal = memo(({
           bigTech: parsed.personaAnswers?.bigTech || '',
           unicorn: parsed.personaAnswers?.unicorn || ''
         },
-        followUpQuestions: Array.isArray(parsed.followUpQuestions) ? parsed.followUpQuestions : ['']
+        followUpQuestions: Array.isArray(parsed.followUpQuestions) ? parsed.followUpQuestions : [''],
+        nextDayPreview: parsed.nextDayPreview || ''
       });
 
       setJsonError(null);
@@ -422,6 +431,12 @@ export const EmailSendModal = memo(({
           return;
         }
 
+        if (!answerGuideData.nextDayPreview || !answerGuideData.nextDayPreview.trim()) {
+          setEmailError('내일 예고(다음 예상 질문 주제)는 필수 항목입니다.');
+          setSendingEmail(false);
+          return;
+        }
+
         if (!recipientEmail) {
           setEmailError('이메일을 입력해주세요.');
           setSendingEmail(false);
@@ -436,20 +451,22 @@ export const EmailSendModal = memo(({
         }
 
         // Question 선택은 선택사항 - questionId는 있으면 전달, 없으면 null
+        const answerContent: Record<string, any> = {
+          version: '1.0',
+          question: answerGuideData.question,
+          analysis: answerGuideData.analysis,
+          keywords: answerGuideData.keywords.filter(k => k.trim() !== ''),
+          starStructure: answerGuideData.starStructure,
+          personaAnswers: answerGuideData.personaAnswers,
+          followUpQuestions: answerGuideData.followUpQuestions.filter(q => q.trim() !== ''),
+          nextDayPreview: answerGuideData.nextDayPreview
+        };
         const answerResponse = await queryDailyService.createAnswer({
           email: recipientEmail,
           purchaseId: purchaseId || undefined,
           questionId: selectedQuestion?.id || undefined,
           type: 'TRIAL',
-          content: {
-            version: '1.0',
-            question: answerGuideData.question,
-            analysis: answerGuideData.analysis,
-            keywords: answerGuideData.keywords.filter(k => k.trim() !== ''),
-            starStructure: answerGuideData.starStructure,
-            personaAnswers: answerGuideData.personaAnswers,
-            followUpQuestions: answerGuideData.followUpQuestions.filter(q => q.trim() !== '')
-          },
+          content: answerContent,
           scheduledAt: scheduledAt || undefined,
           displayName: questionData.userName || undefined  // 백오피스에서 입력한 표시 이름 전달
         });
@@ -556,6 +573,12 @@ export const EmailSendModal = memo(({
           return;
         }
 
+        if (!answerGuideData.nextDayPreview || !answerGuideData.nextDayPreview.trim()) {
+          setEmailError('내일 예고(다음 예상 질문 주제)는 필수 항목입니다.');
+          setSendingEmail(false);
+          return;
+        }
+
         if (!recipientEmail) {
           setEmailError('이메일을 입력해주세요.');
           setSendingEmail(false);
@@ -570,20 +593,22 @@ export const EmailSendModal = memo(({
         }
 
         // Question 선택은 선택사항 - questionId는 있으면 전달, 없으면 null
+        const growthPlanAnswerContent: Record<string, any> = {
+          version: '1.0',
+          question: answerGuideData.question,
+          analysis: answerGuideData.analysis,
+          keywords: answerGuideData.keywords.filter(k => k.trim() !== ''),
+          starStructure: answerGuideData.starStructure,
+          personaAnswers: answerGuideData.personaAnswers,
+          followUpQuestions: answerGuideData.followUpQuestions.filter(q => q.trim() !== ''),
+          nextDayPreview: answerGuideData.nextDayPreview
+        };
         const answerResponse = await queryDailyService.createAnswer({
           email: recipientEmail,
           purchaseId: purchaseId || undefined,
           questionId: selectedQuestion?.id || undefined,
           type: 'GROWTH_PLAN',
-          content: {
-            version: '1.0',
-            question: answerGuideData.question,
-            analysis: answerGuideData.analysis,
-            keywords: answerGuideData.keywords.filter(k => k.trim() !== ''),
-            starStructure: answerGuideData.starStructure,
-            personaAnswers: answerGuideData.personaAnswers,
-            followUpQuestions: answerGuideData.followUpQuestions.filter(q => q.trim() !== '')
-          },
+          content: growthPlanAnswerContent,
           scheduledAt: scheduledAt || undefined,
           displayName: questionData.userName || undefined  // 백오피스에서 입력한 표시 이름 전달
         });
@@ -637,7 +662,8 @@ export const EmailSendModal = memo(({
           bigTech: '',
           unicorn: ''
         },
-        followUpQuestions: ['']
+        followUpQuestions: [''],
+        nextDayPreview: ''
       });
 
       setTimeout(() => {
@@ -1239,6 +1265,26 @@ export const EmailSendModal = memo(({
                   + 질문 추가
                 </ActionButton>
               </FormGroup>
+
+              {/* 내일 예고 (필수) */}
+              <NextDayPreviewSection>
+                <SectionHeader>
+                  <SectionTitle>내일 예고 *</SectionTitle>
+                  <SectionBadge>CTA 영역에 표시됨</SectionBadge>
+                </SectionHeader>
+
+                <FormGroup>
+                  <Input
+                    value={answerGuideData.nextDayPreview}
+                    onChange={e => setAnswerGuideData({
+                      ...answerGuideData,
+                      nextDayPreview: e.target.value
+                    })}
+                    placeholder="예: 동시성 제어"
+                  />
+                  <HelperText>이력서 속 약점/주제를 입력하세요. "{'{'}이름{'}'}님의 이력서 속 '{'{'}주제{'}'}' 관련 경험을 보고, 면접관이 물어볼 치명적인 약점을 발견했습니다." 형태로 표시됩니다.</HelperText>
+                </FormGroup>
+              </NextDayPreviewSection>
                 </>
               )}
             </>
@@ -1935,4 +1981,36 @@ const QuickScheduleInfo = styled.div`
   strong {
     color: #3730A3;
   }
+`;
+
+// 내일 예고 섹션 스타일
+const NextDayPreviewSection = styled.div`
+  margin-top: 24px;
+  padding: 20px;
+  background: linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%);
+  border: 2px solid #FB923C;
+  border-radius: 12px;
+`;
+
+const SectionHeader = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+`;
+
+const SectionTitle = styled.h4`
+  font-size: 16px;
+  font-weight: 600;
+  color: #C2410C;
+  margin: 0;
+`;
+
+const SectionBadge = styled.span`
+  padding: 4px 10px;
+  background: #FB923C;
+  color: white;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 20px;
 `;
