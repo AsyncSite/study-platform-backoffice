@@ -79,15 +79,20 @@ export const EmailSendModal = memo(({
     }
   }, [showEmailModal]);
 
-  // Phase 1: Load questions without answers for answer guide modal
+  // Phase 1: Load questions without answers for answer guide modal (filtered by selected member)
   useEffect(() => {
     if (showEmailModal && (emailModalType === 'answerGuide' || emailModalType === 'growthPlanAnswerGuide')) {
       const loadQuestions = async () => {
         try {
           const type = emailModalType === 'growthPlanAnswerGuide' ? 'GROWTH_PLAN' : 'TRIAL';
-          const response = await queryDailyService.getQuestionsWithoutAnswers({ type, page: 0, size: 100 });
+          const response = await queryDailyService.getQuestionsWithoutAnswers({
+            type,
+            page: 0,
+            size: 100,
+            ...(selectedMemberId && { memberId: selectedMemberId })
+          });
           setQuestions(response.content);
-          console.log('✅ Loaded questions without answers:', response.content.length);
+          console.log('✅ Loaded questions without answers:', response.content.length, selectedMemberId ? `(filtered by ${selectedMemberId})` : '(all)');
         } catch (error: any) {
           console.error('Failed to load questions:', error);
           if (error.response?.status !== 401) {
@@ -97,7 +102,7 @@ export const EmailSendModal = memo(({
       };
       loadQuestions();
     }
-  }, [showEmailModal, emailModalType]);
+  }, [showEmailModal, emailModalType, selectedMemberId]);
 
   // Auto-match applicant when email is entered or loaded from props
   useEffect(() => {
