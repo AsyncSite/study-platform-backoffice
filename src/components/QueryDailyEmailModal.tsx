@@ -99,6 +99,34 @@ export const EmailSendModal = memo(({
     }
   }, [showEmailModal, emailModalType]);
 
+  // Auto-match applicant when email is entered or loaded from props
+  useEffect(() => {
+    // Skip if no email or applicants not loaded yet
+    if (!recipientEmail || applicants.length === 0) return;
+
+    // Skip if already matched to the same email
+    const currentApplicant = applicants.find(a => a.memberId === selectedMemberId);
+    if (currentApplicant?.email.toLowerCase() === recipientEmail.toLowerCase()) return;
+
+    // Find matching applicant
+    const matchedApplicant = applicants.find(
+      a => a.email.toLowerCase() === recipientEmail.toLowerCase()
+    );
+
+    if (matchedApplicant) {
+      setSelectedMemberId(matchedApplicant.memberId);
+      setQuestionData(prev => ({
+        ...prev,
+        userName: matchedApplicant.name || matchedApplicant.email.split('@')[0]
+      }));
+      console.log('✅ Auto-matched applicant:', matchedApplicant.name, matchedApplicant.email);
+    } else if (selectedMemberId) {
+      // Email changed to non-matching, clear selection
+      setSelectedMemberId('');
+      console.log('⚠️ Email changed, cleared applicant selection');
+    }
+  }, [recipientEmail, applicants]);
+
   // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -283,6 +311,9 @@ export const EmailSendModal = memo(({
   const [jsonInput, setJsonInput] = useState('');
   const [jsonError, setJsonError] = useState<string | null>(null);
 
+  // Confirmation modal state for immediate sending
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+
   // JSON ↔ State bidirectional sync
   useEffect(() => {
     if (answerInputMode === 'JSON' && (emailModalType === 'answerGuide' || emailModalType === 'growthPlanAnswerGuide')) {
@@ -350,6 +381,33 @@ export const EmailSendModal = memo(({
       console.log('✅ JSON parsed successfully and state updated');
     } catch (error) {
       setJsonError('❌ 유효하지 않은 JSON 형식입니다. 올바른 JSON 구조를 입력해주세요.');
+    }
+  };
+
+  // Get display name for email type
+  const getEmailTypeDisplayName = (type: typeof emailModalType): string => {
+    const displayNames: Record<typeof emailModalType, string> = {
+      question: '면접 질문',
+      answerGuide: '답변 가이드',
+      welcome: '환영',
+      midFeedback: '중간 피드백',
+      complete: '완료',
+      purchaseConfirmation: '구매 확인',
+      growthPlanQuestion: '그로스 플랜 질문',
+      growthPlanAnswerGuide: '그로스 플랜 답변 가이드',
+      feedbackRequest: '피드백 요청'
+    };
+    return displayNames[type] || type;
+  };
+
+  // Handle send button click - show confirmation for immediate sending
+  const handleSendClick = () => {
+    if (!isScheduled) {
+      // Show confirmation modal for immediate sending
+      setShowConfirmModal(true);
+    } else {
+      // For scheduled sending, proceed directly
+      handleSend();
     }
   };
 
@@ -771,10 +829,9 @@ export const EmailSendModal = memo(({
               value={recipientEmail}
               onChange={e => setRecipientEmail(e.target.value)}
               placeholder="example@email.com"
-              disabled={!!selectedMemberId}
             />
             {selectedMemberId && (
-              <HelperText>신청자를 선택하면 이메일이 자동으로 입력됩니다</HelperText>
+              <HelperText>신청자 목록에서 자동 매칭되었습니다. 이메일을 수정하면 매칭이 변경됩니다.</HelperText>
             )}
           </FormGroup>
 
@@ -816,6 +873,28 @@ export const EmailSendModal = memo(({
                 <Label>빠른 선택</Label>
                 <QuickSelectButtons>
                   <QuickButton onClick={() => setQuickSchedule(60)}>1시간 후</QuickButton>
+                  <QuickButton onClick={() => {
+                    // Get current time in KST
+                    const now = new Date();
+                    const kstNow = getKSTDate(now);
+
+                    // Calculate today at 7:00 AM in KST
+                    const todayKST = new Date(kstNow);
+                    todayKST.setUTCHours(7, 0, 0, 0);
+
+                    // Convert back to local time for calculation
+                    const kstOffset = 9 * 60 * 60 * 1000;
+                    const targetTime = new Date(todayKST.getTime() - kstOffset);
+
+                    const diffMinutes = Math.floor((targetTime.getTime() - now.getTime()) / 60000);
+
+                    // If today 7 AM has already passed, show alert
+                    if (diffMinutes < 0) {
+                      alert('오늘 오전 7시는 이미 지났습니다. 내일 오전 7시를 선택해주세요.');
+                      return;
+                    }
+                    setQuickSchedule(diffMinutes);
+                  }}>오늘 오전 7시 (KST)</QuickButton>
                   <QuickButton onClick={() => {
                     // Get current time in KST
                     const now = new Date();
@@ -1384,11 +1463,42 @@ export const EmailSendModal = memo(({
           }} disabled={sendingEmail}>
             취소
           </CancelButton>
-          <SaveButton onClick={handleSend} disabled={sendingEmail}>
+          <SaveButton onClick={handleSendClick} disabled={sendingEmail}>
             {sendingEmail ? '발송 중...' : '발송하기'}
           </SaveButton>
         </ModalFooter>
       </ModalContent>
+
+      {/* Confirmation Modal for Immediate Sending */}
+      {showConfirmModal && (
+        <ConfirmModalOverlay>
+          <ConfirmModalContent>
+            <ConfirmModalIcon>⚠️</ConfirmModalIcon>
+            <ConfirmModalTitle>즉시 발송 확인</ConfirmModalTitle>
+            <ConfirmModalBody>
+              <ConfirmModalRecipient>{recipientEmail}</ConfirmModalRecipient>
+              <ConfirmModalText>
+                님에게 <strong>{getEmailTypeDisplayName(emailModalType)}</strong> 메일을
+                <br />지금 바로 발송합니다.
+              </ConfirmModalText>
+              <ConfirmModalWarning>
+                ⚠️ 발송 후에는 취소할 수 없습니다.
+              </ConfirmModalWarning>
+            </ConfirmModalBody>
+            <ConfirmModalFooter>
+              <ConfirmCancelButton onClick={() => setShowConfirmModal(false)}>
+                취소
+              </ConfirmCancelButton>
+              <ConfirmSendButton onClick={() => {
+                setShowConfirmModal(false);
+                handleSend();
+              }}>
+                즉시 발송
+              </ConfirmSendButton>
+            </ConfirmModalFooter>
+          </ConfirmModalContent>
+        </ConfirmModalOverlay>
+      )}
     </Modal>
   );
 });
@@ -2011,4 +2121,140 @@ const SectionBadge = styled.span`
   font-size: 11px;
   font-weight: 600;
   border-radius: 20px;
+`;
+
+// Confirmation Modal Styled Components
+const ConfirmModalOverlay = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1100;
+  animation: fadeIn 0.2s ease;
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+`;
+
+const ConfirmModalContent = styled.div`
+  background: white;
+  border-radius: 16px;
+  width: 400px;
+  max-width: 90%;
+  padding: 32px;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.3s ease;
+
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+`;
+
+const ConfirmModalIcon = styled.div`
+  font-size: 48px;
+  margin-bottom: 16px;
+`;
+
+const ConfirmModalTitle = styled.h3`
+  font-size: 20px;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0 0 24px 0;
+`;
+
+const ConfirmModalBody = styled.div`
+  margin-bottom: 28px;
+`;
+
+const ConfirmModalRecipient = styled.div`
+  font-size: 16px;
+  font-weight: 600;
+  color: ${({ theme }) => theme.colors.primary};
+  margin-bottom: 8px;
+  word-break: break-all;
+`;
+
+const ConfirmModalText = styled.div`
+  font-size: 15px;
+  color: #4b5563;
+  line-height: 1.6;
+
+  strong {
+    color: #1f2937;
+    font-weight: 600;
+  }
+`;
+
+const ConfirmModalWarning = styled.div`
+  margin-top: 20px;
+  padding: 12px 16px;
+  background: #fef3c7;
+  border: 1px solid #fcd34d;
+  border-radius: 8px;
+  color: #92400e;
+  font-size: 14px;
+  font-weight: 500;
+`;
+
+const ConfirmModalFooter = styled.div`
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+`;
+
+const ConfirmCancelButton = styled.button`
+  flex: 1;
+  padding: 14px 24px;
+  border: 2px solid #e5e7eb;
+  border-radius: 10px;
+  background: white;
+  color: #6b7280;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: #f9fafb;
+    border-color: #d1d5db;
+  }
+`;
+
+const ConfirmSendButton = styled.button`
+  flex: 1;
+  padding: 14px 24px;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+  color: white;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3);
+
+  &:hover {
+    background: linear-gradient(135deg, #ea580c 0%, #dc2626 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(249, 115, 22, 0.4);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
 `;
