@@ -94,7 +94,7 @@ export interface CreateAnswerRequest {
   purchaseId?: string;  // NEW 모드용 (Question 없이 Answer만 생성할 때 필수)
   answerId?: string;  // RESEND 모드용 (재발송 시에만 사용)
   questionId?: string;  // NEW 모드용 (선택사항: Question 없이 Answer만 발송 가능)
-  type?: 'TRIAL' | 'GROWTH_PLAN';  // NEW 모드용 (Question 없이 Answer만 생성할 때 필수)
+  type?: 'TRIAL' | 'GROWTH_PLAN' | 'CRITICAL_HIT';  // NEW 모드용 (Question 없이 Answer만 생성할 때 필수)
   content?: {
     version?: string;
     question?: string;
@@ -111,7 +111,7 @@ export interface CreateAnswerRequest {
       unicorn: string;
     };
     followUpQuestions: string[];
-    nextDayPreview: string;
+    nextDayPreview?: string;
   };
   scheduledAt?: string;
   displayName?: string;

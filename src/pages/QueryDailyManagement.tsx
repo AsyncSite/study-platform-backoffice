@@ -110,7 +110,7 @@ const QueryDailyManagement: React.FC = () => {
   const [selectedPurchaseId, setSelectedPurchaseId] = useState<string>('');
   const [showUserDetailModal, setShowUserDetailModal] = useState(false);
   const [showEmailModal, setShowEmailModal] = useState(false);
-  const [emailModalType, setEmailModalType] = useState<'question' | 'answerGuide' | 'welcome' | 'midFeedback' | 'complete' | 'purchaseConfirmation' | 'growthPlanQuestion' | 'growthPlanAnswerGuide' | 'feedbackRequest'>('question');
+  const [emailModalType, setEmailModalType] = useState<'question' | 'answerGuide' | 'welcome' | 'midFeedback' | 'complete' | 'purchaseConfirmation' | 'growthPlanQuestion' | 'growthPlanAnswerGuide' | 'feedbackRequest' | 'criticalHit'>('question');
   const [showAnswerGuideModal, setShowAnswerGuideModal] = useState(false);
   const [guideKeywords, setGuideKeywords] = useState<string[]>([]);
   const [keywordInput, setKeywordInput] = useState('');
@@ -795,8 +795,7 @@ const QueryDailyManagement: React.FC = () => {
               <tr>
                 <th>회원</th>
                 <th>구매일</th>
-                <th>발송상태</th>
-                <th>발송일시</th>
+                <th>발송 진행</th>
                 <th>이력서</th>
                 <th>액션</th>
               </tr>
@@ -804,78 +803,121 @@ const QueryDailyManagement: React.FC = () => {
             <tbody>
               {filteredPurchases.length === 0 ? (
                 <tr>
-                  <td colSpan={6} style={{ textAlign: 'center', padding: '40px' }}>
+                  <td colSpan={5} style={{ textAlign: 'center', padding: '40px' }}>
                     크리티컬 히트 구매 내역이 없습니다
                   </td>
                 </tr>
               ) : (
-                filteredPurchases.map(purchase => (
-                  <tr key={purchase.purchaseId}>
-                    <td>
-                      <div style={{ fontWeight: 500 }}>{purchase.memberName}</div>
-                      <div style={{ fontSize: '12px', color: '#6b7280' }}>{purchase.memberEmail}</div>
-                    </td>
-                    <td>{new Date(purchase.purchasedAt).toLocaleDateString('ko-KR')}</td>
-                    <td>
-                      <UserTypeBadge type="LEAD" style={{ backgroundColor: '#fbbf24' }}>
-                        ⏳ 발송대기
-                      </UserTypeBadge>
-                    </td>
-                    <td style={{ fontSize: '13px', color: '#6b7280' }}>-</td>
-                    <td>
-                      {purchase.resumeId ? (
-                        <button
-                          style={{
-                            padding: '4px 8px',
-                            backgroundColor: '#3b82f6',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            fontSize: '12px'
-                          }}
-                          onClick={async () => {
-                            try {
-                              if (!purchase.resumeDownloadUrl) {
-                                alert('이력서 다운로드 URL을 찾을 수 없습니다.');
-                                return;
-                              }
+                filteredPurchases.map(purchase => {
+                  // 발송 횟수 계산 (answerSentCount 사용)
+                  const sentCount = purchase.answerSentCount || 0;
+                  const totalCount = 3;
+                  const isComplete = sentCount >= totalCount;
 
-                              // resumeDownloadUrl: /api/assets/{assetId}/download
-                              const assetId = purchase.resumeDownloadUrl.split('/')[3];
-                              await queryDailyService.downloadAsset(
-                                assetId,
-                                purchase.resumeFilename || 'resume.pdf'
-                              );
-                            } catch (error) {
-                              alert('이력서 다운로드 중 오류가 발생했습니다.');
-                            }
-                          }}
-                        >
-                          📄 다운로드
-                        </button>
-                      ) : (
-                        <span style={{ color: '#9ca3af' }}>-</span>
-                      )}
-                    </td>
-                    <td>
-                      <button
-                        style={{
-                          padding: '4px 8px',
-                          backgroundColor: '#10b981',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '4px',
-                          cursor: 'pointer',
-                          fontSize: '12px'
-                        }}
-                        onClick={() => alert('즉시 발송 기능 준비 중입니다.')}
-                      >
-                        📤 즉시발송
-                      </button>
-                    </td>
-                  </tr>
-                ))
+                  return (
+                    <tr key={purchase.purchaseId}>
+                      <td>
+                        <div style={{ fontWeight: 500 }}>{purchase.memberName}</div>
+                        <div style={{ fontSize: '12px', color: '#6b7280' }}>{purchase.memberEmail}</div>
+                      </td>
+                      <td>{new Date(purchase.purchasedAt).toLocaleDateString('ko-KR')}</td>
+                      <td>
+                        {isComplete ? (
+                          <UserTypeBadge type="MEMBER" style={{ backgroundColor: '#10b981' }}>
+                            ✅ 완료 ({sentCount}/{totalCount})
+                          </UserTypeBadge>
+                        ) : sentCount > 0 ? (
+                          <UserTypeBadge type="LEAD" style={{ backgroundColor: '#3b82f6' }}>
+                            🔄 진행중 ({sentCount}/{totalCount})
+                          </UserTypeBadge>
+                        ) : (
+                          <UserTypeBadge type="LEAD" style={{ backgroundColor: '#fbbf24' }}>
+                            ⏳ 대기 ({sentCount}/{totalCount})
+                          </UserTypeBadge>
+                        )}
+                      </td>
+                      <td>
+                        {purchase.resumeId ? (
+                          <button
+                            style={{
+                              padding: '4px 8px',
+                              backgroundColor: '#3b82f6',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '12px'
+                            }}
+                            onClick={async () => {
+                              try {
+                                if (!purchase.resumeDownloadUrl) {
+                                  alert('이력서 다운로드 URL을 찾을 수 없습니다.');
+                                  return;
+                                }
+
+                                // resumeDownloadUrl: /api/assets/{assetId}/download
+                                const assetId = purchase.resumeDownloadUrl.split('/')[3];
+                                await queryDailyService.downloadAsset(
+                                  assetId,
+                                  purchase.resumeFilename || 'resume.pdf'
+                                );
+                              } catch (error) {
+                                alert('이력서 다운로드 중 오류가 발생했습니다.');
+                              }
+                            }}
+                          >
+                            📄 다운로드
+                          </button>
+                        ) : (
+                          <span style={{ color: '#9ca3af' }}>-</span>
+                        )}
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                          {[1, 2, 3].map(round => {
+                            const isSent = sentCount >= round;
+                            const isNext = sentCount === round - 1;
+                            return (
+                              <button
+                                key={round}
+                                style={{
+                                  padding: '4px 8px',
+                                  backgroundColor: isSent ? '#9ca3af' : isNext ? '#f97316' : '#e5e7eb',
+                                  color: isSent ? 'white' : isNext ? 'white' : '#6b7280',
+                                  border: 'none',
+                                  borderRadius: '4px',
+                                  cursor: isSent ? 'not-allowed' : 'pointer',
+                                  fontSize: '11px',
+                                  opacity: isSent ? 0.6 : 1
+                                }}
+                                disabled={isSent}
+                                onClick={() => {
+                                  if (isSent) return;
+                                  setSelectedUser({
+                                    id: purchase.memberId,
+                                    type: 'MEMBER',
+                                    name: purchase.memberName,
+                                    email: purchase.memberEmail,
+                                    applicationDate: purchase.purchasedAt,
+                                    resumeUrl: '',
+                                    totalDays: 3,
+                                    currentDay: round
+                                  });
+                                  setSelectedUserName(purchase.memberName);
+                                  setSelectedPurchaseId(purchase.purchaseId);
+                                  setEmailModalType('criticalHit');
+                                  setShowEmailModal(true);
+                                }}
+                              >
+                                {isSent ? `${round}회 ✓` : `${round}회차`}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </UsersTable>

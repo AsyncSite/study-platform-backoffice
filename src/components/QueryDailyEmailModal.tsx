@@ -9,7 +9,7 @@ import { ko } from 'date-fns/locale';
 interface EmailSendModalProps {
   showEmailModal: boolean;
   setShowEmailModal: (show: boolean) => void;
-  emailModalType: 'question' | 'answerGuide' | 'welcome' | 'midFeedback' | 'complete' | 'purchaseConfirmation' | 'growthPlanQuestion' | 'growthPlanAnswerGuide' | 'feedbackRequest';
+  emailModalType: 'question' | 'answerGuide' | 'welcome' | 'midFeedback' | 'complete' | 'purchaseConfirmation' | 'growthPlanQuestion' | 'growthPlanAnswerGuide' | 'feedbackRequest' | 'criticalHit';
   selectedUserEmail?: string;
   selectedUserName?: string;  // 회원 이름 (이메일 템플릿에 표시)
   selectedPurchaseId?: string;  // 구매 ID (선택사항)
@@ -80,19 +80,32 @@ export const EmailSendModal = memo(({
   }, [showEmailModal]);
 
   // Phase 1: Load questions without answers for answer guide modal (filtered by selected member)
+  // 회원이 선택되어야만 해당 회원의 질문만 가져옴
   useEffect(() => {
     if (showEmailModal && (emailModalType === 'answerGuide' || emailModalType === 'growthPlanAnswerGuide')) {
+      // 회원이 선택되지 않으면 질문 목록 비우기
+      if (!selectedMemberId) {
+        setQuestions([]);
+        setSelectedQuestion(null);
+        console.log('⚠️ No member selected, clearing questions');
+        return;
+      }
+
       const loadQuestions = async () => {
         try {
-          const type = emailModalType === 'growthPlanAnswerGuide' ? 'GROWTH_PLAN' : 'TRIAL';
+          let type: 'TRIAL' | 'GROWTH_PLAN' = 'TRIAL';
+          if (emailModalType === 'growthPlanAnswerGuide') {
+            type = 'GROWTH_PLAN';
+          }
           const response = await queryDailyService.getQuestionsWithoutAnswers({
             type,
+            memberId: selectedMemberId,
             page: 0,
             size: 100,
-            ...(selectedMemberId && { memberId: selectedMemberId })
           });
           setQuestions(response.content);
-          console.log('✅ Loaded questions without answers:', response.content.length, selectedMemberId ? `(filtered by ${selectedMemberId})` : '(all)');
+          setSelectedQuestion(null);  // 회원 변경 시 선택된 질문 초기화
+          console.log('✅ Loaded questions for member:', selectedMemberId, '- count:', response.content.length);
         } catch (error: any) {
           console.error('Failed to load questions:', error);
           if (error.response?.status !== 401) {
@@ -321,7 +334,7 @@ export const EmailSendModal = memo(({
 
   // JSON ↔ State bidirectional sync
   useEffect(() => {
-    if (answerInputMode === 'JSON' && (emailModalType === 'answerGuide' || emailModalType === 'growthPlanAnswerGuide')) {
+    if (answerInputMode === 'JSON' && (emailModalType === 'answerGuide' || emailModalType === 'growthPlanAnswerGuide' || emailModalType === 'criticalHit')) {
       // State → JSON (when switching to JSON mode)
       const jsonObject: Record<string, any> = {
         question: answerGuideData.question,
@@ -329,9 +342,12 @@ export const EmailSendModal = memo(({
         keywords: answerGuideData.keywords.filter(k => k.trim() !== ''),
         starStructure: answerGuideData.starStructure,
         personaAnswers: answerGuideData.personaAnswers,
-        followUpQuestions: answerGuideData.followUpQuestions.filter(q => q.trim() !== ''),
-        nextDayPreview: answerGuideData.nextDayPreview || ''
+        followUpQuestions: answerGuideData.followUpQuestions.filter(q => q.trim() !== '')
       };
+      // nextDayPreview는 무료 플랜(answerGuide)만
+      if (emailModalType === 'answerGuide') {
+        jsonObject.nextDayPreview = answerGuideData.nextDayPreview || '';
+      }
       setJsonInput(JSON.stringify(jsonObject, null, 2));
       setJsonError(null);
     }
@@ -357,10 +373,12 @@ export const EmailSendModal = memo(({
         return;
       }
 
-      // Validation: nextDayPreview is required
-      if (!parsed.nextDayPreview || typeof parsed.nextDayPreview !== 'string' || !parsed.nextDayPreview.trim()) {
-        setJsonError('❌ nextDayPreview 필드는 필수입니다. (이력서 속 약점/주제 입력)');
-        return;
+      // Validation: nextDayPreview is required only for answerGuide (무료 플랜)
+      if (emailModalType === 'answerGuide') {
+        if (!parsed.nextDayPreview || typeof parsed.nextDayPreview !== 'string' || !parsed.nextDayPreview.trim()) {
+          setJsonError('❌ nextDayPreview 필드는 필수입니다. (이력서 속 약점/주제 입력)');
+          return;
+        }
       }
 
       // Update answerGuideData state
@@ -400,7 +418,8 @@ export const EmailSendModal = memo(({
       purchaseConfirmation: '구매 확인',
       growthPlanQuestion: '그로스 플랜 질문',
       growthPlanAnswerGuide: '그로스 플랜 답변 가이드',
-      feedbackRequest: '피드백 요청'
+      feedbackRequest: '피드백 요청',
+      criticalHit: '크리티컬히트 답변 가이드'
     };
     return displayNames[type] || type;
   };
@@ -635,12 +654,6 @@ export const EmailSendModal = memo(({
           return;
         }
 
-        if (!answerGuideData.nextDayPreview || !answerGuideData.nextDayPreview.trim()) {
-          setEmailError('내일 예고(다음 예상 질문 주제)는 필수 항목입니다.');
-          setSendingEmail(false);
-          return;
-        }
-
         if (!recipientEmail) {
           setEmailError('이메일을 입력해주세요.');
           setSendingEmail(false);
@@ -655,6 +668,7 @@ export const EmailSendModal = memo(({
         }
 
         // Question 선택은 선택사항 - questionId는 있으면 전달, 없으면 null
+        // 그로스플랜은 nextDayPreview 없음
         const answerResponse = await queryDailyService.createAnswer({
           email: recipientEmail,
           purchaseId: purchaseId || undefined,
@@ -667,8 +681,7 @@ export const EmailSendModal = memo(({
             keywords: answerGuideData.keywords.filter(k => k.trim() !== ''),
             starStructure: answerGuideData.starStructure,
             personaAnswers: answerGuideData.personaAnswers,
-            followUpQuestions: answerGuideData.followUpQuestions.filter(q => q.trim() !== ''),
-            nextDayPreview: answerGuideData.nextDayPreview
+            followUpQuestions: answerGuideData.followUpQuestions.filter(q => q.trim() !== '')
           },
           scheduledAt: scheduledAt || undefined,
           displayName: questionData.userName || undefined  // 백오피스에서 입력한 표시 이름 전달
@@ -681,6 +694,49 @@ export const EmailSendModal = memo(({
           ? `${recipientEmail}로 ${scheduledDate} ${scheduledTime} ${getRelativeTime(scheduledDate, scheduledTime)} KST에 그로스 플랜 답변 가이드 발송이 예약되었습니다.`
           : `${recipientEmail}로 그로스 플랜 답변 가이드가 발송되었습니다.`;
         setEmailSuccess(successMessage);
+      } else if (emailModalType === 'criticalHit') {
+        if (!answerGuideData.question || !answerGuideData.analysis) {
+          setEmailError('질문과 질문 해부는 필수 항목입니다.');
+          setSendingEmail(false);
+          return;
+        }
+
+        if (!recipientEmail) {
+          setEmailError('이메일을 입력해주세요.');
+          setSendingEmail(false);
+          return;
+        }
+
+        if (!purchaseId) {
+          setEmailError('구매 ID가 필요합니다. 구매 탭에서 발송해주세요.');
+          setSendingEmail(false);
+          return;
+        }
+
+        // 크리티컬히트는 질문+답변을 한번에 발송 (questionId 없음)
+        const answerResponse = await queryDailyService.createAnswer({
+          email: recipientEmail,
+          purchaseId: purchaseId,
+          type: 'CRITICAL_HIT',
+          content: {
+            version: '1.0',
+            question: answerGuideData.question,
+            analysis: answerGuideData.analysis,
+            keywords: answerGuideData.keywords.filter(k => k.trim() !== ''),
+            starStructure: answerGuideData.starStructure,
+            personaAnswers: answerGuideData.personaAnswers,
+            followUpQuestions: answerGuideData.followUpQuestions.filter(q => q.trim() !== '')
+          },
+          scheduledAt: scheduledAt || undefined,
+          displayName: questionData.userName || undefined
+        });
+
+        console.log('✅ Critical Hit Answer created:', answerResponse.id);
+
+        const criticalHitSuccessMessage = isScheduled
+          ? `${recipientEmail}로 ${scheduledDate} ${scheduledTime} ${getRelativeTime(scheduledDate, scheduledTime)} KST에 크리티컬히트 답변 가이드 발송이 예약되었습니다.`
+          : `${recipientEmail}로 크리티컬히트 답변 가이드가 발송되었습니다.`;
+        setEmailSuccess(criticalHitSuccessMessage);
       } else if (emailModalType === 'feedbackRequest') {
         if (!feedbackRequestData.questionSentDate) {
           setEmailError('질문 발송일은 필수 항목입니다.');
@@ -765,7 +821,8 @@ export const EmailSendModal = memo(({
              emailModalType === 'purchaseConfirmation' ? '그로스 플랜 구매 확인 메일 발송' :
              emailModalType === 'growthPlanQuestion' ? '그로스 플랜 질문 발송' :
              emailModalType === 'growthPlanAnswerGuide' ? '그로스 플랜 답변 가이드 발송' :
-             emailModalType === 'feedbackRequest' ? '2주 후 피드백 요청 메일 발송' : 'QueryDaily 메일 발송'}
+             emailModalType === 'feedbackRequest' ? '2주 후 피드백 요청 메일 발송' :
+             emailModalType === 'criticalHit' ? '크리티컬히트 답변 가이드 발송' : 'QueryDaily 메일 발송'}
           </h3>
           <CloseButton onClick={() => {
             setShowEmailModal(false);
@@ -1097,45 +1154,37 @@ export const EmailSendModal = memo(({
           {(emailModalType === 'answerGuide' || emailModalType === 'growthPlanAnswerGuide') && (
             <>
               <FormGroup>
-                <Label>질문 선택 (선택사항)</Label>
+                <Label>질문 선택 (필수)</Label>
                 <ApplicantDropdownWrapper className="question-dropdown-wrapper">
                   <ApplicantSelectButton
                     onClick={() => setShowQuestionDropdown(!showQuestionDropdown)}
                     $hasSelection={!!selectedQuestion}
+                    disabled={!selectedMemberId}
                   >
-                    {selectedQuestion
-                      ? `${selectedQuestion.member?.name || 'Unknown'} - ${selectedQuestion.content.substring(0, 50)}...`
-                      : '답변할 질문을 선택하세요'}
+                    {!selectedMemberId
+                      ? '먼저 회원을 선택해주세요'
+                      : selectedQuestion
+                        ? `${selectedQuestion.content.substring(0, 60)}...`
+                        : '답변할 질문을 선택하세요'}
                     <DropdownArrow>▼</DropdownArrow>
                   </ApplicantSelectButton>
 
-                  {showQuestionDropdown && (
+                  {showQuestionDropdown && selectedMemberId && (
                     <ApplicantDropdown>
                       {questions.length === 0 ? (
-                        <ApplicantOption disabled>답변이 없는 질문이 없습니다</ApplicantOption>
+                        <ApplicantOption disabled>해당 회원의 답변 대기 중인 질문이 없습니다</ApplicantOption>
                       ) : (
                         <>
-                          <ApplicantOption
-                            onClick={() => {
-                              setSelectedQuestion(null);
-                              setRecipientEmail('');
-                              setAnswerGuideData(prev => ({ ...prev, question: '' }));
-                              setShowQuestionDropdown(false);
-                            }}
-                            className="clear-option"
-                          >
-                            선택 해제
-                          </ApplicantOption>
                           {questions.map(question => (
                             <ApplicantOption
                               key={question.id}
                               onClick={() => handleQuestionSelect(question)}
                               selected={selectedQuestion?.id === question.id}
                             >
-                              <ApplicantName>{question.member?.name || 'Unknown'} ({question.member?.email || 'no-email'})</ApplicantName>
+                              <ApplicantName>Day {question.currentDay}/{question.totalDays}</ApplicantName>
                               <ApplicantEmail>
-                                {question.content.substring(0, 80)}
-                                {question.content.length > 80 ? '...' : ''}
+                                {question.content.substring(0, 100)}
+                                {question.content.length > 100 ? '...' : ''}
                               </ApplicantEmail>
                             </ApplicantOption>
                           ))}
@@ -1146,7 +1195,7 @@ export const EmailSendModal = memo(({
                 </ApplicantDropdownWrapper>
                 {selectedQuestion && (
                   <SelectedInfo>
-                    ✅ 선택됨: {selectedQuestion.member?.name || 'Unknown'} - Day {selectedQuestion.currentDay}/{selectedQuestion.totalDays}
+                    ✅ 선택됨: Day {selectedQuestion.currentDay}/{selectedQuestion.totalDays}
                   </SelectedInfo>
                 )}
               </FormGroup>
@@ -1348,25 +1397,228 @@ export const EmailSendModal = memo(({
                 </ActionButton>
               </FormGroup>
 
-              {/* 내일 예고 (필수) */}
-              <NextDayPreviewSection>
-                <SectionHeader>
-                  <SectionTitle>내일 예고 *</SectionTitle>
-                  <SectionBadge>CTA 영역에 표시됨</SectionBadge>
-                </SectionHeader>
+              {/* 내일 예고 (필수) - 무료 플랜(answerGuide)만 */}
+              {emailModalType === 'answerGuide' && (
+                <NextDayPreviewSection>
+                  <SectionHeader>
+                    <SectionTitle>내일 예고 *</SectionTitle>
+                    <SectionBadge>CTA 영역에 표시됨</SectionBadge>
+                  </SectionHeader>
 
+                  <FormGroup>
+                    <Input
+                      value={answerGuideData.nextDayPreview}
+                      onChange={e => setAnswerGuideData({
+                        ...answerGuideData,
+                        nextDayPreview: e.target.value
+                      })}
+                      placeholder="예: 동시성 제어"
+                    />
+                    <HelperText>이력서 속 약점/주제를 입력하세요. "{'{'}이름{'}'}님의 이력서 속 '{'{'}주제{'}'}' 관련 경험을 보고, 면접관이 물어볼 치명적인 약점을 발견했습니다." 형태로 표시됩니다.</HelperText>
+                  </FormGroup>
+                </NextDayPreviewSection>
+              )}
+                </>
+              )}
+            </>
+          )}
+
+          {/* 크리티컬히트: 질문+답변 한번에 입력 (질문 선택 없음) */}
+          {emailModalType === 'criticalHit' && (
+            <>
+              {/* Answer Input Mode Tabs */}
+              <FormGroup>
+                <Label>답변 양식 선택</Label>
+                <AnswerModeTabs>
+                  <AnswerModeTab
+                    $active={answerInputMode === 'FORM'}
+                    onClick={() => setAnswerInputMode('FORM')}
+                  >
+                    일반 양식
+                  </AnswerModeTab>
+                  <AnswerModeTab
+                    $active={answerInputMode === 'JSON'}
+                    onClick={() => setAnswerInputMode('JSON')}
+                  >
+                    JSON 입력
+                  </AnswerModeTab>
+                </AnswerModeTabs>
+              </FormGroup>
+
+              {answerInputMode === 'JSON' ? (
+                /* JSON Input Mode */
                 <FormGroup>
-                  <Input
-                    value={answerGuideData.nextDayPreview}
-                    onChange={e => setAnswerGuideData({
-                      ...answerGuideData,
-                      nextDayPreview: e.target.value
-                    })}
-                    placeholder="예: 동시성 제어"
+                  <Label>답변 가이드 JSON *</Label>
+                  <JsonTextarea
+                    value={jsonInput}
+                    onChange={handleJsonInputChange}
+                    placeholder={`{
+  "question": "JWT를 사용한 인증 방식의 장단점은?",
+  "analysis": "이 질문은 '트레이드오프형' 질문으로...",
+  "keywords": ["JWT", "인증", "보안", "확장성"],
+  "starStructure": {
+    "situation": "RESTful API 인증이 필요한 상황",
+    "task": "안전하고 확장 가능한 인증 구현",
+    "action": "JWT 도입 및 Refresh Token 전략 수립",
+    "result": "무상태 인증으로 서버 부하 50% 감소"
+  },
+  "personaAnswers": {
+    "bigTech": "대규모 트래픽 처리 중심 답변...",
+    "unicorn": "빠른 실행력 중심 답변..."
+  },
+  "followUpQuestions": [
+    "Refresh Token은 어떻게 관리하시나요?",
+    "Token 탈취 시 대응 방안은?"
+  ]
+}`}
+                    rows={25}
                   />
-                  <HelperText>이력서 속 약점/주제를 입력하세요. "{'{'}이름{'}'}님의 이력서 속 '{'{'}주제{'}'}' 관련 경험을 보고, 면접관이 물어볼 치명적인 약점을 발견했습니다." 형태로 표시됩니다.</HelperText>
+                  {jsonError && <JsonErrorMessage>{jsonError}</JsonErrorMessage>}
+                  <HelperText>
+                    위 형식에 맞춰 JSON을 입력하면 자동으로 파싱됩니다. question, analysis 필드는 필수입니다.
+                  </HelperText>
                 </FormGroup>
-              </NextDayPreviewSection>
+              ) : (
+                /* Form Input Mode */
+                <>
+                  <FormGroup>
+                    <Label>질문 *</Label>
+                    <Textarea
+                      value={answerGuideData.question}
+                      onChange={e => setAnswerGuideData({...answerGuideData, question: e.target.value})}
+                      placeholder="면접 질문을 입력하세요"
+                      rows={3}
+                    />
+                  </FormGroup>
+
+                  <FormGroup>
+                    <Label>질문 해부 *</Label>
+                    <Textarea
+                      value={answerGuideData.analysis}
+                      onChange={e => setAnswerGuideData({...answerGuideData, analysis: e.target.value})}
+                      placeholder="이 질문은 '트레이드오프형' 질문으로..."
+                      rows={3}
+                    />
+                  </FormGroup>
+
+                  <FormGroup>
+                    <Label>핵심 키워드</Label>
+                    {answerGuideData.keywords.map((keyword, index) => (
+                      <div key={`keyword-${index}`} style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                        <Input
+                          value={keyword}
+                          onChange={e => {
+                            const newKeywords = [...answerGuideData.keywords];
+                            newKeywords[index] = e.target.value;
+                            setAnswerGuideData({...answerGuideData, keywords: newKeywords});
+                          }}
+                          placeholder="키워드 입력"
+                        />
+                        {answerGuideData.keywords.length > 1 && (
+                          <ActionButton onClick={() => {
+                            const newKeywords = answerGuideData.keywords.filter((_, i) => i !== index);
+                            setAnswerGuideData({...answerGuideData, keywords: newKeywords});
+                          }}>삭제</ActionButton>
+                        )}
+                      </div>
+                    ))}
+                    <ActionButton onClick={() => setAnswerGuideData({...answerGuideData, keywords: [...answerGuideData.keywords, '']})}>
+                      + 키워드 추가
+                    </ActionButton>
+                  </FormGroup>
+
+                  <FormGroup>
+                    <Label>STAR 구조</Label>
+                    <Textarea
+                      value={answerGuideData.starStructure.situation}
+                      onChange={e => setAnswerGuideData({
+                        ...answerGuideData,
+                        starStructure: {...answerGuideData.starStructure, situation: e.target.value}
+                      })}
+                      placeholder="Situation: 상황 설명"
+                      rows={2}
+                      style={{ marginBottom: '8px' }}
+                    />
+                    <Textarea
+                      value={answerGuideData.starStructure.task}
+                      onChange={e => setAnswerGuideData({
+                        ...answerGuideData,
+                        starStructure: {...answerGuideData.starStructure, task: e.target.value}
+                      })}
+                      placeholder="Task: 과제 설명"
+                      rows={2}
+                      style={{ marginBottom: '8px' }}
+                    />
+                    <Textarea
+                      value={answerGuideData.starStructure.action}
+                      onChange={e => setAnswerGuideData({
+                        ...answerGuideData,
+                        starStructure: {...answerGuideData.starStructure, action: e.target.value}
+                      })}
+                      placeholder="Action: 행동 설명"
+                      rows={2}
+                      style={{ marginBottom: '8px' }}
+                    />
+                    <Textarea
+                      value={answerGuideData.starStructure.result}
+                      onChange={e => setAnswerGuideData({
+                        ...answerGuideData,
+                        starStructure: {...answerGuideData.starStructure, result: e.target.value}
+                      })}
+                      placeholder="Result: 결과 설명"
+                      rows={2}
+                    />
+                  </FormGroup>
+
+                  <FormGroup>
+                    <Label>페르소나별 답변</Label>
+                    <Textarea
+                      value={answerGuideData.personaAnswers.bigTech}
+                      onChange={e => setAnswerGuideData({
+                        ...answerGuideData,
+                        personaAnswers: {...answerGuideData.personaAnswers, bigTech: e.target.value}
+                      })}
+                      placeholder="빅테크 지원자 답변 예시"
+                      rows={2}
+                      style={{ marginBottom: '8px' }}
+                    />
+                    <Textarea
+                      value={answerGuideData.personaAnswers.unicorn}
+                      onChange={e => setAnswerGuideData({
+                        ...answerGuideData,
+                        personaAnswers: {...answerGuideData.personaAnswers, unicorn: e.target.value}
+                      })}
+                      placeholder="유니콘 지원자 답변 예시"
+                      rows={2}
+                    />
+                  </FormGroup>
+
+                  <FormGroup>
+                    <Label>예상 꼬리 질문</Label>
+                    {answerGuideData.followUpQuestions.map((question, index) => (
+                      <div key={`question-${index}`} style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                        <Textarea
+                          value={question}
+                          onChange={e => {
+                            const newQuestions = [...answerGuideData.followUpQuestions];
+                            newQuestions[index] = e.target.value;
+                            setAnswerGuideData({...answerGuideData, followUpQuestions: newQuestions});
+                          }}
+                          placeholder="예상 꼬리 질문"
+                          rows={2}
+                        />
+                        {answerGuideData.followUpQuestions.length > 1 && (
+                          <ActionButton onClick={() => {
+                            const newQuestions = answerGuideData.followUpQuestions.filter((_, i) => i !== index);
+                            setAnswerGuideData({...answerGuideData, followUpQuestions: newQuestions});
+                          }}>삭제</ActionButton>
+                        )}
+                      </div>
+                    ))}
+                    <ActionButton onClick={() => setAnswerGuideData({...answerGuideData, followUpQuestions: [...answerGuideData.followUpQuestions, '']})}>
+                      + 질문 추가
+                    </ActionButton>
+                  </FormGroup>
                 </>
               )}
             </>
@@ -1936,9 +2188,17 @@ const ApplicantSelectButton = styled.button<{ $hasSelection: boolean }>`
   align-items: center;
   transition: all 0.2s;
 
-  &:hover {
+  &:hover:not(:disabled) {
     border-color: ${({ theme }) => theme.colors.primary};
     background: ${({ $hasSelection }) => $hasSelection ? 'rgba(99, 102, 241, 0.08)' : '#f9fafb'};
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+    background: ${({ theme }) => theme.colors.gray[100]};
+    border-color: ${({ theme }) => theme.colors.gray[200]};
+    color: ${({ theme }) => theme.colors.text.secondary};
   }
 `;
 
