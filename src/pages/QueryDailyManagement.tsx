@@ -110,7 +110,7 @@ const QueryDailyManagement: React.FC = () => {
   const [selectedPurchaseId, setSelectedPurchaseId] = useState<string>('');
   const [showUserDetailModal, setShowUserDetailModal] = useState(false);
   const [showEmailModal, setShowEmailModal] = useState(false);
-  const [emailModalType, setEmailModalType] = useState<'question' | 'answerGuide' | 'welcome' | 'midFeedback' | 'complete' | 'purchaseConfirmation' | 'growthPlanQuestion' | 'growthPlanAnswerGuide' | 'feedbackRequest' | 'criticalHit'>('question');
+  const [emailModalType, setEmailModalType] = useState<'question' | 'answerGuide' | 'welcome' | 'midFeedback' | 'complete' | 'purchaseConfirmation' | 'growthPlanQuestion' | 'growthPlanAnswerGuide' | 'feedbackRequest' | 'criticalHit' | 'feedbackBonus'>('question');
   const [showAnswerGuideModal, setShowAnswerGuideModal] = useState(false);
   const [guideKeywords, setGuideKeywords] = useState<string[]>([]);
   const [keywordInput, setKeywordInput] = useState('');
@@ -547,6 +547,27 @@ const QueryDailyManagement: React.FC = () => {
                               }}
                             >
                               📮 2주후
+                            </button>
+                            <button
+                              style={{
+                                background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
+                                border: 'none',
+                                borderRadius: '6px',
+                                color: 'white',
+                                padding: '4px 8px',
+                                cursor: 'pointer',
+                                fontSize: '12px',
+                                marginLeft: '8px'
+                              }}
+                              onClick={() => {
+                                setSelectedPurchaseId(purchase.purchaseId);
+                                setSelectedUser({ email: purchase.memberEmail } as User);
+                                setSelectedUserName(purchase.memberName);
+                                setEmailModalType('feedbackBonus');
+                                setShowEmailModal(true);
+                              }}
+                            >
+                              🎁 피드백보너스
                             </button>
                           </>
                         )}

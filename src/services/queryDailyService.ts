@@ -373,6 +373,25 @@ class QueryDailyService {
       throw error;
     }
   }
+
+  /**
+   * 피드백 보너스 이메일 발송 (수동)
+   * 무료체험 사용자에게 피드백 보너스 이메일을 수동으로 발송
+   */
+  async sendFeedbackBonus(request: {
+    email: string;
+    displayName?: string;
+    scheduledAt?: string;
+  }): Promise<{ feedbackBonusId: string; email: string; displayName: string; status: string }> {
+    try {
+      const response = await apiClient.post('/api/query-daily/admin/feedback-bonus', request);
+      console.log('✅ Feedback bonus sent:', response.data.data);
+      return response.data.data;
+    } catch (error: any) {
+      console.error('❌ Failed to send feedback bonus:', error);
+      throw error;
+    }
+  }
 }
 
 export default new QueryDailyService();

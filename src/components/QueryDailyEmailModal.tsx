@@ -9,7 +9,7 @@ import { ko } from 'date-fns/locale';
 interface EmailSendModalProps {
   showEmailModal: boolean;
   setShowEmailModal: (show: boolean) => void;
-  emailModalType: 'question' | 'answerGuide' | 'welcome' | 'midFeedback' | 'complete' | 'purchaseConfirmation' | 'growthPlanQuestion' | 'growthPlanAnswerGuide' | 'feedbackRequest' | 'criticalHit';
+  emailModalType: 'question' | 'answerGuide' | 'welcome' | 'midFeedback' | 'complete' | 'purchaseConfirmation' | 'growthPlanQuestion' | 'growthPlanAnswerGuide' | 'feedbackRequest' | 'criticalHit' | 'feedbackBonus';
   selectedUserEmail?: string;
   selectedUserName?: string;  // 회원 이름 (이메일 템플릿에 표시)
   selectedPurchaseId?: string;  // 구매 ID (선택사항)
@@ -419,7 +419,8 @@ export const EmailSendModal = memo(({
       growthPlanQuestion: '그로스 플랜 질문',
       growthPlanAnswerGuide: '그로스 플랜 답변 가이드',
       feedbackRequest: '피드백 요청',
-      criticalHit: '크리티컬히트 답변 가이드'
+      criticalHit: '크리티컬히트 답변 가이드',
+      feedbackBonus: '피드백 보너스 안내'
     };
     return displayNames[type] || type;
   };
@@ -755,6 +756,17 @@ export const EmailSendModal = memo(({
           ? `${recipientEmail}로 ${scheduledDate} ${scheduledTime} ${getRelativeTime(scheduledDate, scheduledTime)} KST에 피드백 요청 메일 발송 예약되었습니다.`
           : `${recipientEmail}로 피드백 요청 메일을 발송했습니다.`;
         setEmailSuccess(successMessage);
+      } else if (emailModalType === 'feedbackBonus') {
+        // 피드백 보너스 이메일 발송 (query-daily-service API 호출)
+        await queryDailyService.sendFeedbackBonus({
+          email: recipientEmail,
+          displayName: questionData.userName || undefined,
+          scheduledAt: scheduledAt || undefined
+        });
+        const successMessage = isScheduled
+          ? `${recipientEmail}로 ${scheduledDate} ${scheduledTime} ${getRelativeTime(scheduledDate, scheduledTime)} KST에 피드백 보너스 메일 발송 예약되었습니다.`
+          : `${recipientEmail}로 피드백 보너스 메일을 발송했습니다.`;
+        setEmailSuccess(successMessage);
       }
 
       // Clear form data only on success
@@ -822,7 +834,8 @@ export const EmailSendModal = memo(({
              emailModalType === 'growthPlanQuestion' ? '그로스 플랜 질문 발송' :
              emailModalType === 'growthPlanAnswerGuide' ? '그로스 플랜 답변 가이드 발송' :
              emailModalType === 'feedbackRequest' ? '2주 후 피드백 요청 메일 발송' :
-             emailModalType === 'criticalHit' ? '크리티컬히트 답변 가이드 발송' : 'QueryDaily 메일 발송'}
+             emailModalType === 'criticalHit' ? '크리티컬히트 답변 가이드 발송' :
+             emailModalType === 'feedbackBonus' ? '피드백 보너스 메일 발송' : 'QueryDaily 메일 발송'}
           </h3>
           <CloseButton onClick={() => {
             setShowEmailModal(false);
