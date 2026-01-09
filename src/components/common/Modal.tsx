@@ -6,7 +6,7 @@ interface ModalProps {
   onClose: () => void;
   title?: string;
   children: React.ReactNode;
-  size?: 'small' | 'medium' | 'large';
+  size?: 'small' | 'medium' | 'large' | 'xlarge';
 }
 
 const Modal: React.FC<ModalProps> = ({
@@ -84,6 +84,7 @@ const ModalContainer = styled.div<{ size: string }>`
       small: '400px',
       medium: '600px',
       large: '800px',
+      xlarge: '1200px',
     };
     return sizes[size as keyof typeof sizes];
   }};

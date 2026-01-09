@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { EmailSendModal } from '../components/QueryDailyEmailModal';
 import queryDailyService, { type AnswerWithMember, type QuestionWithMember, type PurchaseAdmin } from '../services/queryDailyService';
+import { PurchaseDeliveryList, QuestionDetailModal, AnswerPreviewModal } from '../components/queryDaily';
+import BenchmarkTab from '../components/queryDaily/benchmark/BenchmarkTab';
 
 // Types
 type UserType = 'LEAD' | 'MEMBER';
@@ -104,7 +106,7 @@ const getCurrentDateTime = () => {
 };
 
 const QueryDailyManagement: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'users' | 'emails' | 'purchases'>('emails');
+  const [activeTab, setActiveTab] = useState<'users' | 'emails' | 'purchases' | 'benchmark'>('emails');
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [selectedUserName, setSelectedUserName] = useState<string>('');
   const [selectedPurchaseId, setSelectedPurchaseId] = useState<string>('');
@@ -120,6 +122,13 @@ const QueryDailyManagement: React.FC = () => {
   const [isLoadingAnswers, setIsLoadingAnswers] = useState(false);
   const [purchases, setPurchases] = useState<PurchaseAdmin[]>([]);
   const [isLoadingPurchases, setIsLoadingPurchases] = useState(false);
+
+  // Purchase delivery list state (질문/답변 보기)
+  const [expandedPurchaseId, setExpandedPurchaseId] = useState<string | null>(null);
+  const [selectedQuestion, setSelectedQuestion] = useState<QuestionWithMember | null>(null);
+  const [selectedAnswer, setSelectedAnswer] = useState<AnswerWithMember | null>(null);
+  const [showQuestionDetailModal, setShowQuestionDetailModal] = useState(false);
+  const [showAnswerPreviewModal, setShowAnswerPreviewModal] = useState(false);
 
   // Purchase sub-tabs (상품별 탭)
   const [purchaseProductTab, setPurchaseProductTab] = useState<'all' | 'TRIAL' | 'GROWTH_PLAN' | 'REAL_INTERVIEW' | 'CRITICAL_HIT' | 'LAST_CHECK' | 'RESUME_FIT'>('all');
@@ -428,7 +437,8 @@ const QueryDailyManagement: React.FC = () => {
                 </tr>
               ) : (
                 filteredPurchases.map(purchase => (
-                  <tr key={purchase.purchaseId}>
+                  <React.Fragment key={purchase.purchaseId}>
+                  <tr>
                     <td>
                       <div style={{ fontWeight: 500 }}>{purchase.memberName}</div>
                       <div style={{ fontSize: '12px', color: '#6b7280' }}>{purchase.memberEmail}</div>
@@ -574,9 +584,55 @@ const QueryDailyManagement: React.FC = () => {
                         {purchase.questionSentCount >= purchase.maxDeliveries && purchase.answerSentCount < purchase.maxDeliveries && (
                           <span style={{ fontSize: '11px', color: '#9ca3af', marginLeft: '4px', alignSelf: 'center' }}>질문완료</span>
                         )}
+                        {/* 발송이력 버튼 */}
+                        {(purchase.questionSentCount > 0 || purchase.answerSentCount > 0) && (
+                          <button
+                            style={{
+                              padding: '4px 8px',
+                              backgroundColor: expandedPurchaseId === purchase.purchaseId ? '#6366f1' : '#e5e7eb',
+                              color: expandedPurchaseId === purchase.purchaseId ? 'white' : '#374151',
+                              border: 'none',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '12px',
+                              marginLeft: '4px'
+                            }}
+                            onClick={() => {
+                              setExpandedPurchaseId(
+                                expandedPurchaseId === purchase.purchaseId ? null : purchase.purchaseId
+                              );
+                            }}
+                          >
+                            {expandedPurchaseId === purchase.purchaseId ? '접기 ▲' : '발송이력 ▼'}
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
+                  {/* 펼쳐진 발송이력 */}
+                  {expandedPurchaseId === purchase.purchaseId && (
+                    <tr>
+                      <td colSpan={6} style={{ padding: 0 }}>
+                        <PurchaseDeliveryList
+                          purchaseId={purchase.purchaseId}
+                          memberId={purchase.memberId}
+                          maxDeliveries={purchase.maxDeliveries}
+                          questionSentCount={purchase.questionSentCount}
+                          answerSentCount={purchase.answerSentCount}
+                          isExpanded={true}
+                          onQuestionClick={(q) => {
+                            setSelectedQuestion(q);
+                            setShowQuestionDetailModal(true);
+                          }}
+                          onAnswerClick={(a) => {
+                            setSelectedAnswer(a);
+                            setShowAnswerPreviewModal(true);
+                          }}
+                        />
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
                 ))
               )}
             </tbody>
@@ -606,7 +662,8 @@ const QueryDailyManagement: React.FC = () => {
                 </tr>
               ) : (
                 filteredPurchases.map(purchase => (
-                  <tr key={purchase.purchaseId}>
+                  <React.Fragment key={purchase.purchaseId}>
+                  <tr>
                     <td>
                       <div style={{ fontWeight: 500 }}>{purchase.memberName}</div>
                       <div style={{ fontSize: '12px', color: '#6b7280' }}>{purchase.memberEmail}</div>
@@ -706,8 +763,54 @@ const QueryDailyManagement: React.FC = () => {
                       ) : (
                         <span style={{ fontSize: '12px', color: '#9ca3af' }}>발송 완료</span>
                       )}
+                      {/* 발송이력 버튼 */}
+                      {(purchase.questionSentCount > 0 || purchase.answerSentCount > 0) && (
+                        <button
+                          style={{
+                            padding: '4px 8px',
+                            backgroundColor: expandedPurchaseId === purchase.purchaseId ? '#6366f1' : '#e5e7eb',
+                            color: expandedPurchaseId === purchase.purchaseId ? 'white' : '#374151',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '12px',
+                            marginLeft: '8px'
+                          }}
+                          onClick={() => {
+                            setExpandedPurchaseId(
+                              expandedPurchaseId === purchase.purchaseId ? null : purchase.purchaseId
+                            );
+                          }}
+                        >
+                          {expandedPurchaseId === purchase.purchaseId ? '접기 ▲' : '발송이력 ▼'}
+                        </button>
+                      )}
                     </td>
                   </tr>
+                  {/* 펼쳐진 발송이력 */}
+                  {expandedPurchaseId === purchase.purchaseId && (
+                    <tr>
+                      <td colSpan={6} style={{ padding: 0 }}>
+                        <PurchaseDeliveryList
+                          purchaseId={purchase.purchaseId}
+                          memberId={purchase.memberId}
+                          maxDeliveries={purchase.maxDeliveries}
+                          questionSentCount={purchase.questionSentCount}
+                          answerSentCount={purchase.answerSentCount}
+                          isExpanded={true}
+                          onQuestionClick={(q) => {
+                            setSelectedQuestion(q);
+                            setShowQuestionDetailModal(true);
+                          }}
+                          onAnswerClick={(a) => {
+                            setSelectedAnswer(a);
+                            setShowAnswerPreviewModal(true);
+                          }}
+                        />
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
                 ))
               )}
             </tbody>
@@ -834,109 +937,152 @@ const QueryDailyManagement: React.FC = () => {
                   const sentCount = purchase.answerSentCount || 0;
                   const totalCount = 3;
                   const isComplete = sentCount >= totalCount;
+                  const isExpanded = expandedPurchaseId === purchase.purchaseId;
 
                   return (
-                    <tr key={purchase.purchaseId}>
-                      <td>
-                        <div style={{ fontWeight: 500 }}>{purchase.memberName}</div>
-                        <div style={{ fontSize: '12px', color: '#6b7280' }}>{purchase.memberEmail}</div>
-                      </td>
-                      <td>{new Date(purchase.purchasedAt).toLocaleDateString('ko-KR')}</td>
-                      <td>
-                        {isComplete ? (
-                          <UserTypeBadge type="MEMBER" style={{ backgroundColor: '#10b981' }}>
-                            ✅ 완료 ({sentCount}/{totalCount})
-                          </UserTypeBadge>
-                        ) : sentCount > 0 ? (
-                          <UserTypeBadge type="LEAD" style={{ backgroundColor: '#3b82f6' }}>
-                            🔄 진행중 ({sentCount}/{totalCount})
-                          </UserTypeBadge>
-                        ) : (
-                          <UserTypeBadge type="LEAD" style={{ backgroundColor: '#fbbf24' }}>
-                            ⏳ 대기 ({sentCount}/{totalCount})
-                          </UserTypeBadge>
-                        )}
-                      </td>
-                      <td>
-                        {purchase.resumeId ? (
-                          <button
-                            style={{
-                              padding: '4px 8px',
-                              backgroundColor: '#3b82f6',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: '4px',
-                              cursor: 'pointer',
-                              fontSize: '12px'
-                            }}
-                            onClick={async () => {
-                              try {
-                                if (!purchase.resumeDownloadUrl) {
-                                  alert('이력서 다운로드 URL을 찾을 수 없습니다.');
-                                  return;
-                                }
+                    <React.Fragment key={purchase.purchaseId}>
+                      <tr>
+                        <td>
+                          <div style={{ fontWeight: 500 }}>{purchase.memberName}</div>
+                          <div style={{ fontSize: '12px', color: '#6b7280' }}>{purchase.memberEmail}</div>
+                        </td>
+                        <td>{new Date(purchase.purchasedAt).toLocaleDateString('ko-KR')}</td>
+                        <td>
+                          {isComplete ? (
+                            <UserTypeBadge type="MEMBER" style={{ backgroundColor: '#10b981' }}>
+                              ✅ 완료 ({sentCount}/{totalCount})
+                            </UserTypeBadge>
+                          ) : sentCount > 0 ? (
+                            <UserTypeBadge type="LEAD" style={{ backgroundColor: '#3b82f6' }}>
+                              🔄 진행중 ({sentCount}/{totalCount})
+                            </UserTypeBadge>
+                          ) : (
+                            <UserTypeBadge type="LEAD" style={{ backgroundColor: '#fbbf24' }}>
+                              ⏳ 대기 ({sentCount}/{totalCount})
+                            </UserTypeBadge>
+                          )}
+                        </td>
+                        <td>
+                          {purchase.resumeId ? (
+                            <button
+                              style={{
+                                padding: '4px 8px',
+                                backgroundColor: '#3b82f6',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontSize: '12px'
+                              }}
+                              onClick={async () => {
+                                try {
+                                  if (!purchase.resumeDownloadUrl) {
+                                    alert('이력서 다운로드 URL을 찾을 수 없습니다.');
+                                    return;
+                                  }
 
-                                // resumeDownloadUrl: /api/assets/{assetId}/download
-                                const assetId = purchase.resumeDownloadUrl.split('/')[3];
-                                await queryDailyService.downloadAsset(
-                                  assetId,
-                                  purchase.resumeFilename || 'resume.pdf'
-                                );
-                              } catch (error) {
-                                alert('이력서 다운로드 중 오류가 발생했습니다.');
-                              }
-                            }}
-                          >
-                            📄 다운로드
-                          </button>
-                        ) : (
-                          <span style={{ color: '#9ca3af' }}>-</span>
-                        )}
-                      </td>
-                      <td>
-                        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                          {[1, 2, 3].map(round => {
-                            const isSent = sentCount >= round;
-                            const isNext = sentCount === round - 1;
-                            return (
+                                  // resumeDownloadUrl: /api/assets/{assetId}/download
+                                  const assetId = purchase.resumeDownloadUrl.split('/')[3];
+                                  await queryDailyService.downloadAsset(
+                                    assetId,
+                                    purchase.resumeFilename || 'resume.pdf'
+                                  );
+                                } catch (error) {
+                                  alert('이력서 다운로드 중 오류가 발생했습니다.');
+                                }
+                              }}
+                            >
+                              📄 다운로드
+                            </button>
+                          ) : (
+                            <span style={{ color: '#9ca3af' }}>-</span>
+                          )}
+                        </td>
+                        <td>
+                          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', alignItems: 'center' }}>
+                            {[1, 2, 3].map(round => {
+                              const isSent = sentCount >= round;
+                              const isNext = sentCount === round - 1;
+                              return (
+                                <button
+                                  key={round}
+                                  style={{
+                                    padding: '4px 8px',
+                                    backgroundColor: isSent ? '#9ca3af' : isNext ? '#f97316' : '#e5e7eb',
+                                    color: isSent ? 'white' : isNext ? 'white' : '#6b7280',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    cursor: isSent ? 'not-allowed' : 'pointer',
+                                    fontSize: '11px',
+                                    opacity: isSent ? 0.6 : 1
+                                  }}
+                                  disabled={isSent}
+                                  onClick={() => {
+                                    if (isSent) return;
+                                    setSelectedUser({
+                                      id: purchase.memberId,
+                                      type: 'MEMBER',
+                                      name: purchase.memberName,
+                                      email: purchase.memberEmail,
+                                      applicationDate: purchase.purchasedAt,
+                                      resumeUrl: '',
+                                      totalDays: 3,
+                                      currentDay: round
+                                    });
+                                    setSelectedUserName(purchase.memberName);
+                                    setSelectedPurchaseId(purchase.purchaseId);
+                                    setEmailModalType('criticalHit');
+                                    setShowEmailModal(true);
+                                  }}
+                                >
+                                  {isSent ? `${round}회 ✓` : `${round}회차`}
+                                </button>
+                              );
+                            })}
+                            {sentCount > 0 && (
                               <button
-                                key={round}
                                 style={{
                                   padding: '4px 8px',
-                                  backgroundColor: isSent ? '#9ca3af' : isNext ? '#f97316' : '#e5e7eb',
-                                  color: isSent ? 'white' : isNext ? 'white' : '#6b7280',
+                                  backgroundColor: isExpanded ? '#6366f1' : '#e5e7eb',
+                                  color: isExpanded ? 'white' : '#6b7280',
                                   border: 'none',
                                   borderRadius: '4px',
-                                  cursor: isSent ? 'not-allowed' : 'pointer',
+                                  cursor: 'pointer',
                                   fontSize: '11px',
-                                  opacity: isSent ? 0.6 : 1
+                                  marginLeft: '4px'
                                 }}
-                                disabled={isSent}
-                                onClick={() => {
-                                  if (isSent) return;
-                                  setSelectedUser({
-                                    id: purchase.memberId,
-                                    type: 'MEMBER',
-                                    name: purchase.memberName,
-                                    email: purchase.memberEmail,
-                                    applicationDate: purchase.purchasedAt,
-                                    resumeUrl: '',
-                                    totalDays: 3,
-                                    currentDay: round
-                                  });
-                                  setSelectedUserName(purchase.memberName);
-                                  setSelectedPurchaseId(purchase.purchaseId);
-                                  setEmailModalType('criticalHit');
-                                  setShowEmailModal(true);
-                                }}
+                                onClick={() => setExpandedPurchaseId(isExpanded ? null : purchase.purchaseId)}
                               >
-                                {isSent ? `${round}회 ✓` : `${round}회차`}
+                                발송이력 {isExpanded ? '▲' : '▼'}
                               </button>
-                            );
-                          })}
-                        </div>
-                      </td>
-                    </tr>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                      {isExpanded && (
+                        <tr>
+                          <td colSpan={5} style={{ padding: 0 }}>
+                            <PurchaseDeliveryList
+                              purchaseId={purchase.purchaseId}
+                              memberId={purchase.memberId}
+                              maxDeliveries={3}
+                              questionSentCount={0}
+                              answerSentCount={purchase.answerSentCount}
+                              isExpanded={isExpanded}
+                              onQuestionClick={(q) => {
+                                setSelectedQuestion(q);
+                                setShowQuestionDetailModal(true);
+                              }}
+                              onAnswerClick={(a) => {
+                                setSelectedAnswer(a);
+                                setShowAnswerPreviewModal(true);
+                              }}
+                              mode="answerOnly"
+                            />
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
                   );
                 })
               )}
@@ -1935,12 +2081,19 @@ const QueryDailyManagement: React.FC = () => {
         >
           💳 구매 내역
         </Tab>
+        <Tab
+          className={activeTab === 'benchmark' ? 'active' : ''}
+          onClick={() => setActiveTab('benchmark')}
+        >
+          🧪 질문 벤치마크
+        </Tab>
       </TabBar>
 
       <Content>
         {activeTab === 'users' && renderUsers()}
         {activeTab === 'emails' && renderEmails()}
         {activeTab === 'purchases' && renderPurchases()}
+        {activeTab === 'benchmark' && <BenchmarkTab />}
       </Content>
 
       {/* 사용자 상세 모달 */}
@@ -2096,6 +2249,53 @@ const QueryDailyManagement: React.FC = () => {
           selectedPurchaseId={selectedPurchaseId}
         />
       )}
+
+      {/* 질문 상세 모달 */}
+      <QuestionDetailModal
+        isOpen={showQuestionDetailModal}
+        onClose={() => {
+          setShowQuestionDetailModal(false);
+          setSelectedQuestion(null);
+        }}
+        question={selectedQuestion}
+        onViewAnswer={() => {
+          // 질문에 연결된 답변 찾기
+          if (selectedQuestion) {
+            queryDailyService.getAnswers({ memberId: selectedQuestion.member.memberId, size: 100 })
+              .then((res) => {
+                const matchingAnswer = res.content.find(
+                  a => a.questionId === selectedQuestion.id ||
+                       a.currentDay === selectedQuestion.currentDay
+                );
+                if (matchingAnswer) {
+                  setSelectedAnswer(matchingAnswer);
+                  setShowQuestionDetailModal(false);
+                  setShowAnswerPreviewModal(true);
+                }
+              })
+              .catch(console.error);
+          }
+        }}
+      />
+
+      {/* 답변 미리보기 모달 */}
+      <AnswerPreviewModal
+        isOpen={showAnswerPreviewModal}
+        onClose={() => {
+          setShowAnswerPreviewModal(false);
+          setSelectedAnswer(null);
+        }}
+        answer={selectedAnswer}
+        onResend={async (answerId) => {
+          try {
+            await queryDailyService.resendAnswerGuide(answerId);
+            alert('답변 가이드가 재발송되었습니다.');
+            setShowAnswerPreviewModal(false);
+          } catch (error) {
+            alert('재발송 중 오류가 발생했습니다.');
+          }
+        }}
+      />
 
       {/* 답변 가이드 작성 모달 */}
       {showAnswerGuideModal && (

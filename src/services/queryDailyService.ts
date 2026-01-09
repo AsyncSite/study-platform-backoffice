@@ -34,6 +34,10 @@ export interface QuestionWithMember {
   totalDays?: number;
   scheduledAt: string;
   hasAnswer: boolean;
+  /** 실제 발송 여부 (Delivery 테이블 기준) */
+  sent: boolean;
+  /** 실제 발송 시간 (sent=true일 때만 값이 있음) */
+  sentAt?: string;
 }
 
 export interface Answer {
