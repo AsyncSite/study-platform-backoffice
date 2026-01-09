@@ -101,7 +101,7 @@ const GritMomentManagement: React.FC = () => {
   };
 
   const copyLink = (urlId: string) => {
-    const link = `https://querydaily.com/grit-moment/${urlId}`;
+    const link = `https://querydaily.asyncsite.com/grit-moment/${urlId}`;
     navigator.clipboard.writeText(link);
     alert('링크가 복사되었습니다.');
   };
@@ -147,7 +147,7 @@ const GritMomentManagement: React.FC = () => {
                 <Td>{price.email}</Td>
                 <Td>
                   <UrlContainer>
-                    <UrlText>querydaily.com/grit-moment/{price.urlId}</UrlText>
+                    <UrlText>querydaily.asyncsite.com/grit-moment/{price.urlId}</UrlText>
                     <CopyButton onClick={() => copyLink(price.urlId)} title="URL 복사">
                       📋
                     </CopyButton>
@@ -224,7 +224,7 @@ const GritMomentManagement: React.FC = () => {
                   readOnly
                   style={{ backgroundColor: '#f3f4f6', cursor: 'not-allowed' }}
                 />
-                <HelpText>결제 링크: querydaily.com/grit-moment/{formData.urlId || 'id'}</HelpText>
+                <HelpText>결제 링크: querydaily.asyncsite.com/grit-moment/{formData.urlId || 'id'}</HelpText>
               </FormGroup>
               <FormGroup>
                 <Label>결제 금액 *</Label>
