@@ -34,6 +34,8 @@ export interface QuestionWithMember {
   totalDays?: number;
   scheduledAt: string;
   hasAnswer: boolean;
+  sent?: boolean;
+  sentAt?: string;
 }
 
 export interface Answer {

@@ -17,6 +17,7 @@ const tabs: Tab[] = [
   { id: 'noti-management', label: '알림 관리', icon: '📥', path: '/noti-management' },
   { id: 'members', label: '회원 관리', icon: '👥', path: '/members' },
   { id: 'payments', label: '결제 관리', icon: '💳', path: '/payments' },
+  { id: 'grit-moment', label: '그릿모먼츠', icon: '🔥', path: '/grit-moment' },
   { id: 'settings', label: '설정', icon: '⚙️', path: '/myPage' },
 ];
 
