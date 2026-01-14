@@ -16,7 +16,7 @@ import type {
 } from '../types/benchmark';
 import type { ApiResponse } from '../types/api';
 
-const BENCHMARK_API_BASE = '/api/query-daily/admin/benchmark';
+const BENCHMARK_API_BASE = '/query-daily-service/api/v1/admin/benchmark';
 
 /**
  * 벤치마크 시작 (비동기)
@@ -90,7 +90,7 @@ export const getAvailableModels = async (): Promise<ModelInfo[]> => {
 export const checkEmbedding = async (resumeId: string): Promise<{ exists: boolean; chunkCount: number }> => {
   try {
     const response = await apiClient.get<ApiResponse<{ exists: boolean; chunkCount: number }>>(
-      `/api/query-daily/admin/embeddings/check/${resumeId}`
+      `/query-daily-service/api/v1/admin/embeddings/check/${resumeId}`
     );
     return response.data.data;
   } catch {
@@ -106,7 +106,7 @@ export const checkEmbedding = async (resumeId: string): Promise<{ exists: boolea
  */
 export const searchEmbedding = async (resumeId: string, query: string): Promise<RagSearchResult> => {
   const response = await apiClient.post<ApiResponse<RagSearchResult>>(
-    `/api/query-daily/admin/embeddings/search`,
+    `/query-daily-service/api/v1/admin/embeddings/search`,
     { resumeId, query, topK: 5 }
   );
   return response.data.data;
@@ -148,7 +148,7 @@ export const getHistoryByModel = async (
   return response.data.data;
 };
 
-const PROMPT_API_BASE = '/api/query-daily/admin/prompts';
+const PROMPT_API_BASE = '/query-daily-service/api/v1/admin/prompts';
 
 export const getPrompts = async (): Promise<PromptTemplate[]> => {
   const response = await apiClient.get<ApiResponse<PromptTemplate[]>>(PROMPT_API_BASE);
