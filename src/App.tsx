@@ -16,6 +16,7 @@ import NotiManagement from './pages/NotiManagement';
 import QueryDailyManagement from './pages/QueryDailyManagement';
 import QueryDailyMobileManagement from './pages/QueryDailyMobileManagement';
 import PaymentTransactionManagement from './pages/PaymentTransactionManagement';
+import GritMomentManagement from './pages/GritMomentManagement';
 
 function App() {
   return (
@@ -113,6 +114,16 @@ function App() {
                 <PrivateRoute>
                   <Layout>
                     <PaymentTransactionManagement />
+                  </Layout>
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/grit-moment"
+              element={
+                <PrivateRoute>
+                  <Layout>
+                    <GritMomentManagement />
                   </Layout>
                 </PrivateRoute>
               }
