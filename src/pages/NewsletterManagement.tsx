@@ -30,6 +30,11 @@ const NewsletterManagement: React.FC = () => {
   const [testEmail, setTestEmail] = useState('');
   const [testNewsletterId, setTestNewsletterId] = useState<number | null>(null);
 
+  // 예약 발송 모달
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [scheduleNewsletterId, setScheduleNewsletterId] = useState<number | null>(null);
+  const [scheduleDateTime, setScheduleDateTime] = useState('');
+
   useEffect(() => {
     fetchNewsletters();
     fetchSubscribers();
@@ -125,6 +130,41 @@ const NewsletterManagement: React.FC = () => {
     } catch (error) {
       console.error('Failed to send:', error);
       alert('발송에 실패했습니다.');
+    }
+  };
+
+  const openScheduleModal = (id: number) => {
+    setScheduleNewsletterId(id);
+    // 기본값: 내일 오전 9시
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(9, 0, 0, 0);
+    setScheduleDateTime(tomorrow.toISOString().slice(0, 16));
+    setShowScheduleModal(true);
+  };
+
+  const handleSchedule = async () => {
+    if (!scheduleNewsletterId || !scheduleDateTime) return;
+    try {
+      await newslettersApi.schedule(scheduleNewsletterId, { scheduledAt: scheduleDateTime });
+      alert('뉴스레터가 예약되었습니다.');
+      setShowScheduleModal(false);
+      fetchNewsletters();
+    } catch (error) {
+      console.error('Failed to schedule:', error);
+      alert('예약에 실패했습니다.');
+    }
+  };
+
+  const handleCancelSchedule = async (id: number) => {
+    if (!confirm('예약을 취소하시겠습니까?')) return;
+    try {
+      await newslettersApi.cancelSchedule(id);
+      alert('예약이 취소되었습니다.');
+      fetchNewsletters();
+    } catch (error) {
+      console.error('Failed to cancel schedule:', error);
+      alert('예약 취소에 실패했습니다.');
     }
   };
 
@@ -235,7 +275,7 @@ const NewsletterManagement: React.FC = () => {
                       <Th>제목</Th>
                       <Th>상태</Th>
                       <Th>발송 대상</Th>
-                      <Th>발송일</Th>
+                      <Th>예약/발송일</Th>
                       <Th>액션</Th>
                     </tr>
                   </thead>
@@ -250,7 +290,16 @@ const NewsletterManagement: React.FC = () => {
                         </Td>
                         <Td>{getStatusBadge(newsletter.status)}</Td>
                         <Td>{newsletter.recipientCount > 0 ? `${newsletter.recipientCount}명` : '-'}</Td>
-                        <Td>{formatDate(newsletter.sentAt)}</Td>
+                        <Td>
+                          {newsletter.status === 'SCHEDULED' && newsletter.scheduledAt && (
+                            <ScheduleInfo>
+                              <ScheduleIcon>⏰</ScheduleIcon>
+                              {formatDate(newsletter.scheduledAt)}
+                            </ScheduleInfo>
+                          )}
+                          {newsletter.status === 'SENT' && formatDate(newsletter.sentAt)}
+                          {newsletter.status === 'DRAFT' && '-'}
+                        </Td>
                         <Td>
                           <ActionButtons>
                             {newsletter.status === 'DRAFT' && (
@@ -262,10 +311,23 @@ const NewsletterManagement: React.FC = () => {
                                   테스트
                                 </ActionButton>
                                 <ActionButton $primary onClick={() => handleSend(newsletter.id)}>
-                                  발송
+                                  즉시 발송
+                                </ActionButton>
+                                <ActionButton $schedule onClick={() => openScheduleModal(newsletter.id)}>
+                                  예약
                                 </ActionButton>
                                 <ActionButton $danger onClick={() => handleDelete(newsletter.id)}>
                                   삭제
+                                </ActionButton>
+                              </>
+                            )}
+                            {newsletter.status === 'SCHEDULED' && (
+                              <>
+                                <ActionButton onClick={() => handleEdit(newsletter)}>
+                                  보기
+                                </ActionButton>
+                                <ActionButton $danger onClick={() => handleCancelSchedule(newsletter.id)}>
+                                  예약 취소
                                 </ActionButton>
                               </>
                             )}
@@ -321,7 +383,7 @@ const NewsletterManagement: React.FC = () => {
                 />
               </FormGroup>
 
-              {editingNewsletter?.status !== 'SENT' && (
+              {editingNewsletter?.status !== 'SENT' && editingNewsletter?.status !== 'SCHEDULED' && (
                 <EditorActions>
                   <SaveButton onClick={handleSave} disabled={isSaving}>
                     {isSaving ? '저장 중...' : '저장'}
@@ -331,11 +393,25 @@ const NewsletterManagement: React.FC = () => {
                       <TestButton onClick={() => openTestModal(editingNewsletter.id)}>
                         테스트 발송
                       </TestButton>
+                      <ScheduleButton onClick={() => openScheduleModal(editingNewsletter.id)}>
+                        예약 발송
+                      </ScheduleButton>
                       <SendButton onClick={() => handleSend(editingNewsletter.id)}>
-                        {totalCount}명에게 발송
+                        {totalCount}명에게 즉시 발송
                       </SendButton>
                     </>
                   )}
+                </EditorActions>
+              )}
+              {editingNewsletter?.status === 'SCHEDULED' && (
+                <EditorActions>
+                  <ScheduleInfo style={{ marginRight: 'auto' }}>
+                    <ScheduleIcon>⏰</ScheduleIcon>
+                    {formatDate(editingNewsletter.scheduledAt)} 예약됨
+                  </ScheduleInfo>
+                  <CancelScheduleButton onClick={() => handleCancelSchedule(editingNewsletter.id)}>
+                    예약 취소
+                  </CancelScheduleButton>
                 </EditorActions>
               )}
             </EditorContainer>
@@ -430,6 +506,36 @@ const NewsletterManagement: React.FC = () => {
               <ModalActions>
                 <CancelButton onClick={() => setShowTestModal(false)}>취소</CancelButton>
                 <ConfirmButton onClick={handleTestSend}>발송</ConfirmButton>
+              </ModalActions>
+            </ModalBody>
+          </Modal>
+        </ModalOverlay>
+      )}
+
+      {/* 예약 발송 모달 */}
+      {showScheduleModal && (
+        <ModalOverlay onClick={() => setShowScheduleModal(false)}>
+          <Modal onClick={(e) => e.stopPropagation()}>
+            <ModalHeader>
+              <ModalTitle>예약 발송</ModalTitle>
+              <CloseButton onClick={() => setShowScheduleModal(false)}>×</CloseButton>
+            </ModalHeader>
+            <ModalBody>
+              <FormGroup>
+                <Label>발송 예약 시간</Label>
+                <DateTimeInput
+                  type="datetime-local"
+                  value={scheduleDateTime}
+                  onChange={(e) => setScheduleDateTime(e.target.value)}
+                  min={new Date().toISOString().slice(0, 16)}
+                />
+                <ScheduleHint>
+                  선택한 시간에 {totalCount}명의 구독자에게 발송됩니다.
+                </ScheduleHint>
+              </FormGroup>
+              <ModalActions>
+                <CancelButton onClick={() => setShowScheduleModal(false)}>취소</CancelButton>
+                <ScheduleConfirmButton onClick={handleSchedule}>예약하기</ScheduleConfirmButton>
               </ModalActions>
             </ModalBody>
           </Modal>
@@ -626,7 +732,7 @@ const ActionButtons = styled.div`
   gap: 8px;
 `;
 
-const ActionButton = styled.button<{ $primary?: boolean; $danger?: boolean }>`
+const ActionButton = styled.button<{ $primary?: boolean; $danger?: boolean; $schedule?: boolean }>`
   padding: 6px 12px;
   border: 1px solid #d1d5db;
   border-radius: 4px;
@@ -659,9 +765,33 @@ const ActionButton = styled.button<{ $primary?: boolean; $danger?: boolean }>`
     }
   `}
 
+  ${({ $schedule }) =>
+    $schedule &&
+    `
+    background: #059669;
+    border-color: #059669;
+    color: white;
+
+    &:hover {
+      background: #047857;
+    }
+  `}
+
   &:hover {
     background: #f3f4f6;
   }
+`;
+
+const ScheduleInfo = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #1e40af;
+  font-size: 13px;
+`;
+
+const ScheduleIcon = styled.span`
+  font-size: 14px;
 `;
 
 const UnsubscribeButton = styled.button`
@@ -795,6 +925,20 @@ const TestButton = styled.button`
 
 const SendButton = styled.button`
   padding: 12px 24px;
+  background: #4f46e5;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+
+  &:hover {
+    background: #4338ca;
+  }
+`;
+
+const ScheduleButton = styled.button`
+  padding: 12px 24px;
   background: #059669;
   color: white;
   border: none;
@@ -804,6 +948,20 @@ const SendButton = styled.button`
 
   &:hover {
     background: #047857;
+  }
+`;
+
+const CancelScheduleButton = styled.button`
+  padding: 12px 24px;
+  background: #fee2e2;
+  color: #dc2626;
+  border: none;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+
+  &:hover {
+    background: #fecaca;
   }
 `;
 
@@ -886,5 +1044,38 @@ const ConfirmButton = styled.button`
 
   &:hover {
     background: #4338ca;
+  }
+`;
+
+const DateTimeInput = styled.input`
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+
+  &:focus {
+    outline: none;
+    border-color: #059669;
+    box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.1);
+  }
+`;
+
+const ScheduleHint = styled.p`
+  margin-top: 8px;
+  font-size: 13px;
+  color: #6b7280;
+`;
+
+const ScheduleConfirmButton = styled.button`
+  padding: 10px 20px;
+  background: #059669;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+
+  &:hover {
+    background: #047857;
   }
 `;

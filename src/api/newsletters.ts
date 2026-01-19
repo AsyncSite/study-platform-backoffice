@@ -92,4 +92,10 @@ export const newslettersApi = {
     const response = await newsletterClient.post(`${NEWSLETTER_API_URL}/${id}/schedule`, request);
     return response.data;
   },
+
+  // 예약 취소
+  cancelSchedule: async (id: number): Promise<{ message: string }> => {
+    const response = await newsletterClient.post(`${NEWSLETTER_API_URL}/${id}/cancel-schedule`);
+    return response.data;
+  },
 };
