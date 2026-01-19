@@ -4,10 +4,9 @@ import RichTextEditor from '../components/editor/RichTextEditor';
 import { newslettersApi, type Newsletter, type NewsletterStatus } from '../api/newsletters';
 import { newsletterApi, type Subscriber } from '../api/newsletter';
 
-type TabType = 'newsletters' | 'subscribers';
-
 const NewsletterManagement: React.FC = () => {
-  const [activeMainTab, setActiveMainTab] = useState<TabType>('newsletters');
+  // 구독자 섹션 접기/펼치기
+  const [subscribersExpanded, setSubscribersExpanded] = useState(false);
 
   // 뉴스레터 상태
   const [newsletters, setNewsletters] = useState<Newsletter[]>([]);
@@ -24,6 +23,10 @@ const NewsletterManagement: React.FC = () => {
   const [totalCount, setTotalCount] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
   const [unsubscribing, setUnsubscribing] = useState<string | null>(null);
+  // 페이지네이션 상태
+  const [currentPage, setCurrentPage] = useState(0);
+  const [pageSize] = useState(20);
+  const [totalPages, setTotalPages] = useState(0);
 
   // 테스트 발송 모달
   const [showTestModal, setShowTestModal] = useState(false);
@@ -37,8 +40,18 @@ const NewsletterManagement: React.FC = () => {
 
   useEffect(() => {
     fetchNewsletters();
-    fetchSubscribers();
   }, []);
+
+  // 구독자 목록은 검색어나 페이지가 변경될 때마다 다시 조회
+  useEffect(() => {
+    fetchSubscribers();
+  }, [currentPage, searchTerm]);
+
+  // 검색어 변경시 페이지를 0으로 리셋 (debounce 효과)
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    setCurrentPage(0);
+  };
 
   // ===== 뉴스레터 관련 함수 =====
   const fetchNewsletters = async () => {
@@ -172,9 +185,14 @@ const NewsletterManagement: React.FC = () => {
   const fetchSubscribers = async () => {
     try {
       setSubscribersLoading(true);
-      const data = await newsletterApi.getSubscribers();
-      setSubscribers(data.subscribers);
-      setTotalCount(data.totalCount);
+      const data = await newsletterApi.getSubscribersPage({
+        page: currentPage,
+        size: pageSize,
+        keyword: searchTerm,
+      });
+      setSubscribers(data.content);
+      setTotalCount(data.totalElements);
+      setTotalPages(data.totalPages);
     } catch (error) {
       console.error('Failed to fetch subscribers:', error);
     } finally {
@@ -182,16 +200,10 @@ const NewsletterManagement: React.FC = () => {
     }
   };
 
-  const filteredSubscribers = subscribers.filter(
-    (s) =>
-      s.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (s.name && s.name.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
-
   const copyEmails = () => {
-    const emails = filteredSubscribers.map((s) => s.email).join(', ');
+    const emails = subscribers.map((s) => s.email).join(', ');
     navigator.clipboard.writeText(emails);
-    alert(`${filteredSubscribers.length}개의 이메일이 복사되었습니다.`);
+    alert(`${subscribers.length}개의 이메일이 복사되었습니다. (현재 페이지)`);
   };
 
   const handleUnsubscribe = async (email: string) => {
@@ -239,25 +251,8 @@ const NewsletterManagement: React.FC = () => {
         </div>
       </Header>
 
-      {/* 메인 탭 네비게이션 */}
-      <TabNavigation>
-        <Tab
-          $active={activeMainTab === 'newsletters'}
-          onClick={() => { setActiveMainTab('newsletters'); setActiveView('list'); }}
-        >
-          발송 관리
-        </Tab>
-        <Tab
-          $active={activeMainTab === 'subscribers'}
-          onClick={() => setActiveMainTab('subscribers')}
-        >
-          구독자 ({totalCount})
-        </Tab>
-      </TabNavigation>
-
-      {/* 뉴스레터 발송 관리 탭 */}
-      {activeMainTab === 'newsletters' && (
-        <>
+      {/* 뉴스레터 발송 관리 섹션 */}
+      <Section>
           {activeView === 'list' ? (
             <>
               <SectionHeader>
@@ -416,16 +411,21 @@ const NewsletterManagement: React.FC = () => {
               )}
             </EditorContainer>
           )}
-        </>
-      )}
+      </Section>
 
-      {/* 구독자 관리 탭 */}
-      {activeMainTab === 'subscribers' && (
-        <>
-          <SectionHeader>
-            <SectionTitle>구독자 목록</SectionTitle>
-            <CopyButton onClick={copyEmails} disabled={filteredSubscribers.length === 0}>
-              이메일 복사 ({filteredSubscribers.length})
+      {/* 구독자 관리 섹션 */}
+      <Section>
+        <CollapsibleHeader onClick={() => setSubscribersExpanded(!subscribersExpanded)}>
+          <SectionTitle>구독자 ({totalCount}명)</SectionTitle>
+          <ExpandIcon $expanded={subscribersExpanded}>{subscribersExpanded ? '▼' : '▶'}</ExpandIcon>
+        </CollapsibleHeader>
+
+        {subscribersExpanded && (
+          <>
+            <SectionHeader>
+              <div />
+            <CopyButton onClick={copyEmails} disabled={subscribers.length === 0}>
+              현재 페이지 이메일 복사 ({subscribers.length})
             </CopyButton>
           </SectionHeader>
 
@@ -434,7 +434,7 @@ const NewsletterManagement: React.FC = () => {
               type="text"
               placeholder="이메일 또는 이름으로 검색..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => handleSearchChange(e.target.value)}
             />
           </SearchBox>
 
@@ -452,7 +452,7 @@ const NewsletterManagement: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredSubscribers.map((subscriber) => (
+                {subscribers.map((subscriber) => (
                   <tr key={subscriber.id}>
                     <Td>{subscriber.email}</Td>
                     <Td>{subscriber.name || '-'}</Td>
@@ -470,7 +470,7 @@ const NewsletterManagement: React.FC = () => {
                     </Td>
                   </tr>
                 ))}
-                {filteredSubscribers.length === 0 && (
+                {subscribers.length === 0 && (
                   <tr>
                     <Td colSpan={5}>
                       <EmptyText>
@@ -482,8 +482,42 @@ const NewsletterManagement: React.FC = () => {
               </tbody>
             </Table>
           )}
-        </>
-      )}
+
+          {/* 페이지네이션 */}
+          {totalPages > 1 && (
+            <Pagination>
+              <PageButton
+                onClick={() => setCurrentPage(0)}
+                disabled={currentPage === 0}
+              >
+                처음
+              </PageButton>
+              <PageButton
+                onClick={() => setCurrentPage(currentPage - 1)}
+                disabled={currentPage === 0}
+              >
+                이전
+              </PageButton>
+              <PageInfo>
+                {currentPage + 1} / {totalPages} 페이지
+              </PageInfo>
+              <PageButton
+                onClick={() => setCurrentPage(currentPage + 1)}
+                disabled={currentPage >= totalPages - 1}
+              >
+                다음
+              </PageButton>
+              <PageButton
+                onClick={() => setCurrentPage(totalPages - 1)}
+                disabled={currentPage >= totalPages - 1}
+              >
+                마지막
+              </PageButton>
+            </Pagination>
+          )}
+          </>
+        )}
+      </Section>
 
       {/* 테스트 발송 모달 */}
       {showTestModal && (
@@ -569,28 +603,30 @@ const Description = styled.p`
   color: #666;
 `;
 
-const TabNavigation = styled.div`
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-  border-bottom: 1px solid #e5e7eb;
+const Section = styled.div`
+  margin-bottom: 32px;
 `;
 
-const Tab = styled.button<{ $active: boolean }>`
-  padding: 12px 24px;
-  background: none;
-  border: none;
-  font-size: 14px;
-  font-weight: 500;
+const CollapsibleHeader = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: #f8f9fa;
+  border-radius: 8px;
   cursor: pointer;
-  color: ${({ $active }) => ($active ? '#4f46e5' : '#6b7280')};
-  border-bottom: 2px solid ${({ $active }) => ($active ? '#4f46e5' : 'transparent')};
-  margin-bottom: -1px;
-  transition: all 0.2s;
+  margin-bottom: 16px;
+  transition: background 0.2s;
 
   &:hover {
-    color: #4f46e5;
+    background: #e9ecef;
   }
+`;
+
+const ExpandIcon = styled.span<{ $expanded: boolean }>`
+  font-size: 12px;
+  color: #6b7280;
+  transition: transform 0.2s;
 `;
 
 const SectionHeader = styled.div`
@@ -1078,4 +1114,41 @@ const ScheduleConfirmButton = styled.button`
   &:hover {
     background: #047857;
   }
+`;
+
+// 페이지네이션 스타일
+const Pagination = styled.div`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin-top: 24px;
+  padding: 16px 0;
+`;
+
+const PageButton = styled.button`
+  padding: 8px 16px;
+  background: white;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover:not(:disabled) {
+    background: #f3f4f6;
+    border-color: #9ca3af;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
+
+const PageInfo = styled.span`
+  padding: 8px 16px;
+  font-size: 14px;
+  color: #374151;
+  font-weight: 500;
 `;
