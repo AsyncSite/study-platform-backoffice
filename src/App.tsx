@@ -18,6 +18,7 @@ import QueryDailyMobileManagement from './pages/QueryDailyMobileManagement';
 import PaymentTransactionManagement from './pages/PaymentTransactionManagement';
 import GritMomentManagement from './pages/GritMomentManagement';
 import SubscriberManagement from './pages/SubscriberManagement';
+import NewsletterManagement from './pages/NewsletterManagement';
 
 function App() {
   return (
@@ -135,6 +136,16 @@ function App() {
                 <PrivateRoute>
                   <Layout>
                     <SubscriberManagement />
+                  </Layout>
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/newsletters"
+              element={
+                <PrivateRoute>
+                  <Layout>
+                    <NewsletterManagement />
                   </Layout>
                 </PrivateRoute>
               }
