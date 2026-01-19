@@ -7,6 +7,7 @@ const SubscriberManagement: React.FC = () => {
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [unsubscribing, setUnsubscribing] = useState<string | null>(null);
 
   useEffect(() => {
     fetchSubscribers();
@@ -42,6 +43,22 @@ const SubscriberManagement: React.FC = () => {
     alert(`${filteredSubscribers.length}개의 이메일이 복사되었습니다.`);
   };
 
+  const handleUnsubscribe = async (email: string) => {
+    if (!confirm(`정말 "${email}" 구독을 취소하시겠습니까?`)) return;
+
+    setUnsubscribing(email);
+    try {
+      await newsletterApi.unsubscribe(email);
+      alert('구독이 취소되었습니다.');
+      fetchSubscribers();
+    } catch (error) {
+      console.error('Failed to unsubscribe:', error);
+      alert('구독 취소에 실패했습니다.');
+    } finally {
+      setUnsubscribing(null);
+    }
+  };
+
   return (
     <Container>
       <Header>
@@ -75,6 +92,7 @@ const SubscriberManagement: React.FC = () => {
               <Th>이름</Th>
               <Th>유입 경로</Th>
               <Th>구독일</Th>
+              <Th>액션</Th>
             </tr>
           </thead>
           <tbody>
@@ -86,11 +104,19 @@ const SubscriberManagement: React.FC = () => {
                   <SourceBadge>{subscriber.source || 'direct'}</SourceBadge>
                 </Td>
                 <Td>{formatDate(subscriber.subscribedAt)}</Td>
+                <Td>
+                  <UnsubscribeButton
+                    onClick={() => handleUnsubscribe(subscriber.email)}
+                    disabled={unsubscribing === subscriber.email}
+                  >
+                    {unsubscribing === subscriber.email ? '처리중...' : '구독 취소'}
+                  </UnsubscribeButton>
+                </Td>
               </tr>
             ))}
             {filteredSubscribers.length === 0 && (
               <tr>
-                <Td colSpan={4}>
+                <Td colSpan={5}>
                   <EmptyText>
                     {searchTerm ? '검색 결과가 없습니다.' : '구독자가 없습니다.'}
                   </EmptyText>
@@ -213,4 +239,25 @@ const EmptyText = styled.p`
   text-align: center;
   color: #9ca3af;
   padding: 20px;
+`;
+
+const UnsubscribeButton = styled.button`
+  padding: 6px 12px;
+  background: #fee2e2;
+  color: #dc2626;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover:not(:disabled) {
+    background: #fecaca;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
 `;
