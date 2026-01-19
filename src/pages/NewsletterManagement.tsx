@@ -5,8 +5,8 @@ import { newslettersApi, type Newsletter, type NewsletterStatus } from '../api/n
 import { newsletterApi, type Subscriber } from '../api/newsletter';
 
 const NewsletterManagement: React.FC = () => {
-  // 구독자 섹션 접기/펼치기
-  const [subscribersExpanded, setSubscribersExpanded] = useState(false);
+  // 구독자 섹션 접기/펼치기 (기본 펼침)
+  const [subscribersExpanded, setSubscribersExpanded] = useState(true);
 
   // 뉴스레터 상태
   const [newsletters, setNewsletters] = useState<Newsletter[]>([]);
