@@ -17,7 +17,6 @@ import QueryDailyManagement from './pages/QueryDailyManagement';
 import QueryDailyMobileManagement from './pages/QueryDailyMobileManagement';
 import PaymentTransactionManagement from './pages/PaymentTransactionManagement';
 import GritMomentManagement from './pages/GritMomentManagement';
-import SubscriberManagement from './pages/SubscriberManagement';
 import NewsletterManagement from './pages/NewsletterManagement';
 
 function App() {
@@ -126,16 +125,6 @@ function App() {
                 <PrivateRoute>
                   <Layout>
                     <GritMomentManagement />
-                  </Layout>
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/subscribers"
-              element={
-                <PrivateRoute>
-                  <Layout>
-                    <SubscriberManagement />
                   </Layout>
                 </PrivateRoute>
               }
