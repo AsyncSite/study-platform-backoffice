@@ -47,7 +47,7 @@ export interface SendResult {
   newsletterId: number;
   subscriberId: string;
   email: string;
-  status: 'SENT' | 'FAILED' | 'PENDING';
+  status: 'SENT' | 'FAILED' | 'SCHEDULED' | 'CANCELLED';
   notificationId: string | null;
   errorMessage: string | null;
   isTest: boolean;

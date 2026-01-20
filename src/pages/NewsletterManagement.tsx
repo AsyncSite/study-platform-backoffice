@@ -674,7 +674,7 @@ const NewsletterManagement: React.FC = () => {
                         <Td>{result.email}</Td>
                         <Td>
                           <SendStatusBadge $status={result.status}>
-                            {result.status === 'SENT' ? '성공' : result.status === 'FAILED' ? '실패' : '대기'}
+                            {result.status === 'SENT' ? '성공' : result.status === 'FAILED' ? '실패' : result.status === 'SCHEDULED' ? '예약됨' : '취소됨'}
                           </SendStatusBadge>
                         </Td>
                         <Td>{result.isTest ? '예' : '-'}</Td>
@@ -1337,6 +1337,11 @@ const SendResultsModal = styled.div`
   overflow: hidden;
   display: flex;
   flex-direction: column;
+
+  ${ModalBody} {
+    flex: 1;
+    overflow-y: auto;
+  }
 `;
 
 const StatsContainer = styled.div`
@@ -1390,7 +1395,7 @@ const SendResultsTable = styled.table`
   }
 `;
 
-const SendStatusBadge = styled.span<{ $status: 'SENT' | 'FAILED' | 'PENDING' }>`
+const SendStatusBadge = styled.span<{ $status: 'SENT' | 'FAILED' | 'SCHEDULED' | 'CANCELLED' }>`
   display: inline-block;
   padding: 4px 8px;
   border-radius: 4px;
@@ -1403,8 +1408,10 @@ const SendStatusBadge = styled.span<{ $status: 'SENT' | 'FAILED' | 'PENDING' }>`
         return 'background: #d1fae5; color: #065f46;';
       case 'FAILED':
         return 'background: #fee2e2; color: #dc2626;';
-      case 'PENDING':
-        return 'background: #fef3c7; color: #92400e;';
+      case 'SCHEDULED':
+        return 'background: #dbeafe; color: #1e40af;';
+      case 'CANCELLED':
+        return 'background: #f3f4f6; color: #6b7280;';
     }
   }}
 `;
