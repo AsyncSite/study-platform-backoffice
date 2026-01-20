@@ -74,6 +74,11 @@ export interface PreviewResponse {
   htmlContent: string;
 }
 
+export interface ImageUploadResponse {
+  url: string;
+  key: string;
+}
+
 const NEWSLETTER_API_URL = '/api/grit-service/grit/newsletter/newsletters';
 
 export const newslettersApi = {
@@ -155,5 +160,26 @@ export const newslettersApi = {
   previewDirect: async (title: string, content: string): Promise<PreviewResponse> => {
     const response = await newsletterClient.post(`${NEWSLETTER_API_URL}/preview`, { title, content });
     return response.data;
+  },
+
+  // 이미지 업로드
+  uploadImage: async (file: File): Promise<ImageUploadResponse> => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await newsletterClient.post('/api/grit-service/grit/newsletter/images', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+      timeout: 30000, // 이미지 업로드는 시간이 더 걸릴 수 있음
+    });
+    return response.data;
+  },
+
+  // 이미지 삭제
+  deleteImage: async (key: string): Promise<void> => {
+    await newsletterClient.delete('/api/grit-service/grit/newsletter/images', {
+      params: { key },
+    });
   },
 };

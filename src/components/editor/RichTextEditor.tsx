@@ -1,11 +1,13 @@
-import { useEffect } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import CharacterCountExtension from '@tiptap/extension-character-count';
 import Link from '@tiptap/extension-link';
 import Heading from '@tiptap/extension-heading';
+import Image from '@tiptap/extension-image';
 import styled from 'styled-components';
+import { newslettersApi } from '../../api/newsletters';
 
 interface RichTextEditorProps {
   value: string;
@@ -22,6 +24,9 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
   maxLength = 50000,
   disabled = false,
 }) => {
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -41,6 +46,13 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
         HTMLAttributes: {
           target: '_blank',
           rel: 'noopener noreferrer',
+        },
+      }),
+      Image.configure({
+        inline: false,
+        allowBase64: false,
+        HTMLAttributes: {
+          class: 'newsletter-image',
         },
       }),
     ],
@@ -78,6 +90,68 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
       return;
     }
     editor?.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
+  };
+
+  const handleImageUpload = useCallback(async (file: File) => {
+    if (!editor) return;
+
+    // 파일 검증
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      alert('지원하지 않는 파일 형식입니다. JPEG, PNG, GIF, WebP만 가능합니다.');
+      return;
+    }
+
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (file.size > maxSize) {
+      alert('파일 크기가 너무 큽니다. 최대 5MB까지 가능합니다.');
+      return;
+    }
+
+    setIsUploading(true);
+
+    try {
+      const response = await newslettersApi.uploadImage(file);
+      editor.chain().focus().setImage({ src: response.url }).run();
+    } catch (error) {
+      console.error('Image upload failed:', error);
+      alert('이미지 업로드에 실패했습니다.');
+    } finally {
+      setIsUploading(false);
+    }
+  }, [editor]);
+
+  const handleImageButtonClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      handleImageUpload(file);
+    }
+    // Reset input to allow selecting the same file again
+    e.target.value = '';
+  };
+
+  // 드래그 앤 드롭 처리
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (disabled || isUploading) return;
+
+    const files = Array.from(e.dataTransfer.files);
+    const imageFile = files.find(file => file.type.startsWith('image/'));
+
+    if (imageFile) {
+      handleImageUpload(imageFile);
+    }
+  }, [disabled, isUploading, handleImageUpload]);
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
   };
 
   return (
@@ -180,16 +254,35 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
           >
             링크
           </ToolbarButton>
+          <ToolbarButton
+            type="button"
+            onClick={handleImageButtonClick}
+            disabled={disabled || isUploading}
+            title="이미지 삽입"
+            $loading={isUploading}
+          >
+            {isUploading ? '업로드 중...' : '이미지'}
+          </ToolbarButton>
         </ToolbarGroup>
       </Toolbar>
 
-      <EditorContentWrapper>
+      <EditorContentWrapper onDrop={handleDrop} onDragOver={handleDragOver}>
         <EditorContent editor={editor} />
       </EditorContentWrapper>
 
       <Footer>
+        <FooterHint>이미지: 드래그 앤 드롭 또는 버튼 클릭 (최대 5MB)</FooterHint>
         <CharacterCount>{characterCount.toLocaleString()} / {maxLength.toLocaleString()}</CharacterCount>
       </Footer>
+
+      {/* Hidden file input for image upload */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/gif,image/webp"
+        style={{ display: 'none' }}
+        onChange={handleFileChange}
+      />
     </EditorWrapper>
   );
 };
@@ -226,12 +319,14 @@ const Divider = styled.div`
   margin: 0 8px;
 `;
 
-const ToolbarButton = styled.button<{ $active?: boolean }>`
+const ToolbarButton = styled.button<{ $active?: boolean; $loading?: boolean }>`
   padding: 6px 10px;
   border: none;
   border-radius: 4px;
-  background: ${({ $active }) => ($active ? '#e0e7ff' : 'transparent')};
-  color: ${({ $active }) => ($active ? '#4f46e5' : '#374151')};
+  background: ${({ $active, $loading }) =>
+    $loading ? '#fef3c7' : $active ? '#e0e7ff' : 'transparent'};
+  color: ${({ $active, $loading }) =>
+    $loading ? '#92400e' : $active ? '#4f46e5' : '#374151'};
   font-size: 13px;
   cursor: pointer;
   transition: all 0.2s;
@@ -291,6 +386,15 @@ const EditorContentWrapper = styled.div`
       text-decoration: underline;
     }
 
+    /* 이미지 스타일 */
+    img.newsletter-image {
+      max-width: 100%;
+      height: auto;
+      border-radius: 8px;
+      margin: 1rem 0;
+      display: block;
+    }
+
     p.is-editor-empty:first-child::before {
       content: attr(data-placeholder);
       float: left;
@@ -306,7 +410,13 @@ const Footer = styled.div`
   background: #f9fafb;
   border-top: 1px solid #e5e7eb;
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
+`;
+
+const FooterHint = styled.span`
+  font-size: 11px;
+  color: #9ca3af;
 `;
 
 const CharacterCount = styled.span`
