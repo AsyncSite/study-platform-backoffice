@@ -167,13 +167,12 @@ export const newslettersApi = {
     const formData = new FormData();
     formData.append('file', file);
 
-    // axios가 Content-Type과 boundary를 자동으로 설정하도록 헤더 제거
-    const response = await newsletterClient.post('/api/grit-service/grit/newsletter/images', formData, {
-      headers: {
-        'Content-Type': undefined, // 기본 JSON 헤더 제거, axios가 자동 설정
-      },
-      timeout: 30000,
-    });
+    // FormData 업로드용 별도 axios 요청 (Content-Type 자동 설정)
+    const response = await axios.post(
+      `${env.apiBaseUrl}/api/grit-service/grit/newsletter/images`,
+      formData,
+      { timeout: 30000 }
+    );
     return response.data;
   },
 
