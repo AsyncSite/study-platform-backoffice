@@ -248,6 +248,20 @@ const NewsletterManagement: React.FC = () => {
     }
   };
 
+  const handlePreviewById = async (id: number) => {
+    setPreviewLoading(true);
+    try {
+      const response = await newslettersApi.preview(id);
+      setPreviewHtml(response.htmlContent);
+      setShowPreviewModal(true);
+    } catch (error) {
+      console.error('Failed to preview:', error);
+      alert('미리보기 생성에 실패했습니다.');
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
   // ===== 구독자 관련 함수 =====
   const fetchSubscribers = async () => {
     try {
@@ -369,6 +383,9 @@ const NewsletterManagement: React.FC = () => {
                                 <ActionButton onClick={() => handleEdit(newsletter)}>
                                   수정
                                 </ActionButton>
+                                <ActionButton $preview onClick={() => handlePreviewById(newsletter.id)}>
+                                  미리보기
+                                </ActionButton>
                                 <ActionButton onClick={() => openTestModal(newsletter.id)}>
                                   테스트
                                 </ActionButton>
@@ -388,6 +405,9 @@ const NewsletterManagement: React.FC = () => {
                                 <ActionButton onClick={() => handleEdit(newsletter)}>
                                   보기
                                 </ActionButton>
+                                <ActionButton $preview onClick={() => handlePreviewById(newsletter.id)}>
+                                  미리보기
+                                </ActionButton>
                                 <ActionButton $danger onClick={() => handleCancelSchedule(newsletter.id)}>
                                   예약 취소
                                 </ActionButton>
@@ -397,6 +417,9 @@ const NewsletterManagement: React.FC = () => {
                               <>
                                 <ActionButton onClick={() => handleEdit(newsletter)}>
                                   보기
+                                </ActionButton>
+                                <ActionButton $preview onClick={() => handlePreviewById(newsletter.id)}>
+                                  미리보기
                                 </ActionButton>
                                 <ActionButton $history onClick={() => openSendResultsModal(newsletter.id)}>
                                   발송 이력
@@ -976,7 +999,7 @@ const ActionButtons = styled.div`
   gap: 8px;
 `;
 
-const ActionButton = styled.button<{ $primary?: boolean; $danger?: boolean; $schedule?: boolean; $history?: boolean }>`
+const ActionButton = styled.button<{ $primary?: boolean; $danger?: boolean; $schedule?: boolean; $history?: boolean; $preview?: boolean }>`
   padding: 6px 12px;
   border: 1px solid #d1d5db;
   border-radius: 4px;
@@ -1030,6 +1053,18 @@ const ActionButton = styled.button<{ $primary?: boolean; $danger?: boolean; $sch
 
     &:hover {
       background: #0369a1;
+    }
+  `}
+
+  ${({ $preview }) =>
+    $preview &&
+    `
+    background: #7c3aed;
+    border-color: #7c3aed;
+    color: white;
+
+    &:hover {
+      background: #6d28d9;
     }
   `}
 
@@ -1497,18 +1532,20 @@ const PreviewModal = styled.div`
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
 `;
 
 const PreviewModalBody = styled.div`
   flex: 1;
-  padding: 0;
-  overflow: hidden;
-  background: #f3f4f6;
+  padding: 16px;
+  overflow: auto;
+  background: #f8f9fa;
 `;
 
 const PreviewFrame = styled.iframe`
   width: 100%;
-  height: 70vh;
-  border: none;
-  background: white;
+  height: 65vh;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background-color: #ffffff;
 `;
