@@ -70,6 +70,10 @@ export interface SendStats {
   successRate: number;
 }
 
+export interface PreviewResponse {
+  htmlContent: string;
+}
+
 const NEWSLETTER_API_URL = '/api/grit-service/grit/newsletter/newsletters';
 
 export const newslettersApi = {
@@ -138,6 +142,18 @@ export const newslettersApi = {
   // 발송 통계 조회
   getSendStats: async (id: number): Promise<SendStats> => {
     const response = await newsletterClient.get(`${NEWSLETTER_API_URL}/${id}/send-stats`);
+    return response.data;
+  },
+
+  // 미리보기 (기존 뉴스레터)
+  preview: async (id: number): Promise<PreviewResponse> => {
+    const response = await newsletterClient.post(`${NEWSLETTER_API_URL}/${id}/preview`);
+    return response.data;
+  },
+
+  // 미리보기 (직접 내용 전달)
+  previewDirect: async (title: string, content: string): Promise<PreviewResponse> => {
+    const response = await newsletterClient.post(`${NEWSLETTER_API_URL}/preview`, { title, content });
     return response.data;
   },
 };

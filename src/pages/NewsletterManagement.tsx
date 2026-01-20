@@ -47,6 +47,11 @@ const NewsletterManagement: React.FC = () => {
   const [sendResultsPage, setSendResultsPage] = useState(0);
   const [sendResultsTotalPages, setSendResultsTotalPages] = useState(0);
 
+  // 미리보기 모달
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [previewHtml, setPreviewHtml] = useState<string>('');
+  const [previewLoading, setPreviewLoading] = useState(false);
+
   useEffect(() => {
     fetchNewsletters();
   }, []);
@@ -220,6 +225,26 @@ const NewsletterManagement: React.FC = () => {
     if (sendResultsNewsletterId) {
       setSendResultsPage(newPage);
       fetchSendResults(sendResultsNewsletterId, newPage);
+    }
+  };
+
+  // ===== 미리보기 관련 함수 =====
+  const handlePreview = async () => {
+    if (!title.trim()) {
+      alert('제목을 입력해주세요.');
+      return;
+    }
+
+    setPreviewLoading(true);
+    try {
+      const response = await newslettersApi.previewDirect(title, content);
+      setPreviewHtml(response.htmlContent);
+      setShowPreviewModal(true);
+    } catch (error) {
+      console.error('Failed to preview:', error);
+      alert('미리보기 생성에 실패했습니다.');
+    } finally {
+      setPreviewLoading(false);
     }
   };
 
@@ -430,6 +455,9 @@ const NewsletterManagement: React.FC = () => {
                   <SaveButton onClick={handleSave} disabled={isSaving}>
                     {isSaving ? '저장 중...' : '저장'}
                   </SaveButton>
+                  <PreviewButton onClick={handlePreview} disabled={previewLoading}>
+                    {previewLoading ? '로딩...' : '미리보기'}
+                  </PreviewButton>
                   {editingNewsletter && (
                     <>
                       <TestButton onClick={() => openTestModal(editingNewsletter.id)}>
@@ -620,6 +648,24 @@ const NewsletterManagement: React.FC = () => {
               </ModalActions>
             </ModalBody>
           </Modal>
+        </ModalOverlay>
+      )}
+
+      {/* 미리보기 모달 */}
+      {showPreviewModal && (
+        <ModalOverlay onClick={() => setShowPreviewModal(false)}>
+          <PreviewModal onClick={(e) => e.stopPropagation()}>
+            <ModalHeader>
+              <ModalTitle>이메일 미리보기</ModalTitle>
+              <CloseButton onClick={() => setShowPreviewModal(false)}>×</CloseButton>
+            </ModalHeader>
+            <PreviewModalBody>
+              <PreviewFrame
+                srcDoc={previewHtml}
+                title="이메일 미리보기"
+              />
+            </PreviewModalBody>
+          </PreviewModal>
         </ModalOverlay>
       )}
 
@@ -1133,6 +1179,25 @@ const TestButton = styled.button`
   }
 `;
 
+const PreviewButton = styled.button`
+  padding: 12px 24px;
+  background: white;
+  color: #0284c7;
+  border: 1px solid #0284c7;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: #e0f2fe;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
+
 const SendButton = styled.button`
   padding: 12px 24px;
   background: #4f46e5;
@@ -1420,4 +1485,30 @@ const ErrorMessage = styled.span`
   color: #dc2626;
   font-size: 12px;
   cursor: help;
+`;
+
+// 미리보기 모달 스타일
+const PreviewModal = styled.div`
+  background: white;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 800px;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+`;
+
+const PreviewModalBody = styled.div`
+  flex: 1;
+  padding: 0;
+  overflow: hidden;
+  background: #f3f4f6;
+`;
+
+const PreviewFrame = styled.iframe`
+  width: 100%;
+  height: 70vh;
+  border: none;
+  background: white;
 `;
