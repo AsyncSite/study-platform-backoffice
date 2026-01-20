@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import RichTextEditor from '../components/editor/RichTextEditor';
-import { newslettersApi, type Newsletter, type NewsletterStatus } from '../api/newsletters';
+import { newslettersApi, type Newsletter, type NewsletterStatus, type SendResult, type SendStats } from '../api/newsletters';
 import { newsletterApi, type Subscriber } from '../api/newsletter';
 
 const NewsletterManagement: React.FC = () => {
@@ -37,6 +37,15 @@ const NewsletterManagement: React.FC = () => {
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [scheduleNewsletterId, setScheduleNewsletterId] = useState<number | null>(null);
   const [scheduleDateTime, setScheduleDateTime] = useState('');
+
+  // 발송 이력 모달
+  const [showSendResultsModal, setShowSendResultsModal] = useState(false);
+  const [sendResultsNewsletterId, setSendResultsNewsletterId] = useState<number | null>(null);
+  const [sendResults, setSendResults] = useState<SendResult[]>([]);
+  const [sendStats, setSendStats] = useState<SendStats | null>(null);
+  const [sendResultsLoading, setSendResultsLoading] = useState(false);
+  const [sendResultsPage, setSendResultsPage] = useState(0);
+  const [sendResultsTotalPages, setSendResultsTotalPages] = useState(0);
 
   useEffect(() => {
     fetchNewsletters();
@@ -178,6 +187,39 @@ const NewsletterManagement: React.FC = () => {
     } catch (error) {
       console.error('Failed to cancel schedule:', error);
       alert('예약 취소에 실패했습니다.');
+    }
+  };
+
+  // ===== 발송 이력 관련 함수 =====
+  const openSendResultsModal = async (id: number) => {
+    setSendResultsNewsletterId(id);
+    setSendResultsPage(0);
+    setShowSendResultsModal(true);
+    await fetchSendResults(id, 0);
+  };
+
+  const fetchSendResults = async (id: number, page: number) => {
+    try {
+      setSendResultsLoading(true);
+      const [resultsData, statsData] = await Promise.all([
+        newslettersApi.getSendResults(id, page, 20),
+        newslettersApi.getSendStats(id),
+      ]);
+      setSendResults(resultsData.content);
+      setSendResultsTotalPages(resultsData.totalPages);
+      setSendStats(statsData);
+    } catch (error) {
+      console.error('Failed to fetch send results:', error);
+      alert('발송 이력 조회에 실패했습니다.');
+    } finally {
+      setSendResultsLoading(false);
+    }
+  };
+
+  const handleSendResultsPageChange = (newPage: number) => {
+    if (sendResultsNewsletterId) {
+      setSendResultsPage(newPage);
+      fetchSendResults(sendResultsNewsletterId, newPage);
     }
   };
 
@@ -327,9 +369,14 @@ const NewsletterManagement: React.FC = () => {
                               </>
                             )}
                             {newsletter.status === 'SENT' && (
-                              <ActionButton onClick={() => handleEdit(newsletter)}>
-                                보기
-                              </ActionButton>
+                              <>
+                                <ActionButton onClick={() => handleEdit(newsletter)}>
+                                  보기
+                                </ActionButton>
+                                <ActionButton $history onClick={() => openSendResultsModal(newsletter.id)}>
+                                  발송 이력
+                                </ActionButton>
+                              </>
                             )}
                           </ActionButtons>
                         </Td>
@@ -575,6 +622,121 @@ const NewsletterManagement: React.FC = () => {
           </Modal>
         </ModalOverlay>
       )}
+
+      {/* 발송 이력 모달 */}
+      {showSendResultsModal && (
+        <ModalOverlay onClick={() => setShowSendResultsModal(false)}>
+          <SendResultsModal onClick={(e) => e.stopPropagation()}>
+            <ModalHeader>
+              <ModalTitle>발송 이력</ModalTitle>
+              <CloseButton onClick={() => setShowSendResultsModal(false)}>×</CloseButton>
+            </ModalHeader>
+            <ModalBody>
+              {/* 발송 통계 */}
+              {sendStats && (
+                <StatsContainer>
+                  <StatBox>
+                    <StatLabel>총 발송</StatLabel>
+                    <StatValue>{sendStats.totalCount}건</StatValue>
+                  </StatBox>
+                  <StatBox $success>
+                    <StatLabel>성공</StatLabel>
+                    <StatValue>{sendStats.sentCount}건</StatValue>
+                  </StatBox>
+                  <StatBox $failure>
+                    <StatLabel>실패</StatLabel>
+                    <StatValue>{sendStats.failedCount}건</StatValue>
+                  </StatBox>
+                  <StatBox>
+                    <StatLabel>성공률</StatLabel>
+                    <StatValue>{sendStats.successRate}%</StatValue>
+                  </StatBox>
+                </StatsContainer>
+              )}
+
+              {/* 발송 결과 테이블 */}
+              {sendResultsLoading ? (
+                <LoadingText>로딩 중...</LoadingText>
+              ) : (
+                <SendResultsTable>
+                  <thead>
+                    <tr>
+                      <Th>이메일</Th>
+                      <Th>상태</Th>
+                      <Th>테스트</Th>
+                      <Th>처리 시간</Th>
+                      <Th>오류</Th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sendResults.map((result) => (
+                      <tr key={result.id}>
+                        <Td>{result.email}</Td>
+                        <Td>
+                          <SendStatusBadge $status={result.status}>
+                            {result.status === 'SENT' ? '성공' : result.status === 'FAILED' ? '실패' : '대기'}
+                          </SendStatusBadge>
+                        </Td>
+                        <Td>{result.isTest ? '예' : '-'}</Td>
+                        <Td>{formatDate(result.processedAt)}</Td>
+                        <Td>
+                          {result.errorMessage ? (
+                            <ErrorMessage title={result.errorMessage}>
+                              {result.errorMessage.substring(0, 30)}...
+                            </ErrorMessage>
+                          ) : (
+                            '-'
+                          )}
+                        </Td>
+                      </tr>
+                    ))}
+                    {sendResults.length === 0 && (
+                      <tr>
+                        <Td colSpan={5}>
+                          <EmptyText>발송 이력이 없습니다.</EmptyText>
+                        </Td>
+                      </tr>
+                    )}
+                  </tbody>
+                </SendResultsTable>
+              )}
+
+              {/* 페이지네이션 */}
+              {sendResultsTotalPages > 1 && (
+                <Pagination>
+                  <PageButton
+                    onClick={() => handleSendResultsPageChange(0)}
+                    disabled={sendResultsPage === 0}
+                  >
+                    처음
+                  </PageButton>
+                  <PageButton
+                    onClick={() => handleSendResultsPageChange(sendResultsPage - 1)}
+                    disabled={sendResultsPage === 0}
+                  >
+                    이전
+                  </PageButton>
+                  <PageInfo>
+                    {sendResultsPage + 1} / {sendResultsTotalPages} 페이지
+                  </PageInfo>
+                  <PageButton
+                    onClick={() => handleSendResultsPageChange(sendResultsPage + 1)}
+                    disabled={sendResultsPage >= sendResultsTotalPages - 1}
+                  >
+                    다음
+                  </PageButton>
+                  <PageButton
+                    onClick={() => handleSendResultsPageChange(sendResultsTotalPages - 1)}
+                    disabled={sendResultsPage >= sendResultsTotalPages - 1}
+                  >
+                    마지막
+                  </PageButton>
+                </Pagination>
+              )}
+            </ModalBody>
+          </SendResultsModal>
+        </ModalOverlay>
+      )}
     </Container>
   );
 };
@@ -768,7 +930,7 @@ const ActionButtons = styled.div`
   gap: 8px;
 `;
 
-const ActionButton = styled.button<{ $primary?: boolean; $danger?: boolean; $schedule?: boolean }>`
+const ActionButton = styled.button<{ $primary?: boolean; $danger?: boolean; $schedule?: boolean; $history?: boolean }>`
   padding: 6px 12px;
   border: 1px solid #d1d5db;
   border-radius: 4px;
@@ -810,6 +972,18 @@ const ActionButton = styled.button<{ $primary?: boolean; $danger?: boolean; $sch
 
     &:hover {
       background: #047857;
+    }
+  `}
+
+  ${({ $history }) =>
+    $history &&
+    `
+    background: #0284c7;
+    border-color: #0284c7;
+    color: white;
+
+    &:hover {
+      background: #0369a1;
     }
   `}
 
@@ -1151,4 +1325,92 @@ const PageInfo = styled.span`
   font-size: 14px;
   color: #374151;
   font-weight: 500;
+`;
+
+// 발송 이력 모달 스타일
+const SendResultsModal = styled.div`
+  background: white;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 800px;
+  max-height: 80vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+`;
+
+const StatsContainer = styled.div`
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+`;
+
+const StatBox = styled.div<{ $success?: boolean; $failure?: boolean }>`
+  padding: 16px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  text-align: center;
+
+  ${({ $success }) =>
+    $success &&
+    `
+    background: #d1fae5;
+  `}
+
+  ${({ $failure }) =>
+    $failure &&
+    `
+    background: #fee2e2;
+  `}
+`;
+
+const StatLabel = styled.div`
+  font-size: 12px;
+  color: #6b7280;
+  margin-bottom: 4px;
+`;
+
+const StatValue = styled.div`
+  font-size: 20px;
+  font-weight: 600;
+  color: #1f2937;
+`;
+
+const SendResultsTable = styled.table`
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+
+  th, td {
+    font-size: 13px;
+  }
+`;
+
+const SendStatusBadge = styled.span<{ $status: 'SENT' | 'FAILED' | 'PENDING' }>`
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+
+  ${({ $status }) => {
+    switch ($status) {
+      case 'SENT':
+        return 'background: #d1fae5; color: #065f46;';
+      case 'FAILED':
+        return 'background: #fee2e2; color: #dc2626;';
+      case 'PENDING':
+        return 'background: #fef3c7; color: #92400e;';
+    }
+  }}
+`;
+
+const ErrorMessage = styled.span`
+  color: #dc2626;
+  font-size: 12px;
+  cursor: help;
 `;

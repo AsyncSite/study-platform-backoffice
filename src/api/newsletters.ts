@@ -42,6 +42,34 @@ export interface ScheduleRequest {
   scheduledAt: string;
 }
 
+export interface SendResult {
+  id: number;
+  newsletterId: number;
+  subscriberId: string;
+  email: string;
+  status: 'SENT' | 'FAILED' | 'PENDING';
+  notificationId: string | null;
+  errorMessage: string | null;
+  isTest: boolean;
+  processedAt: string;
+  createdAt: string;
+}
+
+export interface SendResultPage {
+  content: SendResult[];
+  totalElements: number;
+  totalPages: number;
+  number: number;
+  size: number;
+}
+
+export interface SendStats {
+  sentCount: number;
+  failedCount: number;
+  totalCount: number;
+  successRate: number;
+}
+
 const NEWSLETTER_API_URL = '/api/grit-service/grit/newsletter/newsletters';
 
 export const newslettersApi = {
@@ -96,6 +124,20 @@ export const newslettersApi = {
   // 예약 취소
   cancelSchedule: async (id: number): Promise<{ message: string }> => {
     const response = await newsletterClient.post(`${NEWSLETTER_API_URL}/${id}/cancel-schedule`);
+    return response.data;
+  },
+
+  // 발송 결과 조회 (페이징)
+  getSendResults: async (id: number, page: number = 0, size: number = 20): Promise<SendResultPage> => {
+    const response = await newsletterClient.get(`${NEWSLETTER_API_URL}/${id}/send-results`, {
+      params: { page, size },
+    });
+    return response.data;
+  },
+
+  // 발송 통계 조회
+  getSendStats: async (id: number): Promise<SendStats> => {
+    const response = await newsletterClient.get(`${NEWSLETTER_API_URL}/${id}/send-stats`);
     return response.data;
   },
 };
