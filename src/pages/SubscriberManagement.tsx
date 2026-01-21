@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { newsletterApi, type Subscriber } from '../api/newsletter';
+import { newsletterApi, type SubscriberWithStatus } from '../api/newsletter';
 
 const SubscriberManagement: React.FC = () => {
-  const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
+  const [subscribers, setSubscribers] = useState<SubscriberWithStatus[]>([]);
   const [totalCount, setTotalCount] = useState(0);
+  const [activeCount, setActiveCount] = useState(0);
+  const [unsubscribedCount, setUnsubscribedCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [unsubscribing, setUnsubscribing] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'UNSUBSCRIBED'>('ALL');
 
   useEffect(() => {
     fetchSubscribers();
@@ -16,9 +19,11 @@ const SubscriberManagement: React.FC = () => {
   const fetchSubscribers = async () => {
     try {
       setLoading(true);
-      const data = await newsletterApi.getSubscribers();
-      setSubscribers(data.subscribers);
-      setTotalCount(data.totalCount);
+      const data = await newsletterApi.getAllSubscribers({ size: 100 });
+      setSubscribers(data.content);
+      setTotalCount(data.totalElements);
+      setActiveCount(data.activeCount);
+      setUnsubscribedCount(data.unsubscribedCount);
     } catch (error) {
       console.error('Failed to fetch subscribers:', error);
     } finally {
@@ -31,11 +36,14 @@ const SubscriberManagement: React.FC = () => {
     return new Date(dateStr).toLocaleString('ko-KR');
   };
 
-  const filteredSubscribers = subscribers.filter(
-    (s) =>
+  const filteredSubscribers = subscribers.filter((s) => {
+    const matchesSearch =
       s.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (s.name && s.name.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+      (s.name && s.name.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchesStatus =
+      statusFilter === 'ALL' || s.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
 
   const copyEmails = () => {
     const emails = filteredSubscribers.map((s) => s.email).join(', ');
@@ -65,7 +73,7 @@ const SubscriberManagement: React.FC = () => {
         <div>
           <Title>뉴스레터 구독자 관리</Title>
           <Description>
-            Team Grit 뉴스레터 구독자 목록입니다. 총 {totalCount}명의 활성 구독자가 있습니다.
+            Team Grit 뉴스레터 구독자 목록입니다. 총 {totalCount}명 (활성: {activeCount}명, 해지: {unsubscribedCount}명)
           </Description>
         </div>
         <CopyButton onClick={copyEmails} disabled={filteredSubscribers.length === 0}>
@@ -73,14 +81,34 @@ const SubscriberManagement: React.FC = () => {
         </CopyButton>
       </Header>
 
-      <SearchBox>
+      <FilterBar>
         <SearchInput
           type="text"
           placeholder="이메일 또는 이름으로 검색..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
-      </SearchBox>
+        <StatusFilterGroup>
+          <StatusFilterButton
+            $active={statusFilter === 'ALL'}
+            onClick={() => setStatusFilter('ALL')}
+          >
+            전체 ({totalCount})
+          </StatusFilterButton>
+          <StatusFilterButton
+            $active={statusFilter === 'ACTIVE'}
+            onClick={() => setStatusFilter('ACTIVE')}
+          >
+            활성 ({activeCount})
+          </StatusFilterButton>
+          <StatusFilterButton
+            $active={statusFilter === 'UNSUBSCRIBED'}
+            onClick={() => setStatusFilter('UNSUBSCRIBED')}
+          >
+            해지 ({unsubscribedCount})
+          </StatusFilterButton>
+        </StatusFilterGroup>
+      </FilterBar>
 
       {loading ? (
         <LoadingText>로딩 중...</LoadingText>
@@ -90,8 +118,10 @@ const SubscriberManagement: React.FC = () => {
             <tr>
               <Th>이메일</Th>
               <Th>이름</Th>
+              <Th>상태</Th>
               <Th>유입 경로</Th>
               <Th>구독일</Th>
+              <Th>해지일</Th>
               <Th>액션</Th>
             </tr>
           </thead>
@@ -101,22 +131,30 @@ const SubscriberManagement: React.FC = () => {
                 <Td>{subscriber.email}</Td>
                 <Td>{subscriber.name || '-'}</Td>
                 <Td>
+                  <StatusBadge $status={subscriber.status}>
+                    {subscriber.status === 'ACTIVE' ? '활성' : '해지'}
+                  </StatusBadge>
+                </Td>
+                <Td>
                   <SourceBadge>{subscriber.source || 'direct'}</SourceBadge>
                 </Td>
                 <Td>{formatDate(subscriber.subscribedAt)}</Td>
+                <Td>{formatDate(subscriber.unsubscribedAt)}</Td>
                 <Td>
-                  <UnsubscribeButton
-                    onClick={() => handleUnsubscribe(subscriber.email)}
-                    disabled={unsubscribing === subscriber.email}
-                  >
-                    {unsubscribing === subscriber.email ? '처리중...' : '구독 취소'}
-                  </UnsubscribeButton>
+                  {subscriber.status === 'ACTIVE' && (
+                    <UnsubscribeButton
+                      onClick={() => handleUnsubscribe(subscriber.email)}
+                      disabled={unsubscribing === subscriber.email}
+                    >
+                      {unsubscribing === subscriber.email ? '처리중...' : '구독 취소'}
+                    </UnsubscribeButton>
+                  )}
                 </Td>
               </tr>
             ))}
             {filteredSubscribers.length === 0 && (
               <tr>
-                <Td colSpan={5}>
+                <Td colSpan={7}>
                   <EmptyText>
                     {searchTerm ? '검색 결과가 없습니다.' : '구독자가 없습니다.'}
                   </EmptyText>
@@ -176,8 +214,13 @@ const CopyButton = styled.button`
   }
 `;
 
-const SearchBox = styled.div`
+const FilterBar = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 16px;
+  gap: 16px;
+  flex-wrap: wrap;
 `;
 
 const SearchInput = styled.input`
@@ -192,6 +235,27 @@ const SearchInput = styled.input`
     outline: none;
     border-color: #4f46e5;
     box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+  }
+`;
+
+const StatusFilterGroup = styled.div`
+  display: flex;
+  gap: 8px;
+`;
+
+const StatusFilterButton = styled.button<{ $active: boolean }>`
+  padding: 8px 16px;
+  border: 1px solid ${({ $active }) => ($active ? '#4f46e5' : '#d1d5db')};
+  background: ${({ $active }) => ($active ? '#4f46e5' : 'white')};
+  color: ${({ $active }) => ($active ? 'white' : '#374151')};
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: #4f46e5;
   }
 `;
 
@@ -230,6 +294,16 @@ const SourceBadge = styled.span`
   padding: 4px 8px;
   background: #e0e7ff;
   color: #4338ca;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+`;
+
+const StatusBadge = styled.span<{ $status: 'ACTIVE' | 'UNSUBSCRIBED' }>`
+  display: inline-block;
+  padding: 4px 8px;
+  background: ${({ $status }) => ($status === 'ACTIVE' ? '#dcfce7' : '#fee2e2')};
+  color: ${({ $status }) => ($status === 'ACTIVE' ? '#16a34a' : '#dc2626')};
   border-radius: 4px;
   font-size: 12px;
   font-weight: 500;

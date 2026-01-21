@@ -17,6 +17,11 @@ export interface Subscriber {
   subscribedAt: string;
 }
 
+export interface SubscriberWithStatus extends Subscriber {
+  status: 'ACTIVE' | 'UNSUBSCRIBED';
+  unsubscribedAt: string | null;
+}
+
 export interface SubscribersResponse {
   subscribers: Subscriber[];
   totalCount: number;
@@ -38,6 +43,18 @@ export interface SubscribersPageParams {
   keyword?: string;
 }
 
+export interface PagedSubscribersWithStatusResponse {
+  content: SubscriberWithStatus[];
+  totalElements: number;
+  totalPages: number;
+  currentPage: number;
+  pageSize: number;
+  isFirst: boolean;
+  isLast: boolean;
+  activeCount: number;
+  unsubscribedCount: number;
+}
+
 const NEWSLETTER_API_URL = '/api/grit-service/grit/newsletter';
 
 export interface UnsubscribeResponse {
@@ -56,6 +73,15 @@ export const newsletterApi = {
   getSubscribersPage: async (params: SubscribersPageParams = {}): Promise<PagedSubscribersResponse> => {
     const { page = 0, size = 20, keyword = '' } = params;
     const response = await newsletterClient.get(`${NEWSLETTER_API_URL}/subscribers/page`, {
+      params: { page, size, keyword },
+    });
+    return response.data;
+  },
+
+  // 전체 구독자 목록 조회 (상태 포함)
+  getAllSubscribers: async (params: SubscribersPageParams = {}): Promise<PagedSubscribersWithStatusResponse> => {
+    const { page = 0, size = 20, keyword = '' } = params;
+    const response = await newsletterClient.get(`${NEWSLETTER_API_URL}/subscribers/all`, {
       params: { page, size, keyword },
     });
     return response.data;
