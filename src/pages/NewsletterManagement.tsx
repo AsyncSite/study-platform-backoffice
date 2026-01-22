@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import RichTextEditor from '../components/editor/RichTextEditor';
 import { newslettersApi, type Newsletter, type NewsletterStatus, type SendResult, type SendStats } from '../api/newsletters';
-import { newsletterApi, type Subscriber } from '../api/newsletter';
+import { newsletterApi, type SubscriberWithStatus } from '../api/newsletter';
 
 const NewsletterManagement: React.FC = () => {
   // 구독자 섹션 접기/펼치기 (기본 펼침)
@@ -18,11 +18,13 @@ const NewsletterManagement: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
 
   // 구독자 상태
-  const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
+  const [subscribers, setSubscribers] = useState<SubscriberWithStatus[]>([]);
   const [subscribersLoading, setSubscribersLoading] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
+  const [activeCount, setActiveCount] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
   const [unsubscribing, setUnsubscribing] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'UNSUBSCRIBED'>('ALL');
   // 페이지네이션 상태
   const [currentPage, setCurrentPage] = useState(0);
   const [pageSize] = useState(20);
@@ -266,13 +268,14 @@ const NewsletterManagement: React.FC = () => {
   const fetchSubscribers = async () => {
     try {
       setSubscribersLoading(true);
-      const data = await newsletterApi.getSubscribersPage({
+      const data = await newsletterApi.getAllSubscribers({
         page: currentPage,
         size: pageSize,
         keyword: searchTerm,
       });
       setSubscribers(data.content);
       setTotalCount(data.totalElements);
+      setActiveCount(data.activeCount);
       setTotalPages(data.totalPages);
     } catch (error) {
       console.error('Failed to fetch subscribers:', error);
@@ -281,10 +284,15 @@ const NewsletterManagement: React.FC = () => {
     }
   };
 
+  // 필터링된 구독자 목록
+  const filteredSubscribers = subscribers.filter((s) => {
+    return statusFilter === 'ALL' || s.status === statusFilter;
+  });
+
   const copyEmails = () => {
-    const emails = subscribers.map((s) => s.email).join(', ');
+    const emails = filteredSubscribers.map((s) => s.email).join(', ');
     navigator.clipboard.writeText(emails);
-    alert(`${subscribers.length}개의 이메일이 복사되었습니다. (현재 페이지)`);
+    alert(`${filteredSubscribers.length}개의 이메일이 복사되었습니다.`);
   };
 
   const handleUnsubscribe = async (email: string) => {
@@ -521,9 +529,28 @@ const NewsletterManagement: React.FC = () => {
         {subscribersExpanded && (
           <>
             <SectionHeader>
-              <div />
-            <CopyButton onClick={copyEmails} disabled={subscribers.length === 0}>
-              현재 페이지 이메일 복사 ({subscribers.length})
+              <StatusFilterGroup>
+                <StatusFilterButton
+                  $active={statusFilter === 'ALL'}
+                  onClick={() => setStatusFilter('ALL')}
+                >
+                  전체 ({totalCount})
+                </StatusFilterButton>
+                <StatusFilterButton
+                  $active={statusFilter === 'ACTIVE'}
+                  onClick={() => setStatusFilter('ACTIVE')}
+                >
+                  활성 ({activeCount})
+                </StatusFilterButton>
+                <StatusFilterButton
+                  $active={statusFilter === 'UNSUBSCRIBED'}
+                  onClick={() => setStatusFilter('UNSUBSCRIBED')}
+                >
+                  해지 ({totalCount - activeCount})
+                </StatusFilterButton>
+              </StatusFilterGroup>
+            <CopyButton onClick={copyEmails} disabled={filteredSubscribers.length === 0}>
+              이메일 복사 ({filteredSubscribers.length})
             </CopyButton>
           </SectionHeader>
 
@@ -544,33 +571,41 @@ const NewsletterManagement: React.FC = () => {
                 <tr>
                   <Th>이메일</Th>
                   <Th>이름</Th>
+                  <Th>상태</Th>
                   <Th>유입 경로</Th>
                   <Th>구독일</Th>
                   <Th>액션</Th>
                 </tr>
               </thead>
               <tbody>
-                {subscribers.map((subscriber) => (
+                {filteredSubscribers.map((subscriber) => (
                   <tr key={subscriber.id}>
                     <Td>{subscriber.email}</Td>
                     <Td>{subscriber.name || '-'}</Td>
+                    <Td>
+                      <SubscriberStatusBadge $status={subscriber.status}>
+                        {subscriber.status === 'ACTIVE' ? '활성' : '해지'}
+                      </SubscriberStatusBadge>
+                    </Td>
                     <Td>
                       <SourceBadge>{subscriber.source || 'direct'}</SourceBadge>
                     </Td>
                     <Td>{formatDate(subscriber.subscribedAt)}</Td>
                     <Td>
-                      <UnsubscribeButton
-                        onClick={() => handleUnsubscribe(subscriber.email)}
-                        disabled={unsubscribing === subscriber.email}
-                      >
-                        {unsubscribing === subscriber.email ? '처리중...' : '구독 취소'}
-                      </UnsubscribeButton>
+                      {subscriber.status === 'ACTIVE' && (
+                        <UnsubscribeButton
+                          onClick={() => handleUnsubscribe(subscriber.email)}
+                          disabled={unsubscribing === subscriber.email}
+                        >
+                          {unsubscribing === subscriber.email ? '처리중...' : '구독 취소'}
+                        </UnsubscribeButton>
+                      )}
                     </Td>
                   </tr>
                 ))}
-                {subscribers.length === 0 && (
+                {filteredSubscribers.length === 0 && (
                   <tr>
-                    <Td colSpan={5}>
+                    <Td colSpan={6}>
                       <EmptyText>
                         {searchTerm ? '검색 결과가 없습니다.' : '구독자가 없습니다.'}
                       </EmptyText>
@@ -989,6 +1024,37 @@ const SourceBadge = styled.span`
   padding: 4px 8px;
   background: #e0e7ff;
   color: #4338ca;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+`;
+
+const StatusFilterGroup = styled.div`
+  display: flex;
+  gap: 8px;
+`;
+
+const StatusFilterButton = styled.button<{ $active: boolean }>`
+  padding: 8px 16px;
+  border: 1px solid ${({ $active }) => ($active ? '#4f46e5' : '#d1d5db')};
+  background: ${({ $active }) => ($active ? '#4f46e5' : 'white')};
+  color: ${({ $active }) => ($active ? 'white' : '#374151')};
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: #4f46e5;
+  }
+`;
+
+const SubscriberStatusBadge = styled.span<{ $status: 'ACTIVE' | 'UNSUBSCRIBED' }>`
+  display: inline-block;
+  padding: 4px 8px;
+  background: ${({ $status }) => ($status === 'ACTIVE' ? '#dcfce7' : '#fee2e2')};
+  color: ${({ $status }) => ($status === 'ACTIVE' ? '#16a34a' : '#dc2626')};
   border-radius: 4px;
   font-size: 12px;
   font-weight: 500;
