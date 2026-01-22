@@ -92,4 +92,10 @@ export const newsletterApi = {
     const response = await newsletterClient.post(`${NEWSLETTER_API_URL}/unsubscribe`, { email });
     return response.data;
   },
+
+  // 구독 재활성화 (관리자용)
+  reactivate: async (email: string): Promise<{ email: string; message: string }> => {
+    const response = await newsletterClient.post(`${NEWSLETTER_API_URL}/subscribers/reactivate`, { email });
+    return response.data;
+  },
 };

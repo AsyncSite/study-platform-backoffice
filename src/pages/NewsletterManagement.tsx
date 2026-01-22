@@ -312,6 +312,22 @@ const NewsletterManagement: React.FC = () => {
     }
   };
 
+  const handleReactivate = async (email: string) => {
+    if (!confirm(`"${email}" 구독을 재활성화하시겠습니까?`)) return;
+
+    setUnsubscribing(email); // 같은 상태 변수 재사용
+    try {
+      await newsletterApi.reactivate(email);
+      alert('구독이 재활성화되었습니다.');
+      fetchSubscribers();
+    } catch (error) {
+      console.error('Failed to reactivate:', error);
+      alert('재활성화에 실패했습니다.');
+    } finally {
+      setUnsubscribing(null);
+    }
+  };
+
   const getStatusBadge = (status: NewsletterStatus) => {
     switch (status) {
       case 'DRAFT':
@@ -587,13 +603,20 @@ const NewsletterManagement: React.FC = () => {
                     </Td>
                     <Td>{formatDate(subscriber.subscribedAt)}</Td>
                     <Td>
-                      {subscriber.status === 'ACTIVE' && (
+                      {subscriber.status === 'ACTIVE' ? (
                         <UnsubscribeButton
                           onClick={() => handleUnsubscribe(subscriber.email)}
                           disabled={unsubscribing === subscriber.email}
                         >
                           {unsubscribing === subscriber.email ? '처리중...' : '구독 취소'}
                         </UnsubscribeButton>
+                      ) : (
+                        <ReactivateButton
+                          onClick={() => handleReactivate(subscriber.email)}
+                          disabled={unsubscribing === subscriber.email}
+                        >
+                          {unsubscribing === subscriber.email ? '처리중...' : '재활성화'}
+                        </ReactivateButton>
                       )}
                     </Td>
                   </tr>
@@ -1159,6 +1182,27 @@ const UnsubscribeButton = styled.button`
 
   &:hover:not(:disabled) {
     background: #fecaca;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
+
+const ReactivateButton = styled.button`
+  padding: 6px 12px;
+  background: #dcfce7;
+  color: #16a34a;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover:not(:disabled) {
+    background: #bbf7d0;
   }
 
   &:disabled {
