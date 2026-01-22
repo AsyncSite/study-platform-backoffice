@@ -6,7 +6,7 @@ import { useNotification } from '../../contexts/NotificationContext';
 import type { StudyResponse, ApplicationResponse } from '../../types/api';
 import { ApplicationStatus } from '../../types/api';
 import { User, Clock, CheckCircle, XCircle, FileText, ChevronDown, ChevronUp } from 'lucide-react';
-import {formatDate} from "../../utils/dateUtils.ts";
+import {formatDateKorean} from "../../utils/dateUtils.ts";
 
 interface StudyApplicationsModalProps {
   isOpen: boolean;
@@ -246,7 +246,7 @@ const StudyApplicationsModal: React.FC<StudyApplicationsModalProps> = ({
                           <ApplicantName>{application.applicantId || '알 수 없는 사용자'}</ApplicantName>
                           <ApplicantDate>
                             {application.createdAt ?
-                              formatDate(application.createdAt, false, 'yyyy년 MM월 dd일 HH:mm') :
+                              formatDateKorean(application.createdAt, true) :
                               '날짜 정보 없음'
                             }
                           </ApplicantDate>
