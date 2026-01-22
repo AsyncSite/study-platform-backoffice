@@ -3,6 +3,7 @@ import styled from 'styled-components';
 import RichTextEditor from '../components/editor/RichTextEditor';
 import { newslettersApi, type Newsletter, type NewsletterStatus, type SendResult, type SendStats } from '../api/newsletters';
 import { newsletterApi, type SubscriberWithStatus } from '../api/newsletter';
+import { formatDate } from '../utils/dateUtils';
 
 const NewsletterManagement: React.FC = () => {
   // 구독자 섹션 접기/펼치기 (기본 펼침)
@@ -309,12 +310,6 @@ const NewsletterManagement: React.FC = () => {
     } finally {
       setUnsubscribing(null);
     }
-  };
-
-  // ===== 공통 함수 =====
-  const formatDate = (dateStr: string | null) => {
-    if (!dateStr) return '-';
-    return new Date(dateStr).toLocaleString('ko-KR');
   };
 
   const getStatusBadge = (status: NewsletterStatus) => {

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { newsletterApi, type SubscriberWithStatus } from '../api/newsletter';
+import { formatDate } from '../utils/dateUtils';
 
 const SubscriberManagement: React.FC = () => {
   const [subscribers, setSubscribers] = useState<SubscriberWithStatus[]>([]);
@@ -29,11 +30,6 @@ const SubscriberManagement: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const formatDate = (dateStr: string | null) => {
-    if (!dateStr) return '-';
-    return new Date(dateStr).toLocaleString('ko-KR');
   };
 
   const filteredSubscribers = subscribers.filter((s) => {
