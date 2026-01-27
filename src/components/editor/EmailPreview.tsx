@@ -1,12 +1,19 @@
 import { useState } from 'react';
 import styled from 'styled-components';
 
+interface AnnouncementItem {
+  text: string;
+  linkUrl?: string;
+  linkText?: string;
+}
+
 interface EmailPreviewProps {
   isOpen: boolean;
   onClose: () => void;
   title: string;
   content: string;
   summary?: string;
+  announcements?: AnnouncementItem[];
 }
 
 type DeviceType = 'desktop' | 'mobile';
@@ -17,6 +24,7 @@ const EmailPreview: React.FC<EmailPreviewProps> = ({
   title,
   content,
   summary = '',
+  announcements = [],
 }) => {
   const [device, setDevice] = useState<DeviceType>('desktop');
 
@@ -137,6 +145,27 @@ const EmailPreview: React.FC<EmailPreviewProps> = ({
 
             {/* 본문 */}
             <EmailContent dangerouslySetInnerHTML={{ __html: content }} />
+
+            {/* 팀그릿 소식 */}
+            {announcements.length > 0 && (
+              <AnnouncementsBox>
+                <AnnouncementsDivider />
+                <AnnouncementsTitle>📢 팀그릿 소식</AnnouncementsTitle>
+                <AnnouncementsList>
+                  {announcements.map((item, index) => (
+                    <AnnouncementsItem key={index}>
+                      <AnnouncementsBullet>•</AnnouncementsBullet>
+                      <span>{item.text}</span>
+                      {item.linkUrl && (
+                        <AnnouncementsLink>
+                          → {item.linkText || '자세히'}
+                        </AnnouncementsLink>
+                      )}
+                    </AnnouncementsItem>
+                  ))}
+                </AnnouncementsList>
+              </AnnouncementsBox>
+            )}
 
             {/* 피드백 & 공유 섹션 */}
             <FeedbackBox>
@@ -603,6 +632,46 @@ const TocListItem = styled.div<{ $level: number }>`
   &:hover {
     color: #4f46e5;
   }
+`;
+
+// Announcements Section Styles
+const AnnouncementsBox = styled.div`
+  padding: 0 30px 24px;
+`;
+
+const AnnouncementsDivider = styled.div`
+  border-top: 1px solid #e5e7eb;
+  padding-top: 24px;
+`;
+
+const AnnouncementsTitle = styled.div`
+  font-size: 14px;
+  color: #6b7280;
+  margin-bottom: 12px;
+`;
+
+const AnnouncementsList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+`;
+
+const AnnouncementsItem = styled.div`
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 14px;
+  color: #374151;
+  line-height: 1.6;
+`;
+
+const AnnouncementsBullet = styled.span`
+  color: #9ca3af;
+`;
+
+const AnnouncementsLink = styled.span`
+  color: #16a34a;
+  margin-left: 4px;
 `;
 
 // Feedback & Share Section Styles

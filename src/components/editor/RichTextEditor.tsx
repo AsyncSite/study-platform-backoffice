@@ -23,6 +23,12 @@ import DraftRecoveryModal from './DraftRecoveryModal';
 
 const lowlight = createLowlight(common);
 
+interface AnnouncementItem {
+  text: string;
+  linkUrl?: string;
+  linkText?: string;
+}
+
 interface RichTextEditorProps {
   value: string;
   onChange: (html: string) => void;
@@ -33,6 +39,8 @@ interface RichTextEditorProps {
   draftKey?: string;
   summary?: string;
   onSummaryChange?: (summary: string) => void;
+  announcements?: AnnouncementItem[];
+  onAnnouncementsChange?: (announcements: AnnouncementItem[]) => void;
 }
 
 const DRAFT_STORAGE_KEY = 'newsletter-draft';
@@ -47,6 +55,8 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
   draftKey = DRAFT_STORAGE_KEY,
   summary = '',
   onSummaryChange,
+  announcements = [],
+  onAnnouncementsChange,
 }) => {
   const [isUploading, setIsUploading] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | null>(null);
@@ -571,6 +581,74 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
         <EditorContent editor={editor} />
       </EditorContentWrapper>
 
+      {/* 공지사항 섹션 */}
+      <AnnouncementsSection>
+        <AnnouncementsHeader>
+          <AnnouncementsLabel>
+            <AnnouncementsIcon>📢</AnnouncementsIcon>
+            팀그릿 소식 <AnnouncementsOptional>(선택)</AnnouncementsOptional>
+          </AnnouncementsLabel>
+        </AnnouncementsHeader>
+
+        {announcements.map((item, index) => (
+          <AnnouncementRow key={index}>
+            <AnnouncementInputGroup>
+              <AnnouncementTextInput
+                placeholder="공지 내용"
+                value={item.text}
+                onChange={(e) => {
+                  const newAnnouncements = [...announcements];
+                  newAnnouncements[index] = { ...item, text: e.target.value };
+                  onAnnouncementsChange?.(newAnnouncements);
+                }}
+                disabled={disabled}
+              />
+              <AnnouncementLinkInput
+                placeholder="링크 URL (선택)"
+                value={item.linkUrl || ''}
+                onChange={(e) => {
+                  const newAnnouncements = [...announcements];
+                  newAnnouncements[index] = { ...item, linkUrl: e.target.value };
+                  onAnnouncementsChange?.(newAnnouncements);
+                }}
+                disabled={disabled}
+              />
+              <AnnouncementLinkTextInput
+                placeholder="링크 텍스트 (선택)"
+                value={item.linkText || ''}
+                onChange={(e) => {
+                  const newAnnouncements = [...announcements];
+                  newAnnouncements[index] = { ...item, linkText: e.target.value };
+                  onAnnouncementsChange?.(newAnnouncements);
+                }}
+                disabled={disabled}
+              />
+            </AnnouncementInputGroup>
+            <AnnouncementDeleteButton
+              type="button"
+              onClick={() => {
+                const newAnnouncements = announcements.filter((_, i) => i !== index);
+                onAnnouncementsChange?.(newAnnouncements);
+              }}
+              disabled={disabled}
+            >
+              ✕
+            </AnnouncementDeleteButton>
+          </AnnouncementRow>
+        ))}
+
+        <AnnouncementAddButton
+          type="button"
+          onClick={() => {
+            onAnnouncementsChange?.([...announcements, { text: '', linkUrl: '', linkText: '' }]);
+          }}
+          disabled={disabled}
+        >
+          + 소식 추가
+        </AnnouncementAddButton>
+        <AnnouncementsHint>뉴스레터 하단에 표시됩니다. 비워두면 표시되지 않습니다.</AnnouncementsHint>
+      </AnnouncementsSection>
+
       <Footer>
         <FooterLeft>
           <FooterHint>이미지: 드래그 앤 드롭 또는 버튼 클릭 (최대 5MB)</FooterHint>
@@ -604,6 +682,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
         title={title}
         content={editor?.getHTML() || ''}
         summary={summary}
+        announcements={announcements.filter(a => a.text.trim() !== '')}
       />
 
       {/* 드래프트 복구 모달 */}
@@ -1057,4 +1136,149 @@ const SummaryHint = styled.div`
   margin-top: 6px;
   font-size: 11px;
   color: #6b7280;
+`;
+
+// Announcements Section Styles
+const AnnouncementsSection = styled.div`
+  padding: 16px;
+  background: #f9fafb;
+  border-top: 1px solid #e5e7eb;
+`;
+
+const AnnouncementsHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+`;
+
+const AnnouncementsLabel = styled.label`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+`;
+
+const AnnouncementsIcon = styled.span`
+  font-size: 14px;
+`;
+
+const AnnouncementsOptional = styled.span`
+  font-weight: 400;
+  color: #9ca3af;
+  font-size: 12px;
+`;
+
+const AnnouncementRow = styled.div`
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 8px;
+`;
+
+const AnnouncementInputGroup = styled.div`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+`;
+
+const AnnouncementTextInput = styled.input`
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #374151;
+
+  &::placeholder {
+    color: #9ca3af;
+  }
+
+  &:focus {
+    outline: none;
+    border-color: #6b7280;
+    box-shadow: 0 0 0 2px rgba(107, 114, 128, 0.1);
+  }
+
+  &:disabled {
+    background: #f3f4f6;
+    cursor: not-allowed;
+  }
+`;
+
+const AnnouncementLinkInput = styled.input`
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #6b7280;
+
+  &::placeholder {
+    color: #9ca3af;
+  }
+
+  &:focus {
+    outline: none;
+    border-color: #9ca3af;
+  }
+
+  &:disabled {
+    background: #f3f4f6;
+    cursor: not-allowed;
+  }
+`;
+
+const AnnouncementLinkTextInput = styled(AnnouncementLinkInput)``;
+
+const AnnouncementDeleteButton = styled.button`
+  padding: 8px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: #9ca3af;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: #fee2e2;
+    color: #dc2626;
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+`;
+
+const AnnouncementAddButton = styled.button`
+  padding: 8px 12px;
+  border: 1px dashed #d1d5db;
+  border-radius: 6px;
+  background: transparent;
+  color: #6b7280;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+  width: 100%;
+
+  &:hover {
+    border-color: #9ca3af;
+    background: #f3f4f6;
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+`;
+
+const AnnouncementsHint = styled.div`
+  margin-top: 8px;
+  font-size: 11px;
+  color: #9ca3af;
 `;
