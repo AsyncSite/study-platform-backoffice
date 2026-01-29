@@ -309,6 +309,7 @@ const PreviewContainer = styled.div<{ $device: DeviceType }>`
 
 const EmailFrame = styled.div<{ $device: DeviceType }>`
   background: white;
+  background-color: white;
   border-radius: 12px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
   width: 100%;
@@ -317,11 +318,16 @@ const EmailFrame = styled.div<{ $device: DeviceType }>`
   position: relative;
   z-index: 1;
   isolation: isolate;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  will-change: transform;
 `;
 
 const EmailHeader = styled.div`
   padding: 30px 30px 20px;
   border-bottom: 1px solid #e9ecef;
+  background-color: white;
 `;
 
 const BrandName = styled.span`
@@ -338,6 +344,7 @@ const BrandTag = styled.span`
 
 const ReadingTimeBadge = styled.div`
   padding: 20px 30px 0;
+  background-color: white;
 
   &::before {
     content: '';
@@ -348,6 +355,7 @@ const ReadingTimeBadge = styled.div`
   font-size: 13px;
   color: #6b7280;
   background: #f3f4f6;
+  background-color: #f3f4f6;
   padding: 6px 12px;
   border-radius: 16px;
 `;
@@ -358,6 +366,7 @@ const EmailTitle = styled.h1`
   font-size: 28px;
   font-weight: 700;
   color: #111827;
+  background-color: white;
 `;
 
 const EmailContent = styled.div`
@@ -365,6 +374,7 @@ const EmailContent = styled.div`
   font-size: 16px;
   color: #374151;
   line-height: 1.8;
+  background-color: white;
 
   h1 {
     font-size: 28px;
@@ -454,6 +464,18 @@ const EmailContent = styled.div`
     border: none;
     border-top: 1px solid #e5e7eb;
     margin: 32px 0;
+  }
+
+  /* 섹션 브레이크 스타일 */
+  .section-break {
+    text-align: center;
+    margin: 24px 0;
+  }
+
+  .section-break-dots {
+    font-size: 18px;
+    color: #9ca3af;
+    letter-spacing: 8px;
   }
 
   mark {
@@ -642,6 +664,7 @@ const TocListItem = styled.div<{ $level: number }>`
 // Announcements Section Styles
 const AnnouncementsBox = styled.div`
   padding: 0 30px 24px;
+  background-color: white;
 `;
 
 const AnnouncementsDivider = styled.div`

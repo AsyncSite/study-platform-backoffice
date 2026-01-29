@@ -16,6 +16,8 @@ const NewsletterManagement: React.FC = () => {
   const [editingNewsletter, setEditingNewsletter] = useState<Newsletter | null>(null);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
+  const [summary, setSummary] = useState('');
+  const [announcements, setAnnouncements] = useState<Array<{text: string; linkUrl?: string; linkText?: string}>>([]);
   const [isSaving, setIsSaving] = useState(false);
 
   // 구독자 상태
@@ -87,13 +89,44 @@ const NewsletterManagement: React.FC = () => {
     setEditingNewsletter(null);
     setTitle('');
     setContent('');
+    setSummary('');
+    setAnnouncements([]);
     setActiveView('editor');
   };
 
   const handleEdit = (newsletter: Newsletter) => {
     setEditingNewsletter(newsletter);
     setTitle(newsletter.title);
-    setContent(newsletter.content);
+
+    // content에서 마커 추출
+    let rawContent = newsletter.content;
+
+    // Summary 마커 추출
+    const summaryMatch = rawContent.match(/<!--SUMMARY:([\s\S]*?)-->/);
+    const extractedSummary = summaryMatch ? summaryMatch[1] : '';
+    rawContent = rawContent.replace(/<!--SUMMARY:[\s\S]*?-->/, '');
+
+    // Announcements 마커 추출
+    const announcementsMatch = rawContent.match(/<!--ANNOUNCEMENTS:([\s\S]*?)-->/);
+    const extractedAnnouncements: Array<{text: string; linkUrl?: string; linkText?: string}> = [];
+    if (announcementsMatch && announcementsMatch[1]) {
+      const items = announcementsMatch[1].split(';;');
+      items.forEach(item => {
+        if (item.trim()) {
+          const parts = item.split('|');
+          extractedAnnouncements.push({
+            text: parts[0] || '',
+            linkUrl: parts[1] || '',
+            linkText: parts[2] || '',
+          });
+        }
+      });
+    }
+    rawContent = rawContent.replace(/<!--ANNOUNCEMENTS:[\s\S]*?-->/, '');
+
+    setContent(rawContent.trim());
+    setSummary(extractedSummary);
+    setAnnouncements(extractedAnnouncements);
     setActiveView('editor');
   };
 
@@ -105,11 +138,28 @@ const NewsletterManagement: React.FC = () => {
 
     setIsSaving(true);
     try {
+      // content에 마커 추가
+      let contentWithMarkers = content;
+
+      // Summary 마커 추가
+      if (summary.trim()) {
+        contentWithMarkers = `<!--SUMMARY:${summary}-->${contentWithMarkers}`;
+      }
+
+      // Announcements 마커 추가
+      const validAnnouncements = announcements.filter(a => a.text.trim());
+      if (validAnnouncements.length > 0) {
+        const announcementsStr = validAnnouncements
+          .map(a => `${a.text}|${a.linkUrl || ''}|${a.linkText || ''}`)
+          .join(';;');
+        contentWithMarkers = `${contentWithMarkers}<!--ANNOUNCEMENTS:${announcementsStr}-->`;
+      }
+
       if (editingNewsletter) {
-        await newslettersApi.update(editingNewsletter.id, { title, content });
+        await newslettersApi.update(editingNewsletter.id, { title, content: contentWithMarkers });
         alert('뉴스레터가 수정되었습니다.');
       } else {
-        await newslettersApi.create({ title, content });
+        await newslettersApi.create({ title, content: contentWithMarkers });
         alert('뉴스레터가 생성되었습니다.');
       }
       setActiveView('list');
@@ -240,7 +290,22 @@ const NewsletterManagement: React.FC = () => {
 
     setPreviewLoading(true);
     try {
-      const response = await newslettersApi.previewDirect(title, content);
+      // 미리보기 시에도 마커 포함
+      let contentWithMarkers = content;
+
+      if (summary.trim()) {
+        contentWithMarkers = `<!--SUMMARY:${summary}-->${contentWithMarkers}`;
+      }
+
+      const validAnnouncements = announcements.filter(a => a.text.trim());
+      if (validAnnouncements.length > 0) {
+        const announcementsStr = validAnnouncements
+          .map(a => `${a.text}|${a.linkUrl || ''}|${a.linkText || ''}`)
+          .join(';;');
+        contentWithMarkers = `${contentWithMarkers}<!--ANNOUNCEMENTS:${announcementsStr}-->`;
+      }
+
+      const response = await newslettersApi.previewDirect(title, contentWithMarkers);
       setPreviewHtml(response.htmlContent);
       setShowPreviewModal(true);
     } catch (error) {
@@ -489,6 +554,11 @@ const NewsletterManagement: React.FC = () => {
                   onChange={setContent}
                   placeholder="뉴스레터 내용을 작성하세요..."
                   disabled={editingNewsletter?.status === 'SENT'}
+                  title={title}
+                  summary={summary}
+                  onSummaryChange={setSummary}
+                  announcements={announcements}
+                  onAnnouncementsChange={setAnnouncements}
                 />
               </FormGroup>
 

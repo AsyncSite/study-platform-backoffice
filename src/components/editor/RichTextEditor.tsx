@@ -18,6 +18,7 @@ import styled from 'styled-components';
 import { newslettersApi } from '../../api/newsletters';
 import { createSlashCommandsExtension } from './SlashCommands';
 import { Figure } from './FigureExtension';
+import { SectionBreak } from './SectionBreakExtension';
 import EmailPreview from './EmailPreview';
 import DraftRecoveryModal from './DraftRecoveryModal';
 
@@ -101,6 +102,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
         },
       }),
       Figure,
+      SectionBreak,
       TextAlign.configure({
         types: ['heading', 'paragraph'],
       }),
@@ -226,6 +228,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
   const handleBlockquote = () => editor?.chain().focus().toggleBlockquote().run();
   const handleCodeBlock = () => editor?.chain().focus().toggleCodeBlock().run();
   const handleHorizontalRule = () => editor?.chain().focus().setHorizontalRule().run();
+  const handleSectionBreak = () => editor?.chain().focus().setSectionBreak().run();
   const handleHighlight = () => editor?.chain().focus().toggleHighlight().run();
 
   const handleTextAlign = (alignment: 'left' | 'center' | 'right') => {
@@ -488,6 +491,14 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
             title="구분선 (---)"
           >
             ―
+          </ToolbarButton>
+          <ToolbarButton
+            type="button"
+            onClick={handleSectionBreak}
+            disabled={disabled}
+            title="섹션 브레이크 (***)"
+          >
+            •••
           </ToolbarButton>
         </ToolbarGroup>
 
@@ -852,6 +863,19 @@ const EditorContentWrapper = styled.div`
       margin: 32px 0;
     }
 
+    /* 섹션 브레이크 스타일 */
+    .section-break {
+      text-align: center;
+      margin: 24px 0;
+      user-select: none;
+    }
+
+    .section-break-dots {
+      font-size: 18px;
+      color: #9ca3af;
+      letter-spacing: 8px;
+    }
+
     /* 형광펜 스타일 */
     mark {
       background: #fef08a;
@@ -1069,7 +1093,10 @@ const PreviewButton = styled.button`
 const SummarySection = styled.div`
   padding: 16px;
   background: #f0fdf4;
+  background-color: #f0fdf4;
   border-bottom: 1px solid #bbf7d0;
+  position: relative;
+  z-index: 1;
 `;
 
 const SummaryHeader = styled.div`
@@ -1110,11 +1137,17 @@ const SummaryTextarea = styled.textarea`
   border: 1px solid #bbf7d0;
   border-radius: 8px;
   background: white;
+  background-color: white;
   font-size: 14px;
   line-height: 1.6;
   color: #374151;
   resize: vertical;
   font-family: inherit;
+  box-sizing: border-box;
+  cursor: text;
+  pointer-events: auto;
+  position: relative;
+  z-index: 1;
 
   &::placeholder {
     color: #9ca3af;
@@ -1128,6 +1161,7 @@ const SummaryTextarea = styled.textarea`
 
   &:disabled {
     background: #f3f4f6;
+    background-color: #f3f4f6;
     cursor: not-allowed;
   }
 `;
@@ -1142,7 +1176,10 @@ const SummaryHint = styled.div`
 const AnnouncementsSection = styled.div`
   padding: 16px;
   background: #f9fafb;
+  background-color: #f9fafb;
   border-top: 1px solid #e5e7eb;
+  position: relative;
+  z-index: 1;
 `;
 
 const AnnouncementsHeader = styled.div`
@@ -1192,6 +1229,11 @@ const AnnouncementTextInput = styled.input`
   border-radius: 6px;
   font-size: 14px;
   color: #374151;
+  background-color: white;
+  box-sizing: border-box;
+  pointer-events: auto;
+  position: relative;
+  z-index: 1;
 
   &::placeholder {
     color: #9ca3af;
@@ -1205,6 +1247,7 @@ const AnnouncementTextInput = styled.input`
 
   &:disabled {
     background: #f3f4f6;
+    background-color: #f3f4f6;
     cursor: not-allowed;
   }
 `;
@@ -1260,15 +1303,20 @@ const AnnouncementAddButton = styled.button`
   border: 1px dashed #d1d5db;
   border-radius: 6px;
   background: transparent;
+  background-color: transparent;
   color: #6b7280;
   font-size: 13px;
   cursor: pointer;
   transition: all 0.2s;
   width: 100%;
+  pointer-events: auto;
+  position: relative;
+  z-index: 1;
 
   &:hover {
     border-color: #9ca3af;
     background: #f3f4f6;
+    background-color: #f3f4f6;
   }
 
   &:disabled {
