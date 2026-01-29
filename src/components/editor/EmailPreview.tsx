@@ -169,12 +169,14 @@ const EmailPreview: React.FC<EmailPreviewProps> = ({
 
             {/* 피드백 & 공유 섹션 */}
             <FeedbackBox>
-              <FeedbackTitle>💬 의견이 있으신가요?</FeedbackTitle>
-              <FeedbackDescription>
-                이 메일에 답장해주세요!<br />
+              <FeedbackMainText>
+                의견이 있으신가요?<br />
+                이 메일에 <ReplyHighlight>답장</ReplyHighlight>해주세요!
+              </FeedbackMainText>
+              <FeedbackSubText>
                 좋았던 점, 아쉬웠던 점, 다뤄줬으면 하는 주제 등<br />
                 모든 피드백을 직접 읽고 있습니다.
-              </FeedbackDescription>
+              </FeedbackSubText>
               <FeedbackDivider />
               <ForwardText>
                 이 뉴스레터가 마음에 드셨다면 지인에게 <strong>전달</strong>해주세요!
@@ -312,6 +314,9 @@ const EmailFrame = styled.div<{ $device: DeviceType }>`
   width: 100%;
   max-width: ${({ $device }) => ($device === 'mobile' ? '375px' : '680px')};
   transition: max-width 0.3s ease;
+  position: relative;
+  z-index: 1;
+  isolation: isolate;
 `;
 
 const EmailHeader = styled.div`
@@ -684,18 +689,22 @@ const FeedbackBox = styled.div`
   text-align: center;
 `;
 
-const FeedbackTitle = styled.p`
-  margin: 0 0 8px 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: #111827;
+const FeedbackMainText = styled.p`
+  margin: 0 0 12px 0;
+  font-size: 15px;
+  color: #374151;
+  line-height: 1.6;
 `;
 
-const FeedbackDescription = styled.p`
+const ReplyHighlight = styled.strong`
+  color: #16a34a;
+`;
+
+const FeedbackSubText = styled.p`
   margin: 0 0 20px 0;
-  font-size: 14px;
-  color: #6b7280;
-  line-height: 1.6;
+  font-size: 13px;
+  color: #9ca3af;
+  line-height: 1.5;
 `;
 
 const FeedbackDivider = styled.div`
