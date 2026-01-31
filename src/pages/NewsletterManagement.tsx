@@ -455,13 +455,18 @@ const NewsletterManagement: React.FC = () => {
     setSendingToSelected(true);
     try {
       await newslettersApi.sendToSubscribers(selectSendNewsletterId, targetIds);
-      alert(`${targetIds.length}명에게 발송되었습니다.`);
+      alert(`${targetIds.length}명에게 발송 요청되었습니다.\n(발송 상태는 수 초 후 반영됩니다)`);
       setShowSelectSendModal(false);
       setSelectedSubscriberIds(new Set());
       setSingleSendTargetId(null);
       setIsResend(false);
-      // 발송 후 구독자 목록 새로고침 (발송 상태 반영)
-      fetchSubscribers();
+      // 발송한 뉴스레터를 선택하여 발송 상태 조회
+      setViewingNewsletterId(selectSendNewsletterId);
+      // 발송은 비동기(Kafka)라서 결과 반영까지 약간의 지연이 있음
+      // 3초 후 다시 새로고침
+      setTimeout(() => {
+        fetchSubscribers();
+      }, 3000);
     } catch (error) {
       console.error('Failed to send newsletter:', error);
       alert('발송에 실패했습니다.');
