@@ -7,7 +7,8 @@ import Link from '@tiptap/extension-link';
 import Heading from '@tiptap/extension-heading';
 import Image from '@tiptap/extension-image';
 import TextAlign from '@tiptap/extension-text-align';
-import Highlight from '@tiptap/extension-highlight';
+import { CustomHighlight } from './HighlightExtension';
+import { CustomHorizontalRule } from './HorizontalRuleExtension';
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
 import { Table } from '@tiptap/extension-table';
 import { TableRow } from '@tiptap/extension-table-row';
@@ -21,6 +22,7 @@ import { Figure } from './FigureExtension';
 import { SectionBreak } from './SectionBreakExtension';
 import { VerticalBreak } from './VerticalBreakExtension';
 import { CustomParagraph } from './ParagraphExtension';
+import { CustomBlockquote } from './BlockquoteExtension';
 import EmailPreview from './EmailPreview';
 import DraftRecoveryModal from './DraftRecoveryModal';
 
@@ -80,8 +82,11 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
         heading: false,
         codeBlock: false,
         paragraph: false,
+        blockquote: false,
+        horizontalRule: false,
       }),
       CustomParagraph,
+      CustomBlockquote,
       Heading.configure({
         levels: [1, 2, 3],
       }),
@@ -111,9 +116,10 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
       TextAlign.configure({
         types: ['heading', 'paragraph'],
       }),
-      Highlight.configure({
+      CustomHighlight.configure({
         multicolor: false,
       }),
+      CustomHorizontalRule,
       CodeBlockLowlight.configure({
         lowlight,
         HTMLAttributes: {
