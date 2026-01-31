@@ -224,7 +224,7 @@ const Overlay = styled.div`
 `;
 
 const Modal = styled.div<{ $device: DeviceType }>`
-  background: #1f2937;
+  background: #ffffff;
   border-radius: 12px;
   width: 100%;
   max-width: ${({ $device }) => ($device === 'mobile' ? '500px' : '900px')};
@@ -233,6 +233,7 @@ const Modal = styled.div<{ $device: DeviceType }>`
   flex-direction: column;
   overflow: hidden;
   transition: max-width 0.3s ease;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
 `;
 
 const Header = styled.div`
@@ -240,14 +241,14 @@ const Header = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 16px 20px;
-  border-bottom: 1px solid #374151;
+  border-bottom: 1px solid #e5e7eb;
 `;
 
 const HeaderTitle = styled.h2`
   margin: 0;
   font-size: 16px;
   font-weight: 600;
-  color: white;
+  color: #111827;
 `;
 
 const HeaderControls = styled.div`
@@ -258,7 +259,7 @@ const HeaderControls = styled.div`
 
 const DeviceToggle = styled.div`
   display: flex;
-  background: #374151;
+  background: #f3f4f6;
   border-radius: 6px;
   padding: 2px;
 `;
@@ -271,10 +272,10 @@ const DeviceButton = styled.button<{ $active: boolean }>`
   cursor: pointer;
   transition: all 0.2s;
   background: ${({ $active }) => ($active ? '#4f46e5' : 'transparent')};
-  color: ${({ $active }) => ($active ? 'white' : '#9ca3af')};
+  color: ${({ $active }) => ($active ? 'white' : '#6b7280')};
 
   &:hover {
-    color: white;
+    color: ${({ $active }) => ($active ? 'white' : '#111827')};
   }
 `;
 
@@ -283,8 +284,8 @@ const CloseButton = styled.button`
   height: 32px;
   border: none;
   border-radius: 6px;
-  background: #374151;
-  color: #9ca3af;
+  background: #f3f4f6;
+  color: #6b7280;
   font-size: 16px;
   cursor: pointer;
   display: flex;
@@ -293,8 +294,8 @@ const CloseButton = styled.button`
   transition: all 0.2s;
 
   &:hover {
-    background: #4b5563;
-    color: white;
+    background: #e5e7eb;
+    color: #111827;
   }
 `;
 
@@ -302,7 +303,7 @@ const PreviewContainer = styled.div<{ $device: DeviceType }>`
   flex: 1;
   overflow-y: auto;
   padding: 20px;
-  background: #111827;
+  background: #f9fafb;
   display: flex;
   justify-content: center;
 `;
@@ -311,7 +312,8 @@ const EmailFrame = styled.div<{ $device: DeviceType }>`
   background: white;
   background-color: white;
   border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+  border: 1px solid #e5e7eb;
   width: 100%;
   max-width: ${({ $device }) => ($device === 'mobile' ? '375px' : '680px')};
   transition: max-width 0.3s ease;
@@ -550,12 +552,12 @@ const Footer = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 16px 20px;
-  border-top: 1px solid #374151;
+  border-top: 1px solid #e5e7eb;
 `;
 
 const FooterHint = styled.span`
   font-size: 12px;
-  color: #9ca3af;
+  color: #6b7280;
 `;
 
 const CloseButtonBottom = styled.button`
