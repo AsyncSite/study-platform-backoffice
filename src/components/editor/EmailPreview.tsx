@@ -306,11 +306,12 @@ const PreviewContainer = styled.div<{ $device: DeviceType }>`
   background: #f9fafb;
   display: flex;
   justify-content: center;
+  color-scheme: light;
 `;
 
 const EmailFrame = styled.div<{ $device: DeviceType }>`
-  background: white;
-  background-color: white;
+  background: white !important;
+  background-color: white !important;
   border-radius: 12px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
   border: 1px solid #e5e7eb;
@@ -324,6 +325,20 @@ const EmailFrame = styled.div<{ $device: DeviceType }>`
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
   will-change: transform;
+  color-scheme: light;
+
+  /* 다크 모드 미디어 쿼리 무시 */
+  *, *::before, *::after {
+    color-scheme: light;
+  }
+
+  .email-container {
+    background-color: white !important;
+  }
+
+  table {
+    background-color: white !important;
+  }
 `;
 
 const EmailHeader = styled.div`
@@ -374,9 +389,26 @@ const EmailTitle = styled.h1`
 const EmailContent = styled.div`
   padding: 30px;
   font-size: 16px;
-  color: #374151;
+  color: #374151 !important;
   line-height: 1.8;
-  background-color: white;
+  background-color: white !important;
+  color-scheme: light;
+
+  /* 다크 모드 미디어 쿼리 무시 - 모든 자식 요소 */
+  *, *::before, *::after {
+    color-scheme: light;
+  }
+
+  /* 이메일 템플릿 다크 모드 스타일 오버라이드 */
+  .email-container,
+  .email-content,
+  table,
+  td,
+  th,
+  div {
+    background-color: inherit;
+    color: inherit;
+  }
 
   h1 {
     font-size: 28px;
