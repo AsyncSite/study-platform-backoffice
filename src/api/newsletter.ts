@@ -20,6 +20,8 @@ export interface Subscriber {
 export interface SubscriberWithStatus extends Subscriber {
   status: 'ACTIVE' | 'UNSUBSCRIBED';
   unsubscribedAt: string | null;
+  sendStatus: 'SENT' | 'FAILED' | 'SCHEDULED' | 'CANCELLED' | null;
+  sentAt: string | null;
 }
 
 export interface SubscribersResponse {
@@ -41,6 +43,7 @@ export interface SubscribersPageParams {
   page?: number;
   size?: number;
   keyword?: string;
+  newsletterId?: number;
 }
 
 export interface PagedSubscribersWithStatusResponse {
@@ -80,9 +83,9 @@ export const newsletterApi = {
 
   // 전체 구독자 목록 조회 (상태 포함)
   getAllSubscribers: async (params: SubscribersPageParams = {}): Promise<PagedSubscribersWithStatusResponse> => {
-    const { page = 0, size = 20, keyword = '' } = params;
+    const { page = 0, size = 20, keyword = '', newsletterId } = params;
     const response = await newsletterClient.get(`${NEWSLETTER_API_URL}/subscribers/all`, {
-      params: { page, size, keyword },
+      params: { page, size, keyword, newsletterId },
     });
     return response.data;
   },

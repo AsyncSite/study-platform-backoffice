@@ -39,6 +39,10 @@ const NewsletterManagement: React.FC = () => {
   const [selectSendNewsletterId, setSelectSendNewsletterId] = useState<number | null>(null);
   const [sendingToSelected, setSendingToSelected] = useState(false);
   const [singleSendTargetId, setSingleSendTargetId] = useState<number | null>(null);
+  const [isResend, setIsResend] = useState(false);
+
+  // 발송 상태 조회용 뉴스레터 ID
+  const [viewingNewsletterId, setViewingNewsletterId] = useState<number | null>(null);
 
   // 테스트 발송 모달
   const [showTestModal, setShowTestModal] = useState(false);
@@ -68,10 +72,10 @@ const NewsletterManagement: React.FC = () => {
     fetchNewsletters();
   }, []);
 
-  // 구독자 목록은 검색어나 페이지가 변경될 때마다 다시 조회
+  // 구독자 목록은 검색어, 페이지, 선택된 뉴스레터가 변경될 때마다 다시 조회
   useEffect(() => {
     fetchSubscribers();
-  }, [currentPage, searchTerm]);
+  }, [currentPage, searchTerm, viewingNewsletterId]);
 
   // 검색어 변경시 페이지를 0으로 리셋 (debounce 효과)
   const handleSearchChange = (value: string) => {
@@ -345,6 +349,7 @@ const NewsletterManagement: React.FC = () => {
         page: currentPage,
         size: pageSize,
         keyword: searchTerm,
+        newsletterId: viewingNewsletterId ?? undefined,
       });
       setSubscribers(data.content);
       setTotalCount(data.totalElements);
@@ -422,12 +427,13 @@ const NewsletterManagement: React.FC = () => {
     }
   };
 
-  const openSelectSendModal = (subscriberId?: number) => {
+  const openSelectSendModal = (subscriberId?: number, resend?: boolean) => {
     if (subscriberId) {
       setSingleSendTargetId(subscriberId);
     } else {
       setSingleSendTargetId(null);
     }
+    setIsResend(resend || false);
     setShowSelectSendModal(true);
     setSelectSendNewsletterId(null);
   };
@@ -453,6 +459,9 @@ const NewsletterManagement: React.FC = () => {
       setShowSelectSendModal(false);
       setSelectedSubscriberIds(new Set());
       setSingleSendTargetId(null);
+      setIsResend(false);
+      // 발송 후 구독자 목록 새로고침 (발송 상태 반영)
+      fetchSubscribers();
     } catch (error) {
       console.error('Failed to send newsletter:', error);
       alert('발송에 실패했습니다.');
@@ -702,6 +711,17 @@ const NewsletterManagement: React.FC = () => {
                 </StatusFilterButton>
               </StatusFilterGroup>
               <SubscriberHeaderButtons>
+                <NewsletterSelectDropdown
+                  value={viewingNewsletterId ?? ''}
+                  onChange={(e) => setViewingNewsletterId(e.target.value ? Number(e.target.value) : null)}
+                >
+                  <option value="">발송 상태 조회할 뉴스레터 선택</option>
+                  {newsletters.map((nl) => (
+                    <option key={nl.id} value={nl.id}>
+                      Vol.{nl.issueNumber} - {nl.title}
+                    </option>
+                  ))}
+                </NewsletterSelectDropdown>
                 {selectedSubscriberIds.size > 0 && (
                   <SelectSendButton onClick={() => openSelectSendModal()}>
                     선택 발송 ({selectedSubscriberIds.size}명)
@@ -741,6 +761,7 @@ const NewsletterManagement: React.FC = () => {
                   <Th>이메일</Th>
                   <Th>이름</Th>
                   <Th>상태</Th>
+                  {viewingNewsletterId && <Th>발송 상태</Th>}
                   <Th>유입 경로</Th>
                   <Th>구독일</Th>
                   <Th>액션</Th>
@@ -765,6 +786,17 @@ const NewsletterManagement: React.FC = () => {
                         {subscriber.status === 'ACTIVE' ? '활성' : '해지'}
                       </SubscriberStatusBadge>
                     </Td>
+                    {viewingNewsletterId && (
+                      <Td>
+                        {subscriber.sendStatus ? (
+                          <SendStatusBadge $status={subscriber.sendStatus}>
+                            {subscriber.sendStatus === 'SENT' ? '발송됨' : subscriber.sendStatus === 'FAILED' ? '실패' : subscriber.sendStatus}
+                          </SendStatusBadge>
+                        ) : (
+                          <span style={{ color: '#9ca3af' }}>-</span>
+                        )}
+                      </Td>
+                    )}
                     <Td>
                       <SourceBadge>{subscriber.source || 'direct'}</SourceBadge>
                     </Td>
@@ -772,9 +804,15 @@ const NewsletterManagement: React.FC = () => {
                     <Td>
                       <SubscriberActions>
                         {subscriber.status === 'ACTIVE' && (
-                          <IndividualSendButton onClick={() => openSelectSendModal(subscriber.id)}>
-                            발송
-                          </IndividualSendButton>
+                          viewingNewsletterId && subscriber.sendStatus === 'SENT' ? (
+                            <ResendButton onClick={() => openSelectSendModal(subscriber.id, true)}>
+                              재발송
+                            </ResendButton>
+                          ) : (
+                            <IndividualSendButton onClick={() => openSelectSendModal(subscriber.id)}>
+                              발송
+                            </IndividualSendButton>
+                          )
                         )}
                         {subscriber.status === 'ACTIVE' ? (
                           <UnsubscribeButton
@@ -797,7 +835,7 @@ const NewsletterManagement: React.FC = () => {
                 ))}
                 {filteredSubscribers.length === 0 && (
                   <tr>
-                    <Td colSpan={7}>
+                    <Td colSpan={viewingNewsletterId ? 8 : 7}>
                       <EmptyText>
                         {searchTerm ? '검색 결과가 없습니다.' : '구독자가 없습니다.'}
                       </EmptyText>
@@ -924,7 +962,7 @@ const NewsletterManagement: React.FC = () => {
         <ModalOverlay onClick={() => setShowSelectSendModal(false)}>
           <Modal onClick={(e) => e.stopPropagation()} style={{ maxWidth: '500px' }}>
             <ModalHeader>
-              <ModalTitle>발송할 뉴스레터 선택</ModalTitle>
+              <ModalTitle>{isResend ? '재발송할 뉴스레터 선택' : '발송할 뉴스레터 선택'}</ModalTitle>
               <CloseButton onClick={() => setShowSelectSendModal(false)}>×</CloseButton>
             </ModalHeader>
             <ModalBody>
@@ -1922,6 +1960,38 @@ const IndividualSendButton = styled.button`
 
   &:hover {
     background: #15803d;
+  }
+`;
+
+const ResendButton = styled.button`
+  padding: 6px 12px;
+  background: #f59e0b;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: #d97706;
+  }
+`;
+
+const NewsletterSelectDropdown = styled.select`
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 13px;
+  background: white;
+  cursor: pointer;
+  min-width: 250px;
+
+  &:focus {
+    outline: none;
+    border-color: #4f46e5;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
   }
 `;
 
