@@ -182,4 +182,12 @@ export const newslettersApi = {
       params: { key },
     });
   },
+
+  // 선택한 구독자에게 발송
+  sendToSubscribers: async (id: number, subscriberIds: number[]): Promise<{ message: string }> => {
+    const response = await newsletterClient.post(`${NEWSLETTER_API_URL}/${id}/send-to-subscribers`, {
+      subscriberIds,
+    });
+    return response.data;
+  },
 };

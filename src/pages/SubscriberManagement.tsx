@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { newsletterApi, type SubscriberWithStatus } from '../api/newsletter';
+import { newslettersApi, type Newsletter } from '../api/newsletters';
 import { formatDate } from '../utils/dateUtils';
 
 const SubscriberManagement: React.FC = () => {
@@ -12,6 +13,14 @@ const SubscriberManagement: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [unsubscribing, setUnsubscribing] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'UNSUBSCRIBED'>('ALL');
+
+  // 선택 발송 관련 state
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [showNewsletterModal, setShowNewsletterModal] = useState(false);
+  const [newsletters, setNewsletters] = useState<Newsletter[]>([]);
+  const [selectedNewsletterId, setSelectedNewsletterId] = useState<number | null>(null);
+  const [sendingToSubscribers, setSendingToSubscribers] = useState(false);
+  const [sendTargetId, setSendTargetId] = useState<number | null>(null);
 
   useEffect(() => {
     fetchSubscribers();
@@ -79,6 +88,81 @@ const SubscriberManagement: React.FC = () => {
     }
   };
 
+  // 체크박스 토글
+  const toggleSelect = (id: number) => {
+    setSelectedIds((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
+  // 전체 선택/해제
+  const toggleSelectAll = () => {
+    const activeSubscribers = filteredSubscribers.filter((s) => s.status === 'ACTIVE');
+    if (selectedIds.size === activeSubscribers.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(activeSubscribers.map((s) => s.id)));
+    }
+  };
+
+  // 뉴스레터 목록 조회
+  const fetchNewsletters = async () => {
+    try {
+      const data = await newslettersApi.getAll();
+      setNewsletters(data);
+    } catch (error) {
+      console.error('Failed to fetch newsletters:', error);
+    }
+  };
+
+  // 선택 발송 모달 열기
+  const openSendModal = (subscriberId?: number) => {
+    if (subscriberId) {
+      setSendTargetId(subscriberId);
+    } else {
+      setSendTargetId(null);
+    }
+    fetchNewsletters();
+    setShowNewsletterModal(true);
+    setSelectedNewsletterId(null);
+  };
+
+  // 선택 발송 실행
+  const handleSendToSubscribers = async () => {
+    if (!selectedNewsletterId) {
+      alert('발송할 뉴스레터를 선택해주세요.');
+      return;
+    }
+
+    const targetIds = sendTargetId ? [sendTargetId] : Array.from(selectedIds);
+    if (targetIds.length === 0) {
+      alert('발송 대상을 선택해주세요.');
+      return;
+    }
+
+    if (!confirm(`${targetIds.length}명에게 뉴스레터를 발송하시겠습니까?`)) return;
+
+    setSendingToSubscribers(true);
+    try {
+      await newslettersApi.sendToSubscribers(selectedNewsletterId, targetIds);
+      alert(`${targetIds.length}명에게 발송되었습니다.`);
+      setShowNewsletterModal(false);
+      setSelectedIds(new Set());
+      setSendTargetId(null);
+    } catch (error) {
+      console.error('Failed to send newsletter:', error);
+      alert('발송에 실패했습니다.');
+    } finally {
+      setSendingToSubscribers(false);
+    }
+  };
+
   return (
     <Container>
       <Header>
@@ -88,9 +172,16 @@ const SubscriberManagement: React.FC = () => {
             Team Grit 뉴스레터 구독자 목록입니다. 총 {totalCount}명 (활성: {activeCount}명, 해지: {unsubscribedCount}명)
           </Description>
         </div>
-        <CopyButton onClick={copyEmails} disabled={filteredSubscribers.length === 0}>
-          이메일 복사 ({filteredSubscribers.length})
-        </CopyButton>
+        <HeaderButtons>
+          {selectedIds.size > 0 && (
+            <SendSelectedButton onClick={() => openSendModal()}>
+              선택 발송 ({selectedIds.size}명)
+            </SendSelectedButton>
+          )}
+          <CopyButton onClick={copyEmails} disabled={filteredSubscribers.length === 0}>
+            이메일 복사 ({filteredSubscribers.length})
+          </CopyButton>
+        </HeaderButtons>
       </Header>
 
       <FilterBar>
@@ -128,6 +219,16 @@ const SubscriberManagement: React.FC = () => {
         <Table>
           <thead>
             <tr>
+              <Th style={{ width: '40px' }}>
+                <Checkbox
+                  type="checkbox"
+                  checked={
+                    filteredSubscribers.filter((s) => s.status === 'ACTIVE').length > 0 &&
+                    selectedIds.size === filteredSubscribers.filter((s) => s.status === 'ACTIVE').length
+                  }
+                  onChange={toggleSelectAll}
+                />
+              </Th>
               <Th>이메일</Th>
               <Th>이름</Th>
               <Th>상태</Th>
@@ -140,6 +241,15 @@ const SubscriberManagement: React.FC = () => {
           <tbody>
             {filteredSubscribers.map((subscriber) => (
               <tr key={subscriber.id}>
+                <Td>
+                  {subscriber.status === 'ACTIVE' && (
+                    <Checkbox
+                      type="checkbox"
+                      checked={selectedIds.has(subscriber.id)}
+                      onChange={() => toggleSelect(subscriber.id)}
+                    />
+                  )}
+                </Td>
                 <Td>{subscriber.email}</Td>
                 <Td>{subscriber.name || '-'}</Td>
                 <Td>
@@ -153,27 +263,34 @@ const SubscriberManagement: React.FC = () => {
                 <Td>{formatDate(subscriber.subscribedAt)}</Td>
                 <Td>{formatDate(subscriber.unsubscribedAt)}</Td>
                 <Td>
-                  {subscriber.status === 'ACTIVE' ? (
-                    <UnsubscribeButton
-                      onClick={() => handleUnsubscribe(subscriber.email)}
-                      disabled={unsubscribing === subscriber.email}
-                    >
-                      {unsubscribing === subscriber.email ? '처리중...' : '구독 취소'}
-                    </UnsubscribeButton>
-                  ) : (
-                    <ReactivateButton
-                      onClick={() => handleReactivate(subscriber.email)}
-                      disabled={unsubscribing === subscriber.email}
-                    >
-                      {unsubscribing === subscriber.email ? '처리중...' : '재활성화'}
-                    </ReactivateButton>
-                  )}
+                  <ActionButtons>
+                    {subscriber.status === 'ACTIVE' && (
+                      <SendButton onClick={() => openSendModal(subscriber.id)}>
+                        발송
+                      </SendButton>
+                    )}
+                    {subscriber.status === 'ACTIVE' ? (
+                      <UnsubscribeButton
+                        onClick={() => handleUnsubscribe(subscriber.email)}
+                        disabled={unsubscribing === subscriber.email}
+                      >
+                        {unsubscribing === subscriber.email ? '처리중...' : '구독 취소'}
+                      </UnsubscribeButton>
+                    ) : (
+                      <ReactivateButton
+                        onClick={() => handleReactivate(subscriber.email)}
+                        disabled={unsubscribing === subscriber.email}
+                      >
+                        {unsubscribing === subscriber.email ? '처리중...' : '재활성화'}
+                      </ReactivateButton>
+                    )}
+                  </ActionButtons>
                 </Td>
               </tr>
             ))}
             {filteredSubscribers.length === 0 && (
               <tr>
-                <Td colSpan={7}>
+                <Td colSpan={8}>
                   <EmptyText>
                     {searchTerm ? '검색 결과가 없습니다.' : '구독자가 없습니다.'}
                   </EmptyText>
@@ -182,6 +299,57 @@ const SubscriberManagement: React.FC = () => {
             )}
           </tbody>
         </Table>
+      )}
+
+      {/* 뉴스레터 선택 모달 */}
+      {showNewsletterModal && (
+        <ModalOverlay onClick={() => setShowNewsletterModal(false)}>
+          <ModalContent onClick={(e) => e.stopPropagation()}>
+            <ModalHeader>
+              <ModalTitle>발송할 뉴스레터 선택</ModalTitle>
+              <ModalClose onClick={() => setShowNewsletterModal(false)}>&times;</ModalClose>
+            </ModalHeader>
+            <ModalBody>
+              {newsletters.length === 0 ? (
+                <EmptyText>발송 가능한 뉴스레터가 없습니다.</EmptyText>
+              ) : (
+                <NewsletterList>
+                  {newsletters.map((nl) => (
+                    <NewsletterItem
+                      key={nl.id}
+                      $selected={selectedNewsletterId === nl.id}
+                      onClick={() => setSelectedNewsletterId(nl.id)}
+                    >
+                      <NewsletterRadio
+                        type="radio"
+                        name="newsletter"
+                        checked={selectedNewsletterId === nl.id}
+                        onChange={() => setSelectedNewsletterId(nl.id)}
+                      />
+                      <NewsletterInfo>
+                        <NewsletterTitle>{nl.title}</NewsletterTitle>
+                        <NewsletterMeta>
+                          Vol.{nl.issueNumber} | {nl.status === 'SENT' ? '발송됨' : nl.status === 'SCHEDULED' ? '예약됨' : '초안'}
+                        </NewsletterMeta>
+                      </NewsletterInfo>
+                    </NewsletterItem>
+                  ))}
+                </NewsletterList>
+              )}
+            </ModalBody>
+            <ModalFooter>
+              <ModalCancelButton onClick={() => setShowNewsletterModal(false)}>
+                취소
+              </ModalCancelButton>
+              <ModalConfirmButton
+                onClick={handleSendToSubscribers}
+                disabled={!selectedNewsletterId || sendingToSubscribers}
+              >
+                {sendingToSubscribers ? '발송 중...' : '발송하기'}
+              </ModalConfirmButton>
+            </ModalFooter>
+          </ModalContent>
+        </ModalOverlay>
       )}
     </Container>
   );
@@ -374,4 +542,190 @@ const ReactivateButton = styled.button`
     opacity: 0.5;
     cursor: not-allowed;
   }
+`;
+
+const HeaderButtons = styled.div`
+  display: flex;
+  gap: 12px;
+`;
+
+const SendSelectedButton = styled.button`
+  background: #16a34a;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+
+  &:hover {
+    background: #15803d;
+  }
+`;
+
+const Checkbox = styled.input`
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+`;
+
+const ActionButtons = styled.div`
+  display: flex;
+  gap: 8px;
+`;
+
+const SendButton = styled.button`
+  padding: 6px 12px;
+  background: #16a34a;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: #15803d;
+  }
+`;
+
+const ModalOverlay = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+`;
+
+const ModalContent = styled.div`
+  background: white;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 500px;
+  max-height: 80vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+`;
+
+const ModalHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid #e5e7eb;
+`;
+
+const ModalTitle = styled.h2`
+  font-size: 18px;
+  font-weight: 600;
+  color: #1f2937;
+`;
+
+const ModalClose = styled.button`
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #9ca3af;
+  cursor: pointer;
+
+  &:hover {
+    color: #374151;
+  }
+`;
+
+const ModalBody = styled.div`
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+`;
+
+const ModalFooter = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 20px;
+  border-top: 1px solid #e5e7eb;
+`;
+
+const ModalCancelButton = styled.button`
+  padding: 10px 20px;
+  background: white;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  color: #374151;
+  font-weight: 500;
+  cursor: pointer;
+
+  &:hover {
+    background: #f9fafb;
+  }
+`;
+
+const ModalConfirmButton = styled.button`
+  padding: 10px 20px;
+  background: #16a34a;
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-weight: 500;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: #15803d;
+  }
+
+  &:disabled {
+    background: #9ca3af;
+    cursor: not-allowed;
+  }
+`;
+
+const NewsletterList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+`;
+
+const NewsletterItem = styled.div<{ $selected: boolean }>`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid ${({ $selected }) => ($selected ? '#16a34a' : '#e5e7eb')};
+  border-radius: 8px;
+  cursor: pointer;
+  background: ${({ $selected }) => ($selected ? '#f0fdf4' : 'white')};
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: #16a34a;
+  }
+`;
+
+const NewsletterRadio = styled.input`
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+`;
+
+const NewsletterInfo = styled.div`
+  flex: 1;
+`;
+
+const NewsletterTitle = styled.div`
+  font-weight: 500;
+  color: #1f2937;
+  margin-bottom: 4px;
+`;
+
+const NewsletterMeta = styled.div`
+  font-size: 12px;
+  color: #6b7280;
 `;
