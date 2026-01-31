@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import RichTextEditor from '../components/editor/RichTextEditor';
 import { newslettersApi, type Newsletter, type NewsletterStatus, type SendResult, type SendStats } from '../api/newsletters';
-import { newsletterApi, type SubscriberWithStatus } from '../api/newsletter';
+import { newsletterApi, type SubscriberWithStatus, type SubscriberSendHistoryItem } from '../api/newsletter';
 import { formatDate } from '../utils/dateUtils';
 
 const NewsletterManagement: React.FC = () => {
@@ -40,6 +40,8 @@ const NewsletterManagement: React.FC = () => {
   const [sendingToSelected, setSendingToSelected] = useState(false);
   const [singleSendTargetId, setSingleSendTargetId] = useState<number | null>(null);
   const [isResend, setIsResend] = useState(false);
+  const [subscriberSendHistory, setSubscriberSendHistory] = useState<Record<number, SubscriberSendHistoryItem>>({});
+  const [loadingSendHistory, setLoadingSendHistory] = useState(false);
 
   // 발송 상태 조회용 뉴스레터 ID
   const [viewingNewsletterId, setViewingNewsletterId] = useState<number | null>(null);
@@ -427,11 +429,23 @@ const NewsletterManagement: React.FC = () => {
     }
   };
 
-  const openSelectSendModal = (subscriberId?: number, resend?: boolean) => {
+  const openSelectSendModal = async (subscriberId?: number, resend?: boolean) => {
     if (subscriberId) {
       setSingleSendTargetId(subscriberId);
+      // 개별 구독자의 발송 이력 조회
+      setLoadingSendHistory(true);
+      try {
+        const response = await newsletterApi.getSubscriberSendHistory(subscriberId);
+        setSubscriberSendHistory(response.sendHistory || {});
+      } catch (error) {
+        console.error('Failed to fetch send history:', error);
+        setSubscriberSendHistory({});
+      } finally {
+        setLoadingSendHistory(false);
+      }
     } else {
       setSingleSendTargetId(null);
+      setSubscriberSendHistory({});
     }
     setIsResend(resend || false);
     setShowSelectSendModal(true);
@@ -797,7 +811,6 @@ const NewsletterManagement: React.FC = () => {
                           <SendStatusInfo>
                             <SendStatusBadge $status={subscriber.sendStatus}>
                               {subscriber.sendStatus === 'SENT' ? '발송됨' : subscriber.sendStatus === 'FAILED' ? '실패' : subscriber.sendStatus}
-                              {subscriber.isTest && ' (테스트)'}
                             </SendStatusBadge>
                             {subscriber.sentAt && (
                               <SendDateText>{formatDate(subscriber.sentAt)}</SendDateText>
@@ -815,7 +828,7 @@ const NewsletterManagement: React.FC = () => {
                     <Td>
                       <SubscriberActions>
                         {subscriber.status === 'ACTIVE' && (
-                          viewingNewsletterId && subscriber.sendStatus === 'SENT' && !subscriber.isTest ? (
+                          viewingNewsletterId && subscriber.sendStatus === 'SENT' ? (
                             <ResendButton onClick={() => openSelectSendModal(subscriber.id, true)}>
                               재발송
                             </ResendButton>
@@ -971,36 +984,54 @@ const NewsletterManagement: React.FC = () => {
       {/* 선택 발송 모달 */}
       {showSelectSendModal && (
         <ModalOverlay onClick={() => setShowSelectSendModal(false)}>
-          <Modal onClick={(e) => e.stopPropagation()} style={{ maxWidth: '500px' }}>
+          <Modal onClick={(e) => e.stopPropagation()} style={{ maxWidth: '550px' }}>
             <ModalHeader>
               <ModalTitle>{isResend ? '재발송할 뉴스레터 선택' : '발송할 뉴스레터 선택'}</ModalTitle>
               <CloseButton onClick={() => setShowSelectSendModal(false)}>×</CloseButton>
             </ModalHeader>
             <ModalBody>
-              {newsletters.length === 0 ? (
+              {loadingSendHistory ? (
+                <LoadingText>발송 이력 조회 중...</LoadingText>
+              ) : newsletters.length === 0 ? (
                 <EmptyText>발송 가능한 뉴스레터가 없습니다.</EmptyText>
               ) : (
                 <NewsletterSelectList>
-                  {newsletters.map((nl) => (
-                    <NewsletterSelectItem
-                      key={nl.id}
-                      $selected={selectSendNewsletterId === nl.id}
-                      onClick={() => setSelectSendNewsletterId(nl.id)}
-                    >
-                      <NewsletterSelectRadio
-                        type="radio"
-                        name="selectNewsletter"
-                        checked={selectSendNewsletterId === nl.id}
-                        onChange={() => setSelectSendNewsletterId(nl.id)}
-                      />
-                      <NewsletterSelectInfo>
-                        <NewsletterSelectTitle>{nl.title}</NewsletterSelectTitle>
-                        <NewsletterSelectMeta>
-                          Vol.{nl.issueNumber} | {nl.status === 'SENT' ? '발송됨' : nl.status === 'SCHEDULED' ? '예약됨' : '초안'}
-                        </NewsletterSelectMeta>
-                      </NewsletterSelectInfo>
-                    </NewsletterSelectItem>
-                  ))}
+                  {newsletters.map((nl) => {
+                    const sendHistory = singleSendTargetId ? subscriberSendHistory[nl.id] : null;
+                    const isSentToSubscriber = sendHistory?.status === 'SENT';
+                    return (
+                      <NewsletterSelectItem
+                        key={nl.id}
+                        $selected={selectSendNewsletterId === nl.id}
+                        onClick={() => setSelectSendNewsletterId(nl.id)}
+                      >
+                        <NewsletterSelectRadio
+                          type="radio"
+                          name="selectNewsletter"
+                          checked={selectSendNewsletterId === nl.id}
+                          onChange={() => setSelectSendNewsletterId(nl.id)}
+                        />
+                        <NewsletterSelectInfo>
+                          <NewsletterSelectTitle>{nl.title}</NewsletterSelectTitle>
+                          <NewsletterSelectMeta>
+                            Vol.{nl.issueNumber} | {nl.status === 'SENT' ? '전체발송됨' : nl.status === 'SCHEDULED' ? '예약됨' : '초안'}
+                          </NewsletterSelectMeta>
+                        </NewsletterSelectInfo>
+                        {singleSendTargetId && (
+                          <NewsletterSendStatusBadge $sent={isSentToSubscriber}>
+                            {isSentToSubscriber ? (
+                              <>
+                                발송됨
+                                <NewsletterSendDate>{formatDate(sendHistory.sentAt)}</NewsletterSendDate>
+                              </>
+                            ) : (
+                              '미발송'
+                            )}
+                          </NewsletterSendStatusBadge>
+                        )}
+                      </NewsletterSelectItem>
+                    );
+                  })}
                 </NewsletterSelectList>
               )}
               <ModalActions>
@@ -1009,7 +1040,11 @@ const NewsletterManagement: React.FC = () => {
                   onClick={handleSendToSelectedSubscribers}
                   disabled={!selectSendNewsletterId || sendingToSelected}
                 >
-                  {sendingToSelected ? '발송 중...' : '발송하기'}
+                  {sendingToSelected ? '발송 중...' : (
+                    singleSendTargetId && subscriberSendHistory[selectSendNewsletterId ?? 0]?.status === 'SENT'
+                      ? '재발송하기'
+                      : '발송하기'
+                  )}
                 </SelectSendConfirmButton>
               </ModalActions>
             </ModalBody>
@@ -2061,6 +2096,24 @@ const NewsletterSelectTitle = styled.div`
 const NewsletterSelectMeta = styled.div`
   font-size: 12px;
   color: #6b7280;
+`;
+
+const NewsletterSendStatusBadge = styled.div<{ $sent: boolean }>`
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  background: ${({ $sent }) => ($sent ? '#d1fae5' : '#f3f4f6')};
+  color: ${({ $sent }) => ($sent ? '#065f46' : '#6b7280')};
+`;
+
+const NewsletterSendDate = styled.span`
+  font-size: 10px;
+  font-weight: 400;
+  margin-top: 2px;
 `;
 
 const SelectSendConfirmButton = styled.button`

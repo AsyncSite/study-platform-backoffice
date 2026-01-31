@@ -66,6 +66,16 @@ export interface UnsubscribeResponse {
   message: string;
 }
 
+export interface SubscriberSendHistoryItem {
+  newsletterId: number;
+  status: string;
+  sentAt: string;
+}
+
+export interface SubscriberSendHistoryResponse {
+  sendHistory: Record<number, SubscriberSendHistoryItem>;
+}
+
 export const newsletterApi = {
   // 구독자 목록 조회
   getSubscribers: async (): Promise<SubscribersResponse> => {
@@ -100,6 +110,12 @@ export const newsletterApi = {
   // 구독 재활성화 (관리자용)
   reactivate: async (email: string): Promise<{ email: string; message: string }> => {
     const response = await newsletterClient.post(`${NEWSLETTER_API_URL}/subscribers/reactivate`, { email });
+    return response.data;
+  },
+
+  // 구독자별 발송 이력 조회 (관리자용)
+  getSubscriberSendHistory: async (subscriberId: number): Promise<SubscriberSendHistoryResponse> => {
+    const response = await newsletterClient.get(`${NEWSLETTER_API_URL}/subscribers/${subscriberId}/send-history`);
     return response.data;
   },
 };
