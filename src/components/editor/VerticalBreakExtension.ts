@@ -1,27 +1,27 @@
 import { Node, mergeAttributes } from '@tiptap/core';
 import { InputRule } from '@tiptap/core';
 
-export interface SectionBreakOptions {
+export interface VerticalBreakOptions {
   HTMLAttributes: Record<string, unknown>;
 }
 
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
-    sectionBreak: {
-      setSectionBreak: () => ReturnType;
+    verticalBreak: {
+      setVerticalBreak: () => ReturnType;
     };
   }
 }
 
-export const SectionBreak = Node.create<SectionBreakOptions>({
-  name: 'sectionBreak',
+export const VerticalBreak = Node.create<VerticalBreakOptions>({
+  name: 'verticalBreak',
 
   group: 'block',
 
   parseHTML() {
     return [
       {
-        tag: 'div[data-section-break]',
+        tag: 'div[data-vertical-break]',
       },
     ];
   },
@@ -31,22 +31,22 @@ export const SectionBreak = Node.create<SectionBreakOptions>({
       'div',
       mergeAttributes(
         {
-          'data-section-break': '',
-          class: 'section-break',
+          'data-vertical-break': '',
+          class: 'vertical-break',
           style: 'text-align: center; margin: 24px 0;'
         },
         HTMLAttributes
       ),
       ['span', {
-        class: 'section-break-dots',
-        style: 'font-size: 18px; color: #9ca3af; letter-spacing: 8px;'
-      }, '•  •  •'],
+        class: 'vertical-break-line',
+        style: 'display: inline-block; width: 1px; height: 40px; background-color: #d1d5db;'
+      }],
     ];
   },
 
   addCommands() {
     return {
-      setSectionBreak:
+      setVerticalBreak:
         () =>
         ({ chain }) => {
           return chain()
@@ -58,19 +58,9 @@ export const SectionBreak = Node.create<SectionBreakOptions>({
 
   addInputRules() {
     return [
-      // *** 입력 시 섹션 브레이크로 변환
+      // ||| 입력 시 세로 브레이크로 변환
       new InputRule({
-        find: /^\*\*\*\s$/,
-        handler: ({ range, chain }) => {
-          chain()
-            .deleteRange(range)
-            .insertContent({ type: this.name })
-            .run();
-        },
-      }),
-      // ... 입력 시 섹션 브레이크로 변환
-      new InputRule({
-        find: /^\.\.\.\s$/,
+        find: /^\|\|\|\s$/,
         handler: ({ range, chain }) => {
           chain()
             .deleteRange(range)

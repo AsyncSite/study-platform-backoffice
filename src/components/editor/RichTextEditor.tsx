@@ -19,6 +19,7 @@ import { newslettersApi } from '../../api/newsletters';
 import { createSlashCommandsExtension } from './SlashCommands';
 import { Figure } from './FigureExtension';
 import { SectionBreak } from './SectionBreakExtension';
+import { VerticalBreak } from './VerticalBreakExtension';
 import EmailPreview from './EmailPreview';
 import DraftRecoveryModal from './DraftRecoveryModal';
 
@@ -103,6 +104,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
       }),
       Figure,
       SectionBreak,
+      VerticalBreak,
       TextAlign.configure({
         types: ['heading', 'paragraph'],
       }),
@@ -229,6 +231,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
   const handleCodeBlock = () => editor?.chain().focus().toggleCodeBlock().run();
   const handleHorizontalRule = () => editor?.chain().focus().setHorizontalRule().run();
   const handleSectionBreak = () => editor?.chain().focus().setSectionBreak().run();
+  const handleVerticalBreak = () => editor?.chain().focus().setVerticalBreak().run();
   const handleHighlight = () => editor?.chain().focus().toggleHighlight().run();
 
   const handleTextAlign = (alignment: 'left' | 'center' | 'right') => {
@@ -499,6 +502,14 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
             title="섹션 브레이크 (***)"
           >
             •••
+          </ToolbarButton>
+          <ToolbarButton
+            type="button"
+            onClick={handleVerticalBreak}
+            disabled={disabled}
+            title="세로 구분선 (|||)"
+          >
+            │
           </ToolbarButton>
         </ToolbarGroup>
 
@@ -874,6 +885,20 @@ const EditorContentWrapper = styled.div`
       font-size: 18px;
       color: #9ca3af;
       letter-spacing: 8px;
+    }
+
+    /* 세로 구분선 스타일 */
+    .vertical-break {
+      text-align: center;
+      margin: 24px 0;
+      user-select: none;
+    }
+
+    .vertical-break-line {
+      display: inline-block;
+      width: 1px;
+      height: 40px;
+      background-color: #d1d5db;
     }
 
     /* 형광펜 스타일 */

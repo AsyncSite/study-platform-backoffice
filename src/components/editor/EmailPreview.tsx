@@ -480,6 +480,19 @@ const EmailContent = styled.div`
     letter-spacing: 8px;
   }
 
+  /* 세로 구분선 스타일 */
+  .vertical-break {
+    text-align: center;
+    margin: 24px 0;
+  }
+
+  .vertical-break-line {
+    display: inline-block;
+    width: 1px;
+    height: 40px;
+    background-color: #d1d5db;
+  }
+
   mark {
     background: #fef08a;
     padding: 2px 4px;
