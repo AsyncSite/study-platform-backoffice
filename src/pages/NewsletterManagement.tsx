@@ -547,6 +547,9 @@ const NewsletterManagement: React.FC = () => {
                                 <ActionButton $schedule onClick={() => openScheduleModal(newsletter.id)}>
                                   예약
                                 </ActionButton>
+                                <ActionButton $history onClick={() => openSendResultsModal(newsletter.id)}>
+                                  발송 이력
+                                </ActionButton>
                                 <ActionButton $danger onClick={() => handleDelete(newsletter.id)}>
                                   삭제
                                 </ActionButton>
