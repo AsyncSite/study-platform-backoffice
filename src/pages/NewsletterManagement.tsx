@@ -33,6 +33,13 @@ const NewsletterManagement: React.FC = () => {
   const [pageSize] = useState(20);
   const [totalPages, setTotalPages] = useState(0);
 
+  // 선택 발송 관련 state
+  const [selectedSubscriberIds, setSelectedSubscriberIds] = useState<Set<number>>(new Set());
+  const [showSelectSendModal, setShowSelectSendModal] = useState(false);
+  const [selectSendNewsletterId, setSelectSendNewsletterId] = useState<number | null>(null);
+  const [sendingToSelected, setSendingToSelected] = useState(false);
+  const [singleSendTargetId, setSingleSendTargetId] = useState<number | null>(null);
+
   // 테스트 발송 모달
   const [showTestModal, setShowTestModal] = useState(false);
   const [testEmail, setTestEmail] = useState('');
@@ -393,6 +400,67 @@ const NewsletterManagement: React.FC = () => {
     }
   };
 
+  // ===== 선택 발송 관련 함수 =====
+  const toggleSubscriberSelect = (id: number) => {
+    setSelectedSubscriberIds((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleSelectAllSubscribers = () => {
+    const activeSubscribers = filteredSubscribers.filter((s) => s.status === 'ACTIVE');
+    if (selectedSubscriberIds.size === activeSubscribers.length && activeSubscribers.length > 0) {
+      setSelectedSubscriberIds(new Set());
+    } else {
+      setSelectedSubscriberIds(new Set(activeSubscribers.map((s) => s.id)));
+    }
+  };
+
+  const openSelectSendModal = (subscriberId?: number) => {
+    if (subscriberId) {
+      setSingleSendTargetId(subscriberId);
+    } else {
+      setSingleSendTargetId(null);
+    }
+    setShowSelectSendModal(true);
+    setSelectSendNewsletterId(null);
+  };
+
+  const handleSendToSelectedSubscribers = async () => {
+    if (!selectSendNewsletterId) {
+      alert('발송할 뉴스레터를 선택해주세요.');
+      return;
+    }
+
+    const targetIds = singleSendTargetId ? [singleSendTargetId] : Array.from(selectedSubscriberIds);
+    if (targetIds.length === 0) {
+      alert('발송 대상을 선택해주세요.');
+      return;
+    }
+
+    if (!confirm(`${targetIds.length}명에게 뉴스레터를 발송하시겠습니까?`)) return;
+
+    setSendingToSelected(true);
+    try {
+      await newslettersApi.sendToSubscribers(selectSendNewsletterId, targetIds);
+      alert(`${targetIds.length}명에게 발송되었습니다.`);
+      setShowSelectSendModal(false);
+      setSelectedSubscriberIds(new Set());
+      setSingleSendTargetId(null);
+    } catch (error) {
+      console.error('Failed to send newsletter:', error);
+      alert('발송에 실패했습니다.');
+    } finally {
+      setSendingToSelected(false);
+    }
+  };
+
   const getStatusBadge = (status: NewsletterStatus) => {
     switch (status) {
       case 'DRAFT':
@@ -630,9 +698,16 @@ const NewsletterManagement: React.FC = () => {
                   해지 ({totalCount - activeCount})
                 </StatusFilterButton>
               </StatusFilterGroup>
-            <CopyButton onClick={copyEmails} disabled={filteredSubscribers.length === 0}>
-              이메일 복사 ({filteredSubscribers.length})
-            </CopyButton>
+              <SubscriberHeaderButtons>
+                {selectedSubscriberIds.size > 0 && (
+                  <SelectSendButton onClick={() => openSelectSendModal()}>
+                    선택 발송 ({selectedSubscriberIds.size}명)
+                  </SelectSendButton>
+                )}
+                <CopyButton onClick={copyEmails} disabled={filteredSubscribers.length === 0}>
+                  이메일 복사 ({filteredSubscribers.length})
+                </CopyButton>
+              </SubscriberHeaderButtons>
           </SectionHeader>
 
           <SearchBox>
@@ -650,6 +725,16 @@ const NewsletterManagement: React.FC = () => {
             <Table>
               <thead>
                 <tr>
+                  <Th style={{ width: '40px' }}>
+                    <Checkbox
+                      type="checkbox"
+                      checked={
+                        filteredSubscribers.filter((s) => s.status === 'ACTIVE').length > 0 &&
+                        selectedSubscriberIds.size === filteredSubscribers.filter((s) => s.status === 'ACTIVE').length
+                      }
+                      onChange={toggleSelectAllSubscribers}
+                    />
+                  </Th>
                   <Th>이메일</Th>
                   <Th>이름</Th>
                   <Th>상태</Th>
@@ -661,6 +746,15 @@ const NewsletterManagement: React.FC = () => {
               <tbody>
                 {filteredSubscribers.map((subscriber) => (
                   <tr key={subscriber.id}>
+                    <Td>
+                      {subscriber.status === 'ACTIVE' && (
+                        <Checkbox
+                          type="checkbox"
+                          checked={selectedSubscriberIds.has(subscriber.id)}
+                          onChange={() => toggleSubscriberSelect(subscriber.id)}
+                        />
+                      )}
+                    </Td>
                     <Td>{subscriber.email}</Td>
                     <Td>{subscriber.name || '-'}</Td>
                     <Td>
@@ -673,27 +767,34 @@ const NewsletterManagement: React.FC = () => {
                     </Td>
                     <Td>{formatDate(subscriber.subscribedAt)}</Td>
                     <Td>
-                      {subscriber.status === 'ACTIVE' ? (
-                        <UnsubscribeButton
-                          onClick={() => handleUnsubscribe(subscriber.email)}
-                          disabled={unsubscribing === subscriber.email}
-                        >
-                          {unsubscribing === subscriber.email ? '처리중...' : '구독 취소'}
-                        </UnsubscribeButton>
-                      ) : (
-                        <ReactivateButton
-                          onClick={() => handleReactivate(subscriber.email)}
-                          disabled={unsubscribing === subscriber.email}
-                        >
-                          {unsubscribing === subscriber.email ? '처리중...' : '재활성화'}
-                        </ReactivateButton>
-                      )}
+                      <SubscriberActions>
+                        {subscriber.status === 'ACTIVE' && (
+                          <IndividualSendButton onClick={() => openSelectSendModal(subscriber.id)}>
+                            발송
+                          </IndividualSendButton>
+                        )}
+                        {subscriber.status === 'ACTIVE' ? (
+                          <UnsubscribeButton
+                            onClick={() => handleUnsubscribe(subscriber.email)}
+                            disabled={unsubscribing === subscriber.email}
+                          >
+                            {unsubscribing === subscriber.email ? '처리중...' : '구독 취소'}
+                          </UnsubscribeButton>
+                        ) : (
+                          <ReactivateButton
+                            onClick={() => handleReactivate(subscriber.email)}
+                            disabled={unsubscribing === subscriber.email}
+                          >
+                            {unsubscribing === subscriber.email ? '처리중...' : '재활성화'}
+                          </ReactivateButton>
+                        )}
+                      </SubscriberActions>
                     </Td>
                   </tr>
                 ))}
                 {filteredSubscribers.length === 0 && (
                   <tr>
-                    <Td colSpan={6}>
+                    <Td colSpan={7}>
                       <EmptyText>
                         {searchTerm ? '검색 결과가 없습니다.' : '구독자가 없습니다.'}
                       </EmptyText>
@@ -812,6 +913,55 @@ const NewsletterManagement: React.FC = () => {
               />
             </PreviewModalBody>
           </PreviewModal>
+        </ModalOverlay>
+      )}
+
+      {/* 선택 발송 모달 */}
+      {showSelectSendModal && (
+        <ModalOverlay onClick={() => setShowSelectSendModal(false)}>
+          <Modal onClick={(e) => e.stopPropagation()} style={{ maxWidth: '500px' }}>
+            <ModalHeader>
+              <ModalTitle>발송할 뉴스레터 선택</ModalTitle>
+              <CloseButton onClick={() => setShowSelectSendModal(false)}>×</CloseButton>
+            </ModalHeader>
+            <ModalBody>
+              {newsletters.length === 0 ? (
+                <EmptyText>발송 가능한 뉴스레터가 없습니다.</EmptyText>
+              ) : (
+                <NewsletterSelectList>
+                  {newsletters.map((nl) => (
+                    <NewsletterSelectItem
+                      key={nl.id}
+                      $selected={selectSendNewsletterId === nl.id}
+                      onClick={() => setSelectSendNewsletterId(nl.id)}
+                    >
+                      <NewsletterSelectRadio
+                        type="radio"
+                        name="selectNewsletter"
+                        checked={selectSendNewsletterId === nl.id}
+                        onChange={() => setSelectSendNewsletterId(nl.id)}
+                      />
+                      <NewsletterSelectInfo>
+                        <NewsletterSelectTitle>{nl.title}</NewsletterSelectTitle>
+                        <NewsletterSelectMeta>
+                          Vol.{nl.issueNumber} | {nl.status === 'SENT' ? '발송됨' : nl.status === 'SCHEDULED' ? '예약됨' : '초안'}
+                        </NewsletterSelectMeta>
+                      </NewsletterSelectInfo>
+                    </NewsletterSelectItem>
+                  ))}
+                </NewsletterSelectList>
+              )}
+              <ModalActions>
+                <CancelButton onClick={() => setShowSelectSendModal(false)}>취소</CancelButton>
+                <SelectSendConfirmButton
+                  onClick={handleSendToSelectedSubscribers}
+                  disabled={!selectSendNewsletterId || sendingToSelected}
+                >
+                  {sendingToSelected ? '발송 중...' : '발송하기'}
+                </SelectSendConfirmButton>
+              </ModalActions>
+            </ModalBody>
+          </Modal>
         </ModalOverlay>
       )}
 
@@ -1723,4 +1873,116 @@ const PreviewFrame = styled.iframe`
   border: 1px solid #e5e7eb;
   border-radius: 8px;
   background-color: #ffffff;
+`;
+
+// 선택 발송 관련 스타일
+const SubscriberHeaderButtons = styled.div`
+  display: flex;
+  gap: 12px;
+`;
+
+const SelectSendButton = styled.button`
+  background: #16a34a;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+
+  &:hover {
+    background: #15803d;
+  }
+`;
+
+const Checkbox = styled.input`
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+`;
+
+const SubscriberActions = styled.div`
+  display: flex;
+  gap: 8px;
+`;
+
+const IndividualSendButton = styled.button`
+  padding: 6px 12px;
+  background: #16a34a;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: #15803d;
+  }
+`;
+
+const NewsletterSelectList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+  max-height: 300px;
+  overflow-y: auto;
+`;
+
+const NewsletterSelectItem = styled.div<{ $selected: boolean }>`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid ${({ $selected }) => ($selected ? '#16a34a' : '#e5e7eb')};
+  border-radius: 8px;
+  cursor: pointer;
+  background: ${({ $selected }) => ($selected ? '#f0fdf4' : 'white')};
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: #16a34a;
+  }
+`;
+
+const NewsletterSelectRadio = styled.input`
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+`;
+
+const NewsletterSelectInfo = styled.div`
+  flex: 1;
+`;
+
+const NewsletterSelectTitle = styled.div`
+  font-weight: 500;
+  color: #1f2937;
+  margin-bottom: 4px;
+`;
+
+const NewsletterSelectMeta = styled.div`
+  font-size: 12px;
+  color: #6b7280;
+`;
+
+const SelectSendConfirmButton = styled.button`
+  padding: 10px 20px;
+  background: #16a34a;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+
+  &:hover:not(:disabled) {
+    background: #15803d;
+  }
+
+  &:disabled {
+    background: #9ca3af;
+    cursor: not-allowed;
+  }
 `;
