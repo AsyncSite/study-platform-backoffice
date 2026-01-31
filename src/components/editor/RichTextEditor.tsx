@@ -20,6 +20,7 @@ import { createSlashCommandsExtension } from './SlashCommands';
 import { Figure } from './FigureExtension';
 import { SectionBreak } from './SectionBreakExtension';
 import { VerticalBreak } from './VerticalBreakExtension';
+import { CustomParagraph } from './ParagraphExtension';
 import EmailPreview from './EmailPreview';
 import DraftRecoveryModal from './DraftRecoveryModal';
 
@@ -78,7 +79,9 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
       StarterKit.configure({
         heading: false,
         codeBlock: false,
+        paragraph: false,
       }),
+      CustomParagraph,
       Heading.configure({
         levels: [1, 2, 3],
       }),
