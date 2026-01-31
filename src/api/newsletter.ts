@@ -22,6 +22,7 @@ export interface SubscriberWithStatus extends Subscriber {
   unsubscribedAt: string | null;
   sendStatus: 'SENT' | 'FAILED' | 'SCHEDULED' | 'CANCELLED' | null;
   sentAt: string | null;
+  isTest: boolean | null;
 }
 
 export interface SubscribersResponse {

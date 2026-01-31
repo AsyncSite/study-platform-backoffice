@@ -794,11 +794,17 @@ const NewsletterManagement: React.FC = () => {
                     {viewingNewsletterId && (
                       <Td>
                         {subscriber.sendStatus ? (
-                          <SendStatusBadge $status={subscriber.sendStatus}>
-                            {subscriber.sendStatus === 'SENT' ? '발송됨' : subscriber.sendStatus === 'FAILED' ? '실패' : subscriber.sendStatus}
-                          </SendStatusBadge>
+                          <SendStatusInfo>
+                            <SendStatusBadge $status={subscriber.sendStatus}>
+                              {subscriber.sendStatus === 'SENT' ? '발송됨' : subscriber.sendStatus === 'FAILED' ? '실패' : subscriber.sendStatus}
+                              {subscriber.isTest && ' (테스트)'}
+                            </SendStatusBadge>
+                            {subscriber.sentAt && (
+                              <SendDateText>{formatDate(subscriber.sentAt)}</SendDateText>
+                            )}
+                          </SendStatusInfo>
                         ) : (
-                          <span style={{ color: '#9ca3af' }}>-</span>
+                          <span style={{ color: '#9ca3af' }}>미발송</span>
                         )}
                       </Td>
                     )}
@@ -809,7 +815,7 @@ const NewsletterManagement: React.FC = () => {
                     <Td>
                       <SubscriberActions>
                         {subscriber.status === 'ACTIVE' && (
-                          viewingNewsletterId && subscriber.sendStatus === 'SENT' ? (
+                          viewingNewsletterId && subscriber.sendStatus === 'SENT' && !subscriber.isTest ? (
                             <ResendButton onClick={() => openSelectSendModal(subscriber.id, true)}>
                               재발송
                             </ResendButton>
@@ -1885,6 +1891,17 @@ const SendStatusBadge = styled.span<{ $status: 'SENT' | 'FAILED' | 'SCHEDULED' |
         return 'background: #f3f4f6; color: #6b7280;';
     }
   }}
+`;
+
+const SendStatusInfo = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+`;
+
+const SendDateText = styled.span`
+  font-size: 11px;
+  color: #6b7280;
 `;
 
 const ErrorMessage = styled.span`
