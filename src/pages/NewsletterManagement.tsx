@@ -764,19 +764,25 @@ const NewsletterManagement: React.FC = () => {
               </SubscriberHeaderButtons>
           </SectionHeader>
 
-          <SearchBox>
-            <SearchInput
-              type="text"
-              placeholder="이메일 또는 이름으로 검색..."
-              value={searchTerm}
-              onChange={(e) => handleSearchChange(e.target.value)}
-            />
-          </SearchBox>
-
-          {subscribersLoading ? (
-            <LoadingText>로딩 중...</LoadingText>
+          {!viewingNewsletterId ? (
+            <EmptyStateBox>
+              <EmptyStateText>발송 상태를 조회할 뉴스레터를 선택해주세요.</EmptyStateText>
+            </EmptyStateBox>
           ) : (
-            <Table>
+            <>
+              <SearchBox>
+                <SearchInput
+                  type="text"
+                  placeholder="이메일 또는 이름으로 검색..."
+                  value={searchTerm}
+                  onChange={(e) => handleSearchChange(e.target.value)}
+                />
+              </SearchBox>
+
+              {subscribersLoading ? (
+                <LoadingText>로딩 중...</LoadingText>
+              ) : (
+                <Table>
               <thead>
                 <tr>
                   <Th style={{ width: '40px' }}>
@@ -913,6 +919,8 @@ const NewsletterManagement: React.FC = () => {
                 마지막
               </PageButton>
             </Pagination>
+          )}
+            </>
           )}
           </>
         )}
@@ -1534,6 +1542,21 @@ const EmptyText = styled.p`
   text-align: center;
   color: #9ca3af;
   padding: 20px;
+`;
+
+const EmptyStateBox = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  background: #f9fafb;
+  border-radius: 8px;
+  border: 1px dashed #d1d5db;
+`;
+
+const EmptyStateText = styled.p`
+  font-size: 15px;
+  color: #6b7280;
 `;
 
 // Editor styles
