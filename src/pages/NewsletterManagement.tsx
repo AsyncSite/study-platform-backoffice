@@ -43,8 +43,20 @@ const NewsletterManagement: React.FC = () => {
   const [subscriberSendHistory, setSubscriberSendHistory] = useState<Record<number, SubscriberSendHistoryItem>>({});
   const [loadingSendHistory, setLoadingSendHistory] = useState(false);
 
-  // 발송 상태 조회용 뉴스레터 ID
-  const [viewingNewsletterId, setViewingNewsletterId] = useState<number | null>(null);
+  // 발송 상태 조회용 뉴스레터 ID (localStorage에 저장하여 새로고침 시 유지)
+  const [viewingNewsletterId, setViewingNewsletterId] = useState<number | null>(() => {
+    const saved = localStorage.getItem('viewingNewsletterId');
+    return saved ? Number(saved) : null;
+  });
+
+  // viewingNewsletterId 변경 시 localStorage에 저장
+  useEffect(() => {
+    if (viewingNewsletterId !== null) {
+      localStorage.setItem('viewingNewsletterId', String(viewingNewsletterId));
+    } else {
+      localStorage.removeItem('viewingNewsletterId');
+    }
+  }, [viewingNewsletterId]);
 
   // 테스트 발송 모달
   const [showTestModal, setShowTestModal] = useState(false);
