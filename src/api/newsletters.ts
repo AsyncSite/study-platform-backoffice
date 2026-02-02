@@ -190,4 +190,10 @@ export const newslettersApi = {
     });
     return response.data;
   },
+
+  // 상태 변경
+  updateStatus: async (id: number, status: NewsletterStatus): Promise<Newsletter> => {
+    const response = await newsletterClient.post(`${NEWSLETTER_API_URL}/${id}/update-status`, { status });
+    return response.data;
+  },
 };

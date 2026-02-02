@@ -82,6 +82,11 @@ const NewsletterManagement: React.FC = () => {
   const [previewHtml, setPreviewHtml] = useState<string>('');
   const [previewLoading, setPreviewLoading] = useState(false);
 
+  // 상태 변경 모달
+  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [statusChangeNewsletterId, setStatusChangeNewsletterId] = useState<number | null>(null);
+  const [selectedStatus, setSelectedStatus] = useState<NewsletterStatus>('DRAFT');
+
   useEffect(() => {
     fetchNewsletters();
   }, []);
@@ -501,6 +506,27 @@ const NewsletterManagement: React.FC = () => {
     }
   };
 
+  // 상태 변경 모달 열기
+  const openStatusModal = (id: number, currentStatus: NewsletterStatus) => {
+    setStatusChangeNewsletterId(id);
+    setSelectedStatus(currentStatus);
+    setShowStatusModal(true);
+  };
+
+  // 상태 변경 처리
+  const handleStatusChange = async () => {
+    if (!statusChangeNewsletterId) return;
+    try {
+      await newslettersApi.updateStatus(statusChangeNewsletterId, selectedStatus);
+      alert('상태가 변경되었습니다.');
+      setShowStatusModal(false);
+      fetchNewsletters();
+    } catch (error) {
+      console.error('Failed to update status:', error);
+      alert('상태 변경에 실패했습니다.');
+    }
+  };
+
   const getStatusBadge = (status: NewsletterStatus) => {
     switch (status) {
       case 'DRAFT':
@@ -590,6 +616,9 @@ const NewsletterManagement: React.FC = () => {
                                 <ActionButton $history onClick={() => openSendResultsModal(newsletter.id)}>
                                   발송 이력
                                 </ActionButton>
+                                <ActionButton $status onClick={() => openStatusModal(newsletter.id, newsletter.status)}>
+                                  상태 변경
+                                </ActionButton>
                                 <ActionButton $danger onClick={() => handleDelete(newsletter.id)}>
                                   삭제
                                 </ActionButton>
@@ -606,6 +635,9 @@ const NewsletterManagement: React.FC = () => {
                                 <ActionButton $danger onClick={() => handleCancelSchedule(newsletter.id)}>
                                   예약 취소
                                 </ActionButton>
+                                <ActionButton $status onClick={() => openStatusModal(newsletter.id, newsletter.status)}>
+                                  상태 변경
+                                </ActionButton>
                               </>
                             )}
                             {newsletter.status === 'SENT' && (
@@ -618,6 +650,9 @@ const NewsletterManagement: React.FC = () => {
                                 </ActionButton>
                                 <ActionButton $history onClick={() => openSendResultsModal(newsletter.id)}>
                                   발송 이력
+                                </ActionButton>
+                                <ActionButton $status onClick={() => openStatusModal(newsletter.id, newsletter.status)}>
+                                  상태 변경
                                 </ActionButton>
                               </>
                             )}
@@ -1072,6 +1107,35 @@ const NewsletterManagement: React.FC = () => {
         </ModalOverlay>
       )}
 
+      {/* 상태 변경 모달 */}
+      {showStatusModal && (
+        <ModalOverlay onClick={() => setShowStatusModal(false)}>
+          <Modal onClick={(e) => e.stopPropagation()}>
+            <ModalHeader>
+              <ModalTitle>상태 변경</ModalTitle>
+              <CloseButton onClick={() => setShowStatusModal(false)}>×</CloseButton>
+            </ModalHeader>
+            <ModalBody>
+              <FormGroup>
+                <Label>변경할 상태</Label>
+                <StatusSelect
+                  value={selectedStatus}
+                  onChange={(e) => setSelectedStatus(e.target.value as NewsletterStatus)}
+                >
+                  <option value="DRAFT">작성 중 (DRAFT)</option>
+                  <option value="SCHEDULED">예약됨 (SCHEDULED)</option>
+                  <option value="SENT">발송 완료 (SENT)</option>
+                </StatusSelect>
+              </FormGroup>
+              <ModalActions>
+                <CancelButton onClick={() => setShowStatusModal(false)}>취소</CancelButton>
+                <ConfirmButton onClick={handleStatusChange}>변경</ConfirmButton>
+              </ModalActions>
+            </ModalBody>
+          </Modal>
+        </ModalOverlay>
+      )}
+
       {/* 발송 이력 모달 */}
       {showSendResultsModal && (
         <ModalOverlay onClick={() => setShowSendResultsModal(false)}>
@@ -1410,7 +1474,7 @@ const ActionButtons = styled.div`
   gap: 8px;
 `;
 
-const ActionButton = styled.button<{ $primary?: boolean; $danger?: boolean; $schedule?: boolean; $history?: boolean; $preview?: boolean }>`
+const ActionButton = styled.button<{ $primary?: boolean; $danger?: boolean; $schedule?: boolean; $history?: boolean; $preview?: boolean; $status?: boolean }>`
   padding: 6px 12px;
   border: 1px solid #d1d5db;
   border-radius: 4px;
@@ -1476,6 +1540,18 @@ const ActionButton = styled.button<{ $primary?: boolean; $danger?: boolean; $sch
 
     &:hover {
       background: #6d28d9;
+    }
+  `}
+
+  ${({ $status }) =>
+    $status &&
+    `
+    background: #f59e0b;
+    border-color: #f59e0b;
+    color: white;
+
+    &:hover {
+      background: #d97706;
     }
   `}
 
@@ -1815,6 +1891,22 @@ const DateTimeInput = styled.input`
     outline: none;
     border-color: #059669;
     box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.1);
+  }
+`;
+
+const StatusSelect = styled.select`
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  background: white;
+  cursor: pointer;
+
+  &:focus {
+    outline: none;
+    border-color: #f59e0b;
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
   }
 `;
 
