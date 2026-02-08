@@ -295,7 +295,7 @@ const ProductManagement: React.FC = () => {
     try {
       const result = await assetApi.upload(file, {
         visibility: 'PUBLIC',
-        category: 'product-thumbnail',
+        category: 'THUMBNAIL',
       });
       setUrl(result.publicUrl);
       alert('썸네일이 업로드되었습니다.');

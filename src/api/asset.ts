@@ -10,6 +10,18 @@ export interface AssetUploadResponse {
   mimeType: string;
 }
 
+// Available categories in asset-service
+export type AssetCategory =
+  | 'IMAGE'
+  | 'PROFILE_IMAGE'
+  | 'STUDY_IMAGE'
+  | 'REVIEW_IMAGE'
+  | 'EDITOR_ASSET'
+  | 'DOCUMENT'
+  | 'RESUME'
+  | 'THUMBNAIL'
+  | 'GENERAL';
+
 export const assetApi = {
   /**
    * Upload a file to asset-service
@@ -21,7 +33,7 @@ export const assetApi = {
     file: File,
     options?: {
       visibility?: 'PUBLIC' | 'PRIVATE';
-      category?: string;
+      category?: AssetCategory;
       tags?: string;
     }
   ): Promise<AssetUploadResponse> => {
