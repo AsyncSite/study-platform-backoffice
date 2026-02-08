@@ -646,10 +646,10 @@ const ProductManagement: React.FC = () => {
                 </thead>
                 <tbody>
                   {selectedProduct.variants.map((variant) => {
-                    const originalPrice = variant.originalPrice ?? variant.basePrice ?? 0;
-                    const effectivePrice = variant.effectivePrice ?? variant.basePrice ?? 0;
-                    const isOnSale = variant.onSale || (variant.salePrice != null && variant.salePrice < originalPrice);
-                    const discountPercent = variant.discountPercent ?? (isOnSale ? Math.round((1 - effectivePrice / originalPrice) * 100) : 0);
+                    const originalPrice = variant.originalPrice ?? (variant as any).basePrice ?? 0;
+                    const effectivePrice = variant.effectivePrice ?? variant.salePrice ?? (variant as any).basePrice ?? 0;
+                    const isOnSale = variant.onSale ?? (variant.salePrice != null && variant.salePrice < originalPrice);
+                    const discountPercent = variant.discountPercent ?? (isOnSale && originalPrice > 0 ? Math.round((1 - effectivePrice / originalPrice) * 100) : 0);
                     return (
                       <tr key={variant.variantId}>
                         <Td>
@@ -658,10 +658,10 @@ const ProductManagement: React.FC = () => {
                             {variant.description && <div style={{ fontSize: '12px', color: '#6b7280' }}>{variant.description}</div>}
                           </div>
                         </Td>
-                        <Td>{originalPrice.toLocaleString()}원</Td>
+                        <Td>{(originalPrice || 0).toLocaleString()}원</Td>
                         <Td>
                           {isOnSale ? (
-                            <span style={{ color: '#dc2626', fontWeight: 600 }}>{effectivePrice.toLocaleString()}원</span>
+                            <span style={{ color: '#dc2626', fontWeight: 600 }}>{(effectivePrice || 0).toLocaleString()}원</span>
                           ) : '-'}
                         </Td>
                         <Td>
