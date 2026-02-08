@@ -5,6 +5,12 @@ import { ko } from 'date-fns/locale';
 import Badge from '../components/common/Badge';
 import { couponApi, type CouponResponse, type CreateCouponRequest } from '../api/coupon';
 
+const generateCouponCode = (): string => {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const seg = (len: number) => Array.from({ length: len }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+  return `GRT-${seg(4)}-${seg(4)}`;
+};
+
 const CouponManagement: React.FC = () => {
   const [coupons, setCoupons] = useState<CouponResponse[]>([]);
   const [loading, setLoading] = useState(true);
@@ -12,7 +18,7 @@ const CouponManagement: React.FC = () => {
   const [creating, setCreating] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [formData, setFormData] = useState<CreateCouponRequest>({
-    code: '',
+    code: generateCouponCode(),
     description: '',
     type: 'PERCENTAGE',
     discountValue: 10,
@@ -47,7 +53,7 @@ const CouponManagement: React.FC = () => {
 
   const resetForm = () => {
     setFormData({
-      code: '',
+      code: generateCouponCode(),
       description: '',
       type: 'PERCENTAGE',
       discountValue: 10,
@@ -76,10 +82,6 @@ const CouponManagement: React.FC = () => {
 
   const handleCreateCoupon = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.code.trim()) {
-      alert('쿠폰 코드를 입력해주세요.');
-      return;
-    }
     if (!formData.validFrom) {
       alert('유효 시작일을 입력해주세요.');
       return;
@@ -270,14 +272,19 @@ const CouponManagement: React.FC = () => {
             <Form onSubmit={handleCreateCoupon}>
               <FormGrid>
                 <FormGroup>
-                  <Label>쿠폰 코드 *</Label>
-                  <Input
-                    type="text"
-                    value={formData.code}
-                    onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
-                    placeholder="WELCOME-2026"
-                    required
-                  />
+                  <Label>쿠폰 코드 (자동 생성)</Label>
+                  <ProductIdInputRow>
+                    <Input
+                      type="text"
+                      value={formData.code}
+                      onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
+                      placeholder="자동 생성됨"
+                      readOnly
+                    />
+                    <SmallButton type="button" onClick={() => setFormData({ ...formData, code: generateCouponCode() })}>
+                      재생성
+                    </SmallButton>
+                  </ProductIdInputRow>
                 </FormGroup>
 
                 <FormGroup>
