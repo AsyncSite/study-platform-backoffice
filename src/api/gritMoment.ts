@@ -28,7 +28,7 @@ export interface CreateGritMomentPriceRequest {
   amount: number;
 }
 
-const GRIT_MOMENT_API_URL = '/api/query-daily/admin/grit-moment/prices';
+const GRIT_MOMENT_API_URL = '/api/grit-service/grit/prices';
 
 export const gritMomentApi = {
   // 전체 목록 조회
