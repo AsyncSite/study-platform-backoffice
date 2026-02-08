@@ -666,7 +666,7 @@ const ProductManagement: React.FC = () => {
                         </Td>
                         <Td>
                           {isOnSale ? (
-                            <Badge variant="danger">{discountPercent}%</Badge>
+                            <Badge variant="error">{discountPercent}%</Badge>
                           ) : '-'}
                         </Td>
                         <Td>{PRICING_TYPE_LABELS[variant.pricingType]}</Td>
