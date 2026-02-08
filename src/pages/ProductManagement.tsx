@@ -59,7 +59,8 @@ const ProductManagement: React.FC = () => {
   const [variantForm, setVariantForm] = useState<CreateVariantRequest>({
     name: '',
     description: '',
-    basePrice: 0,
+    originalPrice: 0,
+    salePrice: null,
     pricingType: 'ONE_TIME',
     features: {},
     isDefault: false,
@@ -220,7 +221,7 @@ const ProductManagement: React.FC = () => {
       alert('Variant가 추가되었습니다.');
       setShowVariantForm(false);
       setVariantForm({
-        name: '', description: '', basePrice: 0, pricingType: 'ONE_TIME',
+        name: '', description: '', originalPrice: 0, salePrice: null, pricingType: 'ONE_TIME',
         features: {}, isDefault: false, displayOrder: 0,
       });
       await refreshDetail();
@@ -634,7 +635,9 @@ const ProductManagement: React.FC = () => {
                 <thead>
                   <tr>
                     <Th>이름</Th>
-                    <Th>가격</Th>
+                    <Th>정가</Th>
+                    <Th>할인가</Th>
+                    <Th>할인율</Th>
                     <Th>가격 유형</Th>
                     <Th>기본</Th>
                     <Th>순서</Th>
@@ -642,25 +645,41 @@ const ProductManagement: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {selectedProduct.variants.map((variant) => (
-                    <tr key={variant.variantId}>
-                      <Td>
-                        <div>
-                          <strong>{variant.name}</strong>
-                          {variant.description && <div style={{ fontSize: '12px', color: '#6b7280' }}>{variant.description}</div>}
-                        </div>
-                      </Td>
-                      <Td>{variant.basePrice.toLocaleString()}원</Td>
-                      <Td>{PRICING_TYPE_LABELS[variant.pricingType]}</Td>
-                      <Td>{variant.isDefault ? 'Y' : 'N'}</Td>
-                      <Td>{variant.displayOrder}</Td>
-                      <Td>
-                        <Badge variant={variant.active ? 'success' : 'default'}>
-                          {variant.active ? '활성' : '비활성'}
-                        </Badge>
-                      </Td>
-                    </tr>
-                  ))}
+                  {selectedProduct.variants.map((variant) => {
+                    const originalPrice = variant.originalPrice ?? variant.basePrice ?? 0;
+                    const effectivePrice = variant.effectivePrice ?? variant.basePrice ?? 0;
+                    const isOnSale = variant.onSale || (variant.salePrice != null && variant.salePrice < originalPrice);
+                    const discountPercent = variant.discountPercent ?? (isOnSale ? Math.round((1 - effectivePrice / originalPrice) * 100) : 0);
+                    return (
+                      <tr key={variant.variantId}>
+                        <Td>
+                          <div>
+                            <strong>{variant.name}</strong>
+                            {variant.description && <div style={{ fontSize: '12px', color: '#6b7280' }}>{variant.description}</div>}
+                          </div>
+                        </Td>
+                        <Td>{originalPrice.toLocaleString()}원</Td>
+                        <Td>
+                          {isOnSale ? (
+                            <span style={{ color: '#dc2626', fontWeight: 600 }}>{effectivePrice.toLocaleString()}원</span>
+                          ) : '-'}
+                        </Td>
+                        <Td>
+                          {isOnSale ? (
+                            <Badge variant="danger">{discountPercent}%</Badge>
+                          ) : '-'}
+                        </Td>
+                        <Td>{PRICING_TYPE_LABELS[variant.pricingType]}</Td>
+                        <Td>{variant.isDefault ? 'Y' : 'N'}</Td>
+                        <Td>{variant.displayOrder}</Td>
+                        <Td>
+                          <Badge variant={variant.active ? 'success' : 'default'}>
+                            {variant.active ? '활성' : '비활성'}
+                          </Badge>
+                        </Td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </VariantTable>
             ) : (
@@ -683,14 +702,25 @@ const ProductManagement: React.FC = () => {
                       />
                     </FormGroup>
                     <FormGroup>
-                      <Label>가격 (원) *</Label>
+                      <Label>정가 (원) *</Label>
                       <Input
                         type="number"
-                        value={variantForm.basePrice}
-                        onChange={(e) => setVariantForm({ ...variantForm, basePrice: Number(e.target.value) })}
+                        value={variantForm.originalPrice}
+                        onChange={(e) => setVariantForm({ ...variantForm, originalPrice: Number(e.target.value) })}
                         min={0}
                         required
                       />
+                    </FormGroup>
+                    <FormGroup>
+                      <Label>할인가 (원)</Label>
+                      <Input
+                        type="number"
+                        value={variantForm.salePrice ?? ''}
+                        onChange={(e) => setVariantForm({ ...variantForm, salePrice: e.target.value ? Number(e.target.value) : null })}
+                        min={0}
+                        placeholder="할인 없으면 비워두세요"
+                      />
+                      <HelpText>할인가를 입력하면 자동으로 할인율이 계산됩니다</HelpText>
                     </FormGroup>
                     <FormGroup>
                       <Label>가격 유형 *</Label>

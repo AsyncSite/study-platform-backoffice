@@ -31,13 +31,29 @@ export interface ProductVariantResponse {
   variantId: string;
   name: string;
   description: string;
-  basePrice: number;
+  // New price structure
+  originalPrice: number;
+  salePrice: number | null;
+  effectivePrice: number;
+  onSale: boolean;
+  discountPercent: number;
+  // Legacy (backward compatibility)
+  basePrice?: number;
   currency: string;
   pricingType: PricingType;
   features: Record<string, string> | null;
   isDefault: boolean;
   displayOrder: number;
   active: boolean;
+}
+
+// Helper to get effective price (supports both old and new structure)
+export function getVariantPrice(variant: ProductVariantResponse): number {
+  return variant.effectivePrice ?? variant.basePrice ?? 0;
+}
+
+export function getVariantOriginalPrice(variant: ProductVariantResponse): number {
+  return variant.originalPrice ?? variant.basePrice ?? 0;
 }
 
 export interface ProductDetailResponse {
@@ -105,7 +121,8 @@ export interface UpdateProductRequest {
 export interface CreateVariantRequest {
   name: string;
   description: string;
-  basePrice: number;
+  originalPrice: number;
+  salePrice?: number | null;
   pricingType: PricingType;
   features: Record<string, string>;
   isDefault: boolean;
