@@ -18,6 +18,8 @@ const tabs: Tab[] = [
   { id: 'members', label: '회원 관리', icon: '👥', path: '/members' },
   { id: 'payments', label: '결제 관리', icon: '💳', path: '/payments' },
   { id: 'grit-moment', label: '그릿모먼츠', icon: '🔥', path: '/grit-moment' },
+  { id: 'products', label: '상품 관리', icon: '📦', path: '/products' },
+  { id: 'coupons', label: '쿠폰 관리', icon: '🎟️', path: '/coupons' },
   { id: 'newsletters', label: '뉴스레터', icon: '📧', path: '/newsletters' },
   { id: 'settings', label: '설정', icon: '⚙️', path: '/myPage' },
 ];

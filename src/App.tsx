@@ -18,6 +18,8 @@ import QueryDailyMobileManagement from './pages/QueryDailyMobileManagement';
 import PaymentTransactionManagement from './pages/PaymentTransactionManagement';
 import GritMomentManagement from './pages/GritMomentManagement';
 import NewsletterManagement from './pages/NewsletterManagement';
+import CouponManagement from './pages/CouponManagement';
+import ProductManagement from './pages/ProductManagement';
 
 function App() {
   return (
@@ -135,6 +137,26 @@ function App() {
                 <PrivateRoute>
                   <Layout>
                     <NewsletterManagement />
+                  </Layout>
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/coupons"
+              element={
+                <PrivateRoute>
+                  <Layout>
+                    <CouponManagement />
+                  </Layout>
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/products"
+              element={
+                <PrivateRoute>
+                  <Layout>
+                    <ProductManagement />
                   </Layout>
                 </PrivateRoute>
               }
