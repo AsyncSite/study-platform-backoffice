@@ -101,7 +101,7 @@ const GritMomentManagement: React.FC = () => {
   };
 
   const copyLink = (urlId: string) => {
-    const link = `https://team-grit.co/grit-moments/pay?id=${urlId}`;
+    const link = `https://teamgrit.co/grit-moments/pay?id=${urlId}`;
     navigator.clipboard.writeText(link);
     alert('링크가 복사되었습니다.');
   };
@@ -147,7 +147,7 @@ const GritMomentManagement: React.FC = () => {
                 <Td>{price.email}</Td>
                 <Td>
                   <UrlContainer>
-                    <UrlText>team-grit.co/grit-moments/pay?id={price.urlId}</UrlText>
+                    <UrlText>teamgrit.co/grit-moments/pay?id={price.urlId}</UrlText>
                     <CopyButton onClick={() => copyLink(price.urlId)} title="URL 복사">
                       📋
                     </CopyButton>
@@ -224,7 +224,7 @@ const GritMomentManagement: React.FC = () => {
                   readOnly
                   style={{ backgroundColor: '#f3f4f6', cursor: 'not-allowed' }}
                 />
-                <HelpText>결제 링크: team-grit.co/grit-moments/pay?id={formData.urlId || 'id'}</HelpText>
+                <HelpText>결제 링크: teamgrit.co/grit-moments/pay?id={formData.urlId || 'id'}</HelpText>
               </FormGroup>
               <FormGroup>
                 <Label>결제 금액 *</Label>
