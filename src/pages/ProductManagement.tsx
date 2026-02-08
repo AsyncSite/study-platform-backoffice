@@ -18,6 +18,7 @@ import {
   type ProductStatus,
   type PricingType,
 } from '../api/product';
+import { assetApi } from '../api/asset';
 
 // ─── Sub-views ───
 type ViewMode = 'list' | 'detail' | 'create';
@@ -71,6 +72,11 @@ const ProductManagement: React.FC = () => {
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Thumbnail upload
+  const [thumbnailUploading, setThumbnailUploading] = useState(false);
+  const thumbnailInputRef = useRef<HTMLInputElement>(null);
+  const editThumbnailInputRef = useRef<HTMLInputElement>(null);
 
   // Submitting flags
   const [submitting, setSubmitting] = useState(false);
@@ -272,6 +278,35 @@ const ProductManagement: React.FC = () => {
     handleFileUpload(e.dataTransfer.files);
   };
 
+  // Thumbnail upload handler
+  const handleThumbnailUpload = async (
+    file: File | null,
+    setUrl: (url: string) => void
+  ) => {
+    if (!file) return;
+
+    // Validate image file
+    if (!file.type.startsWith('image/')) {
+      alert('이미지 파일만 업로드할 수 있습니다.');
+      return;
+    }
+
+    setThumbnailUploading(true);
+    try {
+      const result = await assetApi.upload(file, {
+        visibility: 'PUBLIC',
+        category: 'product-thumbnail',
+      });
+      setUrl(result.publicUrl);
+      alert('썸네일이 업로드되었습니다.');
+    } catch (error: any) {
+      console.error('Failed to upload thumbnail:', error);
+      alert(error.response?.data?.message || '썸네일 업로드에 실패했습니다.');
+    } finally {
+      setThumbnailUploading(false);
+    }
+  };
+
   // ─── Helpers ───
   const getStatusBadgeVariant = (status: string) => {
     if (status === 'ACTIVE') return 'success';
@@ -462,13 +497,36 @@ const ProductManagement: React.FC = () => {
               </FormGroup>
 
               <FormGroup>
-                <Label>썸네일 URL</Label>
-                <Input
-                  type="text"
-                  value={createForm.thumbnailUrl}
-                  onChange={(e) => setCreateForm({ ...createForm, thumbnailUrl: e.target.value })}
-                  placeholder="https://..."
-                />
+                <Label>썸네일</Label>
+                <ThumbnailUploadArea>
+                  <input
+                    ref={thumbnailInputRef}
+                    type="file"
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                    onChange={(e) => handleThumbnailUpload(
+                      e.target.files?.[0] || null,
+                      (url) => setCreateForm({ ...createForm, thumbnailUrl: url })
+                    )}
+                  />
+                  {createForm.thumbnailUrl ? (
+                    <ThumbnailPreviewWrapper>
+                      <ThumbnailPreview src={createForm.thumbnailUrl} alt="썸네일" />
+                      <ThumbnailActions>
+                        <ThumbnailButton type="button" onClick={() => thumbnailInputRef.current?.click()} disabled={thumbnailUploading}>
+                          {thumbnailUploading ? '업로드 중...' : '변경'}
+                        </ThumbnailButton>
+                        <ThumbnailButton type="button" onClick={() => setCreateForm({ ...createForm, thumbnailUrl: '' })}>
+                          삭제
+                        </ThumbnailButton>
+                      </ThumbnailActions>
+                    </ThumbnailPreviewWrapper>
+                  ) : (
+                    <ThumbnailUploadButton type="button" onClick={() => thumbnailInputRef.current?.click()} disabled={thumbnailUploading}>
+                      {thumbnailUploading ? '업로드 중...' : '+ 썸네일 이미지 업로드'}
+                    </ThumbnailUploadButton>
+                  )}
+                </ThumbnailUploadArea>
               </FormGroup>
 
               <FormGroup>
@@ -581,12 +639,36 @@ const ProductManagement: React.FC = () => {
                   />
                 </FormGroup>
                 <FormGroup>
-                  <Label>썸네일 URL</Label>
-                  <Input
-                    type="text"
-                    value={editForm.thumbnailUrl}
-                    onChange={(e) => setEditForm({ ...editForm, thumbnailUrl: e.target.value })}
-                  />
+                  <Label>썸네일</Label>
+                  <ThumbnailUploadArea>
+                    <input
+                      ref={editThumbnailInputRef}
+                      type="file"
+                      accept="image/*"
+                      style={{ display: 'none' }}
+                      onChange={(e) => handleThumbnailUpload(
+                        e.target.files?.[0] || null,
+                        (url) => setEditForm({ ...editForm, thumbnailUrl: url })
+                      )}
+                    />
+                    {editForm.thumbnailUrl ? (
+                      <ThumbnailPreviewWrapper>
+                        <ThumbnailPreview src={editForm.thumbnailUrl} alt="썸네일" />
+                        <ThumbnailActions>
+                          <ThumbnailButton type="button" onClick={() => editThumbnailInputRef.current?.click()} disabled={thumbnailUploading}>
+                            {thumbnailUploading ? '업로드 중...' : '변경'}
+                          </ThumbnailButton>
+                          <ThumbnailButton type="button" onClick={() => setEditForm({ ...editForm, thumbnailUrl: '' })}>
+                            삭제
+                          </ThumbnailButton>
+                        </ThumbnailActions>
+                      </ThumbnailPreviewWrapper>
+                    ) : (
+                      <ThumbnailUploadButton type="button" onClick={() => editThumbnailInputRef.current?.click()} disabled={thumbnailUploading}>
+                        {thumbnailUploading ? '업로드 중...' : '+ 썸네일 이미지 업로드'}
+                      </ThumbnailUploadButton>
+                    )}
+                  </ThumbnailUploadArea>
                 </FormGroup>
               </FormGrid>
             ) : (
@@ -1294,5 +1376,67 @@ const DeleteAssetButton = styled.button`
 
   &:hover {
     background: #fecaca;
+  }
+`;
+
+// ─── Thumbnail Upload ───
+
+const ThumbnailUploadArea = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+`;
+
+const ThumbnailPreviewWrapper = styled.div`
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+`;
+
+const ThumbnailActions = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+`;
+
+const ThumbnailButton = styled.button`
+  padding: 6px 12px;
+  background: #f3f4f6;
+  color: #374151;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+
+  &:hover:not(:disabled) {
+    background: #e5e7eb;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
+
+const ThumbnailUploadButton = styled.button`
+  padding: 20px;
+  background: #fafafa;
+  border: 2px dashed #d1d5db;
+  border-radius: 8px;
+  color: #6b7280;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover:not(:disabled) {
+    border-color: #4f46e5;
+    color: #4f46e5;
+    background: #eff6ff;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 `;
