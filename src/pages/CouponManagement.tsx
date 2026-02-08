@@ -4,6 +4,7 @@ import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import Badge from '../components/common/Badge';
 import { couponApi, type CouponResponse, type CreateCouponRequest } from '../api/coupon';
+import { productApi, type ProductResponse } from '../api/product';
 
 const generateCouponCode = (): string => {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -32,7 +33,8 @@ const CouponManagement: React.FC = () => {
     applicableTypes: [],
     issuedBy: 'PLATFORM',
   });
-  const [productIdInput, setProductIdInput] = useState('');
+  const [products, setProducts] = useState<ProductResponse[]>([]);
+  const [selectedProductId, setSelectedProductId] = useState('');
 
   const fetchCoupons = useCallback(async () => {
     setLoading(true);
@@ -51,6 +53,18 @@ const CouponManagement: React.FC = () => {
     fetchCoupons();
   }, [fetchCoupons]);
 
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const data = await productApi.getAllProducts();
+        setProducts(data);
+      } catch (error) {
+        console.error('Failed to fetch products:', error);
+      }
+    };
+    fetchProducts();
+  }, []);
+
   const resetForm = () => {
     setFormData({
       code: generateCouponCode(),
@@ -67,7 +81,7 @@ const CouponManagement: React.FC = () => {
       applicableTypes: [],
       issuedBy: 'PLATFORM',
     });
-    setProductIdInput('');
+    setSelectedProductId('');
   };
 
   const handleOpenCreateModal = () => {
@@ -126,15 +140,19 @@ const CouponManagement: React.FC = () => {
     });
   };
 
-  const handleAddProductId = () => {
-    const trimmed = productIdInput.trim();
-    if (trimmed && !formData.applicableProductIds.includes(trimmed)) {
+  const handleAddProduct = () => {
+    if (selectedProductId && !formData.applicableProductIds.includes(selectedProductId)) {
       setFormData(prev => ({
         ...prev,
-        applicableProductIds: [...prev.applicableProductIds, trimmed],
+        applicableProductIds: [...prev.applicableProductIds, selectedProductId],
       }));
-      setProductIdInput('');
+      setSelectedProductId('');
     }
+  };
+
+  const getProductTitle = (productId: string) => {
+    const product = products.find(p => p.productId === productId);
+    return product ? product.title : productId;
   };
 
   const handleRemoveProductId = (id: string) => {
@@ -387,27 +405,28 @@ const CouponManagement: React.FC = () => {
                 </FormGroup>
 
                 <FormGroup $fullWidth>
-                  <Label>적용 상품 ID</Label>
+                  <Label>적용 상품</Label>
                   <ProductIdInputRow>
-                    <Input
-                      type="text"
-                      value={productIdInput}
-                      onChange={(e) => setProductIdInput(e.target.value)}
-                      placeholder="상품 ID 입력 후 추가"
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          handleAddProductId();
-                        }
-                      }}
-                    />
-                    <SmallButton type="button" onClick={handleAddProductId}>추가</SmallButton>
+                    <Select
+                      value={selectedProductId}
+                      onChange={(e) => setSelectedProductId(e.target.value)}
+                    >
+                      <option value="">상품 선택...</option>
+                      {products
+                        .filter(p => !formData.applicableProductIds.includes(p.productId))
+                        .map(p => (
+                          <option key={p.productId} value={p.productId}>
+                            {p.title} ({p.status})
+                          </option>
+                        ))}
+                    </Select>
+                    <SmallButton type="button" onClick={handleAddProduct} disabled={!selectedProductId}>추가</SmallButton>
                   </ProductIdInputRow>
                   {formData.applicableProductIds.length > 0 && (
                     <TagList>
                       {formData.applicableProductIds.map((id) => (
                         <Tag key={id}>
-                          {id}
+                          {getProductTitle(id)}
                           <TagRemove onClick={() => handleRemoveProductId(id)}>x</TagRemove>
                         </Tag>
                       ))}
