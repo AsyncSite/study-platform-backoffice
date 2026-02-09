@@ -204,6 +204,13 @@ export const productApi = {
     return data.data || data;
   },
 
+  // Admin: Asset variant 변경
+  updateAssetVariant: async (productId: string, assetId: string, variantId: string | null): Promise<ProductAssetResponse> => {
+    const response = await apiClient.patch(`${ADMIN_API}/${productId}/assets/${assetId}/variant`, { variantId });
+    const data = response.data;
+    return data.data || data;
+  },
+
   // Admin: Asset 삭제
   deleteAsset: async (productId: string, assetId: string): Promise<void> => {
     await apiClient.delete(`${ADMIN_API}/${productId}/assets/${assetId}`);

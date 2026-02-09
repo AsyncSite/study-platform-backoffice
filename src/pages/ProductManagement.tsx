@@ -928,9 +928,34 @@ const ProductManagement: React.FC = () => {
                           {asset.contentType} | {formatFileSize(asset.fileSize)}
                         </AssetMeta>
                       </AssetInfo>
-                      <DeleteAssetButton onClick={() => handleDeleteAsset(asset.assetId, asset.fileName)}>
-                        삭제
-                      </DeleteAssetButton>
+                      <AssetActions>
+                        <AssetVariantSelect
+                          value={asset.variantId || ''}
+                          onChange={async (e) => {
+                            if (!selectedProduct) return;
+                            try {
+                              await productApi.updateAssetVariant(
+                                selectedProduct.productId,
+                                asset.assetId,
+                                e.target.value || null
+                              );
+                              const assetData = await productApi.getAssets(selectedProduct.productId);
+                              setAssets(Array.isArray(assetData) ? assetData : []);
+                            } catch (err) {
+                              console.error('Failed to update asset variant:', err);
+                              alert('옵션 변경에 실패했습니다.');
+                            }
+                          }}
+                        >
+                          <option value="">공통</option>
+                          {selectedProduct?.variants?.map((v) => (
+                            <option key={v.variantId} value={v.variantId}>{v.name}</option>
+                          ))}
+                        </AssetVariantSelect>
+                        <DeleteAssetButton onClick={() => handleDeleteAsset(asset.assetId, asset.fileName)}>
+                          삭제
+                        </DeleteAssetButton>
+                      </AssetActions>
                     </AssetItem>
                   );
                 })}
@@ -1410,6 +1435,27 @@ const AssetMeta = styled.div`
   font-size: 12px;
   color: #6b7280;
   margin-top: 2px;
+`;
+
+const AssetActions = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+`;
+
+const AssetVariantSelect = styled.select`
+  padding: 4px 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: 12px;
+  background: white;
+  color: #374151;
+
+  &:focus {
+    outline: none;
+    border-color: #4f46e5;
+  }
 `;
 
 const DeleteAssetButton = styled.button`
