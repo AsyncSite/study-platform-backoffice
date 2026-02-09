@@ -45,6 +45,7 @@ export interface ProductVariantResponse {
   isDefault: boolean;
   displayOrder: number;
   active: boolean;
+  hasAssets: boolean;
 }
 
 // Helper to get effective price (supports both old and new structure)

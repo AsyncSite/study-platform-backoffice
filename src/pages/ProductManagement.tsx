@@ -71,6 +71,7 @@ const ProductManagement: React.FC = () => {
   // Asset upload
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const [uploadVariantId, setUploadVariantId] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Thumbnail upload
@@ -245,7 +246,7 @@ const ProductManagement: React.FC = () => {
     setUploading(true);
     try {
       for (let i = 0; i < files.length; i++) {
-        await productApi.uploadAsset(selectedProduct.productId, files[i]);
+        await productApi.uploadAsset(selectedProduct.productId, files[i], uploadVariantId || undefined);
       }
       alert(`${files.length}개 파일이 업로드되었습니다.`);
       const assetData = await productApi.getAssets(selectedProduct.productId);
@@ -861,6 +862,24 @@ const ProductManagement: React.FC = () => {
               <SectionTitle>디지털 파일 (Asset)</SectionTitle>
             </SectionHeader>
 
+            {selectedProduct.variants && selectedProduct.variants.length > 0 && (
+              <AssetVariantSelector>
+                <Label>업로드 대상 옵션</Label>
+                <Select
+                  value={uploadVariantId}
+                  onChange={(e) => setUploadVariantId(e.target.value)}
+                >
+                  <option value="">전체 공통 (모든 옵션에 포함)</option>
+                  {selectedProduct.variants.map((v) => (
+                    <option key={v.variantId} value={v.variantId}>
+                      {v.name}
+                    </option>
+                  ))}
+                </Select>
+                <HelpText>선택한 옵션을 구매한 사용자에게만 이 파일이 제공됩니다</HelpText>
+              </AssetVariantSelector>
+            )}
+
             <DropZone
               $dragOver={dragOver}
               onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
@@ -890,19 +909,31 @@ const ProductManagement: React.FC = () => {
 
             {assets.length > 0 ? (
               <AssetList>
-                {assets.map((asset) => (
-                  <AssetItem key={asset.assetId}>
-                    <AssetInfo>
-                      <AssetFileName>{asset.fileName}</AssetFileName>
-                      <AssetMeta>
-                        {asset.contentType} | {formatFileSize(asset.fileSize)}
-                      </AssetMeta>
-                    </AssetInfo>
-                    <DeleteAssetButton onClick={() => handleDeleteAsset(asset.assetId, asset.fileName)}>
-                      삭제
-                    </DeleteAssetButton>
-                  </AssetItem>
-                ))}
+                {assets.map((asset) => {
+                  const variant = asset.variantId
+                    ? selectedProduct?.variants?.find(v => v.variantId === asset.variantId)
+                    : null;
+                  return (
+                    <AssetItem key={asset.assetId}>
+                      <AssetInfo>
+                        <AssetFileName>
+                          {asset.fileName}
+                          {asset.variantId ? (
+                            <AssetVariantBadge>{variant?.name || '알 수 없는 옵션'}</AssetVariantBadge>
+                          ) : (
+                            <AssetVariantBadge $common>공통</AssetVariantBadge>
+                          )}
+                        </AssetFileName>
+                        <AssetMeta>
+                          {asset.contentType} | {formatFileSize(asset.fileSize)}
+                        </AssetMeta>
+                      </AssetInfo>
+                      <DeleteAssetButton onClick={() => handleDeleteAsset(asset.assetId, asset.fileName)}>
+                        삭제
+                      </DeleteAssetButton>
+                    </AssetItem>
+                  );
+                })}
               </AssetList>
             ) : (
               <EmptySection>등록된 파일이 없습니다.</EmptySection>
@@ -1349,6 +1380,22 @@ const AssetItem = styled.div`
   background: #f9fafb;
   border: 1px solid #e5e7eb;
   border-radius: 6px;
+`;
+
+const AssetVariantSelector = styled.div`
+  margin-bottom: 16px;
+`;
+
+const AssetVariantBadge = styled.span<{ $common?: boolean }>`
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  border-radius: 4px;
+  background: ${({ $common }) => ($common ? '#f0fdf4' : '#eff6ff')};
+  color: ${({ $common }) => ($common ? '#16a34a' : '#4f46e5')};
+  border: 1px solid ${({ $common }) => ($common ? '#bbf7d0' : '#c7d2fe')};
 `;
 
 const AssetInfo = styled.div``;
