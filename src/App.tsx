@@ -20,6 +20,7 @@ import GritMomentManagement from './pages/GritMomentManagement';
 import NewsletterManagement from './pages/NewsletterManagement';
 import CouponManagement from './pages/CouponManagement';
 import ProductManagement from './pages/ProductManagement';
+import ReviewManagement from './pages/ReviewManagement';
 
 function App() {
   return (
@@ -157,6 +158,16 @@ function App() {
                 <PrivateRoute>
                   <Layout>
                     <ProductManagement />
+                  </Layout>
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/reviews"
+              element={
+                <PrivateRoute>
+                  <Layout>
+                    <ReviewManagement />
                   </Layout>
                 </PrivateRoute>
               }
