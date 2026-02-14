@@ -1,13 +1,5 @@
-import axios from 'axios';
+import apiClient from './client';
 import { env } from '../config/environment';
-
-const resumeClient = axios.create({
-  baseURL: env.apiBaseUrl,
-  timeout: 30000,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
 
 // Types
 
@@ -85,88 +77,88 @@ export const resumeApi = {
   // === Templates ===
   getTemplates: async (activeOnly?: boolean): Promise<ResumeTemplate[]> => {
     const params = activeOnly ? { activeOnly: true } : {};
-    const response = await resumeClient.get(TEMPLATE_URL, { params });
+    const response = await apiClient.get(TEMPLATE_URL, { params });
     return response.data;
   },
 
   getTemplateById: async (id: number): Promise<ResumeTemplate> => {
-    const response = await resumeClient.get(`${TEMPLATE_URL}/${id}`);
+    const response = await apiClient.get(`${TEMPLATE_URL}/${id}`);
     return response.data;
   },
 
   createTemplate: async (request: CreateTemplateRequest): Promise<ResumeTemplate> => {
-    const response = await resumeClient.post(TEMPLATE_URL, request);
+    const response = await apiClient.post(TEMPLATE_URL, request);
     return response.data;
   },
 
   updateTemplate: async (id: number, request: UpdateTemplateRequest): Promise<ResumeTemplate> => {
-    const response = await resumeClient.put(`${TEMPLATE_URL}/${id}`, request);
+    const response = await apiClient.put(`${TEMPLATE_URL}/${id}`, request);
     return response.data;
   },
 
   deleteTemplate: async (id: number): Promise<void> => {
-    await resumeClient.delete(`${TEMPLATE_URL}/${id}`);
+    await apiClient.delete(`${TEMPLATE_URL}/${id}`);
   },
 
   // === Requests ===
   getRequests: async (status?: ResumeRequestStatus): Promise<ResumeRequest[]> => {
     const params = status ? { status } : {};
-    const response = await resumeClient.get(REQUEST_URL, { params });
+    const response = await apiClient.get(REQUEST_URL, { params });
     return response.data;
   },
 
   getRequestById: async (id: number): Promise<ResumeRequest> => {
-    const response = await resumeClient.get(`${REQUEST_URL}/${id}`);
+    const response = await apiClient.get(`${REQUEST_URL}/${id}`);
     return response.data;
   },
 
   createRequest: async (request: CreateResumeRequestDto): Promise<ResumeRequest> => {
-    const response = await resumeClient.post(REQUEST_URL, request);
+    const response = await apiClient.post(REQUEST_URL, request);
     return response.data;
   },
 
   changeRequestStatus: async (id: number, status: ResumeRequestStatus): Promise<ResumeRequest> => {
-    const response = await resumeClient.put(`${REQUEST_URL}/${id}/status`, { status });
+    const response = await apiClient.put(`${REQUEST_URL}/${id}/status`, { status });
     return response.data;
   },
 
   deleteRequest: async (id: number): Promise<void> => {
-    await resumeClient.delete(`${REQUEST_URL}/${id}`);
+    await apiClient.delete(`${REQUEST_URL}/${id}`);
   },
 
   // === Resumes ===
   getResumesByRequestId: async (requestId: number): Promise<Resume[]> => {
-    const response = await resumeClient.get(`${RESUME_URL}/by-request/${requestId}`);
+    const response = await apiClient.get(`${RESUME_URL}/by-request/${requestId}`);
     return response.data;
   },
 
   changeResumeStatus: async (id: number, status: ResumeStatus): Promise<Resume> => {
-    const response = await resumeClient.put(`${RESUME_URL}/${id}/status`, { status });
+    const response = await apiClient.put(`${RESUME_URL}/${id}/status`, { status });
     return response.data;
   },
 
   getResumes: async (): Promise<Resume[]> => {
-    const response = await resumeClient.get(RESUME_URL);
+    const response = await apiClient.get(RESUME_URL);
     return response.data;
   },
 
   getResumeById: async (id: number): Promise<Resume> => {
-    const response = await resumeClient.get(`${RESUME_URL}/${id}`);
+    const response = await apiClient.get(`${RESUME_URL}/${id}`);
     return response.data;
   },
 
   generateResume: async (request: GenerateResumeRequest): Promise<Resume> => {
-    const response = await resumeClient.post(`${RESUME_URL}/generate`, request);
+    const response = await apiClient.post(`${RESUME_URL}/generate`, request);
     return response.data;
   },
 
   previewHtml: async (htmlContent: string): Promise<{ htmlContent: string }> => {
-    const response = await resumeClient.post(`${RESUME_URL}/preview`, { htmlContent });
+    const response = await apiClient.post(`${RESUME_URL}/preview`, { htmlContent });
     return response.data;
   },
 
   deleteResume: async (id: number): Promise<void> => {
-    await resumeClient.delete(`${RESUME_URL}/${id}`);
+    await apiClient.delete(`${RESUME_URL}/${id}`);
   },
 
   getDownloadUrl: (id: number): string => {
@@ -175,17 +167,17 @@ export const resumeApi = {
 
   // === Auto Generation ===
   getAutoGenerationSetting: async (): Promise<{ enabled: boolean }> => {
-    const response = await resumeClient.get(`${RESUME_URL}/settings/auto-generation`);
+    const response = await apiClient.get(`${RESUME_URL}/settings/auto-generation`);
     return response.data;
   },
 
   setAutoGenerationSetting: async (enabled: boolean): Promise<{ enabled: boolean }> => {
-    const response = await resumeClient.put(`${RESUME_URL}/settings/auto-generation`, { enabled });
+    const response = await apiClient.put(`${RESUME_URL}/settings/auto-generation`, { enabled });
     return response.data;
   },
 
   autoGenerate: async (requestId: number): Promise<Resume> => {
-    const response = await resumeClient.post(`${RESUME_URL}/auto-generate`, { requestId });
+    const response = await apiClient.post(`${RESUME_URL}/auto-generate`, { requestId });
     return response.data;
   },
 };
