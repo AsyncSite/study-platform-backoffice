@@ -22,6 +22,7 @@ const tabs: Tab[] = [
   { id: 'reviews', label: '리뷰 관리', icon: '⭐', path: '/reviews' },
   { id: 'coupons', label: '쿠폰 관리', icon: '🎟️', path: '/coupons' },
   { id: 'newsletters', label: '뉴스레터', icon: '📧', path: '/newsletters' },
+  { id: 'resumes', label: '이력서 관리', icon: '📄', path: '/resumes' },
   { id: 'settings', label: '설정', icon: '⚙️', path: '/myPage' },
 ];
 

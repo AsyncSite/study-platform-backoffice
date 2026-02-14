@@ -21,6 +21,7 @@ import NewsletterManagement from './pages/NewsletterManagement';
 import CouponManagement from './pages/CouponManagement';
 import ProductManagement from './pages/ProductManagement';
 import ReviewManagement from './pages/ReviewManagement';
+import ResumeManagement from './pages/ResumeManagement';
 
 function App() {
   return (
@@ -168,6 +169,16 @@ function App() {
                 <PrivateRoute>
                   <Layout>
                     <ReviewManagement />
+                  </Layout>
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/resumes"
+              element={
+                <PrivateRoute>
+                  <Layout>
+                    <ResumeManagement />
                   </Layout>
                 </PrivateRoute>
               }
