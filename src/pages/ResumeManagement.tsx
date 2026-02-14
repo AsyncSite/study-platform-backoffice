@@ -65,6 +65,11 @@ const ResumeManagement: React.FC = () => {
   const [autoGenerationEnabled, setAutoGenerationEnabled] = useState(false);
   const [autoGenLoading, setAutoGenLoading] = useState<number | null>(null);
 
+  // Request-Resume linking state
+  const [expandedRequestResumeIds, setExpandedRequestResumeIds] = useState<Set<number>>(new Set());
+  const [resumesByRequestIdMap, setResumesByRequestIdMap] = useState<Record<number, Resume[]>>({});
+  const [resumeStatusChanging, setResumeStatusChanging] = useState<number | null>(null);
+
   // Fetch functions
   const fetchRequests = useCallback(async () => {
     setRequestsLoading(true);
@@ -106,7 +111,10 @@ const ResumeManagement: React.FC = () => {
 
   useEffect(() => {
     if (activeTab === 'requests') fetchRequests();
-    if (activeTab === 'resumes') fetchResumes();
+    if (activeTab === 'resumes') {
+      fetchResumes();
+      fetchRequests(); // needed for requester name mapping
+    }
     if (activeTab === 'templates') fetchTemplates();
   }, [activeTab, fetchRequests, fetchResumes, fetchTemplates]);
 
@@ -249,6 +257,43 @@ const ResumeManagement: React.FC = () => {
     }
   };
 
+  const handleToggleRequestResumes = async (requestId: number) => {
+    const newExpanded = new Set(expandedRequestResumeIds);
+    if (newExpanded.has(requestId)) {
+      newExpanded.delete(requestId);
+      setExpandedRequestResumeIds(newExpanded);
+      return;
+    }
+    newExpanded.add(requestId);
+    setExpandedRequestResumeIds(newExpanded);
+    try {
+      const data = await resumeApi.getResumesByRequestId(requestId);
+      setResumesByRequestIdMap((prev) => ({ ...prev, [requestId]: data }));
+    } catch (error) {
+      console.error('요청별 이력서 조회 실패:', error);
+      setResumesByRequestIdMap((prev) => ({ ...prev, [requestId]: [] }));
+    }
+  };
+
+  const handleMarkDelivered = async (resumeId: number) => {
+    if (!confirm('이 이력서를 전달 완료로 변경하시겠습니까?')) return;
+    setResumeStatusChanging(resumeId);
+    try {
+      await resumeApi.changeResumeStatus(resumeId, 'DELIVERED');
+      fetchResumes();
+      // Refresh expanded request resume data
+      for (const requestId of expandedRequestResumeIds) {
+        const data = await resumeApi.getResumesByRequestId(requestId);
+        setResumesByRequestIdMap((prev) => ({ ...prev, [requestId]: data }));
+      }
+    } catch (error) {
+      console.error('상태 변경 실패:', error);
+      alert('상태 변경에 실패했습니다.');
+    } finally {
+      setResumeStatusChanging(null);
+    }
+  };
+
   const handleAutoGenerate = async (requestId: number) => {
     if (!confirm('AI로 이력서를 자동 생성하시겠습니까?')) return;
     setAutoGenLoading(requestId);
@@ -330,7 +375,8 @@ const ResumeManagement: React.FC = () => {
               </thead>
               <tbody>
                 {requests.map((req) => (
-                  <tr key={req.id}>
+                  <React.Fragment key={req.id}>
+                  <tr>
                     <td>{req.id}</td>
                     <td>{req.userName}</td>
                     <td>{req.userEmail || '-'}</td>
@@ -348,6 +394,14 @@ const ResumeManagement: React.FC = () => {
                             {autoGenLoading === req.id ? '생성중...' : 'AI 생성'}
                           </SmallButton>
                         )}
+                        {req.status === 'COMPLETED' && (
+                          <SmallButton
+                            onClick={() => handleToggleRequestResumes(req.id)}
+                            style={{ background: '#10b981', color: 'white' }}
+                          >
+                            {expandedRequestResumeIds.has(req.id) ? '접기' : '이력서 보기'}
+                          </SmallButton>
+                        )}
                         <select
                           value={req.status}
                           onChange={(e) => handleChangeRequestStatus(req.id, e.target.value as ResumeRequestStatus)}
@@ -361,6 +415,35 @@ const ResumeManagement: React.FC = () => {
                       </ActionRow>
                     </td>
                   </tr>
+                  {expandedRequestResumeIds.has(req.id) && (
+                    <tr>
+                      <td colSpan={6} style={{ padding: '12px 16px', background: '#f9fafb' }}>
+                        {resumesByRequestIdMap[req.id] === undefined ? (
+                          <span>로딩 중...</span>
+                        ) : resumesByRequestIdMap[req.id].length === 0 ? (
+                          <span style={{ color: '#9ca3af' }}>생성된 이력서가 없습니다.</span>
+                        ) : (
+                          resumesByRequestIdMap[req.id].map((resume) => (
+                            <div key={resume.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                              <span style={{ fontWeight: 500 }}>{resume.title}</span>
+                              <StatusBadge $color={STATUS_COLORS[resume.status]}>{STATUS_LABELS[resume.status]}</StatusBadge>
+                              <SmallButton onClick={() => handleDownloadResume(resume.id)} disabled={!resume.pdfUrl}>다운로드</SmallButton>
+                              {resume.status === 'GENERATED' && (
+                                <SmallButton
+                                  onClick={() => handleMarkDelivered(resume.id)}
+                                  disabled={resumeStatusChanging === resume.id}
+                                  style={{ background: '#3b82f6', color: 'white' }}
+                                >
+                                  {resumeStatusChanging === resume.id ? '변경중...' : '전달 완료'}
+                                </SmallButton>
+                              )}
+                            </div>
+                          ))
+                        )}
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
                 ))}
               </tbody>
             </Table>
@@ -439,6 +522,7 @@ const ResumeManagement: React.FC = () => {
                 <tr>
                   <th>ID</th>
                   <th>제목</th>
+                  <th>요청자</th>
                   <th>모드</th>
                   <th>파일 크기</th>
                   <th>상태</th>
@@ -447,10 +531,15 @@ const ResumeManagement: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {resumes.map((resume) => (
+                {resumes.map((resume) => {
+                  const matchedRequest = resume.requestId
+                    ? requests.find((r) => r.id === resume.requestId)
+                    : undefined;
+                  return (
                   <tr key={resume.id}>
                     <td>{resume.id}</td>
                     <td>{resume.title}</td>
+                    <td>{matchedRequest ? matchedRequest.userName : '-'}</td>
                     <td>{resume.generationMode}</td>
                     <td>{formatFileSize(resume.fileSizeBytes)}</td>
                     <td><StatusBadge $color={STATUS_COLORS[resume.status]}>{STATUS_LABELS[resume.status]}</StatusBadge></td>
@@ -458,11 +547,21 @@ const ResumeManagement: React.FC = () => {
                     <td>
                       <ActionRow>
                         <SmallButton onClick={() => handleDownloadResume(resume.id)} disabled={!resume.pdfUrl}>다운로드</SmallButton>
+                        {resume.status === 'GENERATED' && (
+                          <SmallButton
+                            onClick={() => handleMarkDelivered(resume.id)}
+                            disabled={resumeStatusChanging === resume.id}
+                            style={{ background: '#3b82f6', color: 'white' }}
+                          >
+                            {resumeStatusChanging === resume.id ? '변경중...' : '전달 완료'}
+                          </SmallButton>
+                        )}
                         <SmallButton $variant="danger" onClick={() => handleDeleteResume(resume.id)}>삭제</SmallButton>
                       </ActionRow>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </Table>
           )}

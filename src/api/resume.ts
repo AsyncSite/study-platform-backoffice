@@ -135,6 +135,16 @@ export const resumeApi = {
   },
 
   // === Resumes ===
+  getResumesByRequestId: async (requestId: number): Promise<Resume[]> => {
+    const response = await resumeClient.get(`${RESUME_URL}/by-request/${requestId}`);
+    return response.data;
+  },
+
+  changeResumeStatus: async (id: number, status: ResumeStatus): Promise<Resume> => {
+    const response = await resumeClient.put(`${RESUME_URL}/${id}/status`, { status });
+    return response.data;
+  },
+
   getResumes: async (): Promise<Resume[]> => {
     const response = await resumeClient.get(RESUME_URL);
     return response.data;
