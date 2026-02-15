@@ -12,7 +12,8 @@ import type {
   UpdateTemplateRequest,
 } from '../api/resume';
 
-type SubTab = 'requests' | 'converter' | 'resumes' | 'templates';
+type MainTab = 'workflow' | 'templates';
+type WorkflowStep = 1 | 2 | 3;
 
 const STATUS_COLORS: Record<string, string> = {
   PENDING: '#f59e0b',
@@ -35,24 +36,27 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 const ResumeManagement: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<SubTab>('requests');
+  const [activeTab, setActiveTab] = useState<MainTab>('workflow');
+  const [activeStep, setActiveStep] = useState<WorkflowStep>(1);
 
   // Requests state
   const [requests, setRequests] = useState<ResumeRequest[]>([]);
   const [requestsLoading, setRequestsLoading] = useState(false);
   const [requestStatusFilter, setRequestStatusFilter] = useState<ResumeRequestStatus | ''>('');
+  const [selectedRequest, setSelectedRequest] = useState<ResumeRequest | null>(null);
 
-  // Converter state
+  // Step 2 state
   const [htmlInput, setHtmlInput] = useState('');
   const [pdfTitle, setPdfTitle] = useState('');
   const [previewHtml, setPreviewHtml] = useState('');
   const [showPreview, setShowPreview] = useState(false);
   const [generating, setGenerating] = useState(false);
-  const [selectedRequestId, setSelectedRequestId] = useState<number | undefined>();
+  const [autoGenLoading, setAutoGenLoading] = useState(false);
 
-  // Resumes state
-  const [resumes, setResumes] = useState<Resume[]>([]);
+  // Step 3 state
+  const [requestResumes, setRequestResumes] = useState<Resume[]>([]);
   const [resumesLoading, setResumesLoading] = useState(false);
+  const [resumeStatusChanging, setResumeStatusChanging] = useState<number | null>(null);
 
   // Templates state
   const [templates, setTemplates] = useState<ResumeTemplate[]>([]);
@@ -61,40 +65,8 @@ const ResumeManagement: React.FC = () => {
   const [editingTemplate, setEditingTemplate] = useState<ResumeTemplate | null>(null);
   const [templateForm, setTemplateForm] = useState<CreateTemplateRequest>({ name: '', description: '', promptText: '' });
 
-  // Request search state (for converter tab)
-  const [requestSearchQuery, setRequestSearchQuery] = useState('');
-  const [requestSearchOpen, setRequestSearchOpen] = useState(false);
-  const requestSearchRef = React.useRef<HTMLDivElement>(null);
-
   // Auto generation state
   const [autoGenerationEnabled, setAutoGenerationEnabled] = useState(false);
-  const [autoGenLoading, setAutoGenLoading] = useState<number | null>(null);
-
-  // Request-Resume linking state
-  const [expandedRequestResumeIds, setExpandedRequestResumeIds] = useState<Set<number>>(new Set());
-  const [resumesByRequestIdMap, setResumesByRequestIdMap] = useState<Record<number, Resume[]>>({});
-  const [resumeStatusChanging, setResumeStatusChanging] = useState<number | null>(null);
-
-  // Close request search dropdown on outside click
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (requestSearchRef.current && !requestSearchRef.current.contains(e.target as Node)) {
-        setRequestSearchOpen(false);
-      }
-    };
-    if (requestSearchOpen) document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [requestSearchOpen]);
-
-  const filteredRequestsForSearch = requests.filter((req) => {
-    if (!requestSearchQuery) return true;
-    const q = requestSearchQuery.toLowerCase();
-    return (
-      String(req.id).includes(q) ||
-      req.userName.toLowerCase().includes(q) ||
-      (req.userEmail || '').toLowerCase().includes(q)
-    );
-  });
 
   // Fetch functions
   const fetchRequests = useCallback(async () => {
@@ -111,13 +83,14 @@ const ResumeManagement: React.FC = () => {
     }
   }, [requestStatusFilter]);
 
-  const fetchResumes = useCallback(async () => {
+  const fetchRequestResumes = useCallback(async (requestId: number) => {
     setResumesLoading(true);
     try {
-      const data = await resumeApi.getResumes();
-      setResumes(data);
+      const data = await resumeApi.getResumesByRequestId(requestId);
+      setRequestResumes(data);
     } catch (error) {
-      console.error('이력서 목록 조회 실패:', error);
+      console.error('요청별 이력서 조회 실패:', error);
+      setRequestResumes([]);
     } finally {
       setResumesLoading(false);
     }
@@ -136,14 +109,13 @@ const ResumeManagement: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (activeTab === 'requests') fetchRequests();
-    if (activeTab === 'converter') fetchRequests(); // needed for request selector
-    if (activeTab === 'resumes') {
-      fetchResumes();
-      fetchRequests(); // needed for requester name mapping
+    if (activeTab === 'workflow') {
+      fetchRequests();
     }
-    if (activeTab === 'templates') fetchTemplates();
-  }, [activeTab, fetchRequests, fetchResumes, fetchTemplates]);
+    if (activeTab === 'templates') {
+      fetchTemplates();
+    }
+  }, [activeTab, fetchRequests, fetchTemplates]);
 
   useEffect(() => {
     resumeApi.getAutoGenerationSetting()
@@ -151,7 +123,22 @@ const ResumeManagement: React.FC = () => {
       .catch(err => console.error('자동 생성 설정 조회 실패:', err));
   }, []);
 
+  useEffect(() => {
+    if (selectedRequest) {
+      fetchRequestResumes(selectedRequest.id);
+    }
+  }, [selectedRequest, fetchRequestResumes]);
+
   // Handlers
+  const handleSelectRequest = (req: ResumeRequest) => {
+    setSelectedRequest(req);
+    setActiveStep(1);
+    // Reset step 2 & 3
+    setHtmlInput('');
+    setPdfTitle('');
+    setShowPreview(false);
+  };
+
   const handleCopyFormattedText = (text: string | null) => {
     if (!text) return;
     navigator.clipboard.writeText(text);
@@ -161,7 +148,12 @@ const ResumeManagement: React.FC = () => {
   const handleChangeRequestStatus = async (id: number, status: ResumeRequestStatus) => {
     try {
       await resumeApi.changeRequestStatus(id, status);
-      fetchRequests();
+      await fetchRequests();
+      if (selectedRequest?.id === id) {
+        const updated = await resumeApi.getRequests();
+        const updatedReq = updated.find(r => r.id === id);
+        if (updatedReq) setSelectedRequest(updatedReq);
+      }
     } catch (error) {
       console.error('상태 변경 실패:', error);
       alert('상태 변경에 실패했습니다.');
@@ -172,9 +164,30 @@ const ResumeManagement: React.FC = () => {
     if (!confirm('정말 삭제하시겠습니까?')) return;
     try {
       await resumeApi.deleteRequest(id);
+      if (selectedRequest?.id === id) {
+        setSelectedRequest(null);
+      }
       fetchRequests();
     } catch (error) {
       console.error('요청 삭제 실패:', error);
+    }
+  };
+
+  const handleAutoGenerate = async () => {
+    if (!selectedRequest) return;
+    if (!confirm('AI로 이력서를 자동 생성하시겠습니까?')) return;
+    setAutoGenLoading(true);
+    try {
+      await resumeApi.autoGenerate(selectedRequest.id);
+      alert('이력서가 자동 생성되었습니다.');
+      await fetchRequests();
+      await fetchRequestResumes(selectedRequest.id);
+      setActiveStep(3);
+    } catch (error) {
+      console.error('자동 생성 실패:', error);
+      alert('자동 생성에 실패했습니다.');
+    } finally {
+      setAutoGenLoading(false);
     }
   };
 
@@ -188,6 +201,10 @@ const ResumeManagement: React.FC = () => {
   };
 
   const handleGeneratePdf = async () => {
+    if (!selectedRequest) {
+      alert('요청을 선택해주세요.');
+      return;
+    }
     if (!htmlInput.trim()) {
       alert('HTML을 입력해주세요.');
       return;
@@ -199,7 +216,7 @@ const ResumeManagement: React.FC = () => {
     setGenerating(true);
     try {
       await resumeApi.generateResume({
-        requestId: selectedRequestId,
+        requestId: selectedRequest.id,
         title: pdfTitle,
         htmlContent: htmlInput,
         mode: 'MANUAL',
@@ -208,7 +225,8 @@ const ResumeManagement: React.FC = () => {
       setHtmlInput('');
       setPdfTitle('');
       setShowPreview(false);
-      setSelectedRequestId(undefined);
+      await fetchRequestResumes(selectedRequest.id);
+      setActiveStep(3);
     } catch (error) {
       console.error('PDF 생성 실패:', error);
       alert('PDF 생성에 실패했습니다.');
@@ -217,19 +235,35 @@ const ResumeManagement: React.FC = () => {
     }
   };
 
-  const handleDeleteResume = async (id: number) => {
-    if (!confirm('정말 삭제하시겠습니까? R2의 PDF 파일도 삭제됩니다.')) return;
-    try {
-      await resumeApi.deleteResume(id);
-      fetchResumes();
-    } catch (error) {
-      console.error('이력서 삭제 실패:', error);
-    }
-  };
-
   const handleDownloadResume = (pdfUrl: string | null) => {
     if (!pdfUrl) return;
     window.open(pdfUrl, '_blank');
+  };
+
+  const handleMarkDelivered = async (resumeId: number) => {
+    if (!selectedRequest) return;
+    if (!confirm('이 이력서를 전달 완료로 변경하시겠습니까?')) return;
+    setResumeStatusChanging(resumeId);
+    try {
+      await resumeApi.changeResumeStatus(resumeId, 'DELIVERED');
+      await fetchRequestResumes(selectedRequest.id);
+    } catch (error) {
+      console.error('상태 변경 실패:', error);
+      alert('상태 변경에 실패했습니다.');
+    } finally {
+      setResumeStatusChanging(null);
+    }
+  };
+
+  const handleDeleteResume = async (id: number) => {
+    if (!selectedRequest) return;
+    if (!confirm('정말 삭제하시겠습니까? R2의 PDF 파일도 삭제됩니다.')) return;
+    try {
+      await resumeApi.deleteResume(id);
+      await fetchRequestResumes(selectedRequest.id);
+    } catch (error) {
+      console.error('이력서 삭제 실패:', error);
+    }
   };
 
   // Template handlers
@@ -284,58 +318,6 @@ const ResumeManagement: React.FC = () => {
     }
   };
 
-  const handleToggleRequestResumes = async (requestId: number) => {
-    const newExpanded = new Set(expandedRequestResumeIds);
-    if (newExpanded.has(requestId)) {
-      newExpanded.delete(requestId);
-      setExpandedRequestResumeIds(newExpanded);
-      return;
-    }
-    newExpanded.add(requestId);
-    setExpandedRequestResumeIds(newExpanded);
-    try {
-      const data = await resumeApi.getResumesByRequestId(requestId);
-      setResumesByRequestIdMap((prev) => ({ ...prev, [requestId]: data }));
-    } catch (error) {
-      console.error('요청별 이력서 조회 실패:', error);
-      setResumesByRequestIdMap((prev) => ({ ...prev, [requestId]: [] }));
-    }
-  };
-
-  const handleMarkDelivered = async (resumeId: number) => {
-    if (!confirm('이 이력서를 전달 완료로 변경하시겠습니까?')) return;
-    setResumeStatusChanging(resumeId);
-    try {
-      await resumeApi.changeResumeStatus(resumeId, 'DELIVERED');
-      fetchResumes();
-      // Refresh expanded request resume data
-      for (const requestId of expandedRequestResumeIds) {
-        const data = await resumeApi.getResumesByRequestId(requestId);
-        setResumesByRequestIdMap((prev) => ({ ...prev, [requestId]: data }));
-      }
-    } catch (error) {
-      console.error('상태 변경 실패:', error);
-      alert('상태 변경에 실패했습니다.');
-    } finally {
-      setResumeStatusChanging(null);
-    }
-  };
-
-  const handleAutoGenerate = async (requestId: number) => {
-    if (!confirm('AI로 이력서를 자동 생성하시겠습니까?')) return;
-    setAutoGenLoading(requestId);
-    try {
-      await resumeApi.autoGenerate(requestId);
-      alert('이력서가 자동 생성되었습니다.');
-      fetchRequests();
-    } catch (error) {
-      console.error('자동 생성 실패:', error);
-      alert('자동 생성에 실패했습니다.');
-    } finally {
-      setAutoGenLoading(null);
-    }
-  };
-
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleString('ko-KR');
   };
@@ -361,6 +343,8 @@ const ResumeManagement: React.FC = () => {
     return { type: 'FORM', data: inputData };
   };
 
+  const filteredRequests = requests;
+
   return (
     <Container>
       <Header>
@@ -374,309 +358,251 @@ const ResumeManagement: React.FC = () => {
         </SettingRow>
       </Header>
 
-      <SubTabNav>
-        <SubTabButton $active={activeTab === 'requests'} onClick={() => setActiveTab('requests')}>이력서 요청</SubTabButton>
-        <SubTabButton $active={activeTab === 'converter'} onClick={() => setActiveTab('converter')}>PDF 변환기</SubTabButton>
-        <SubTabButton $active={activeTab === 'resumes'} onClick={() => setActiveTab('resumes')}>생성된 이력서</SubTabButton>
-        <SubTabButton $active={activeTab === 'templates'} onClick={() => setActiveTab('templates')}>프롬프트 템플릿</SubTabButton>
-      </SubTabNav>
+      <TabNav>
+        <TabButton $active={activeTab === 'workflow'} onClick={() => setActiveTab('workflow')}>첨삭 워크플로우</TabButton>
+        <TabButton $active={activeTab === 'templates'} onClick={() => setActiveTab('templates')}>프롬프트 템플릿</TabButton>
+      </TabNav>
 
-      {/* 이력서 요청 탭 */}
-      {activeTab === 'requests' && (
-        <Section>
-          <SectionHeader>
-            <h2>이력서 요청 목록</h2>
-            <FilterRow>
-              <select value={requestStatusFilter} onChange={(e) => setRequestStatusFilter(e.target.value as ResumeRequestStatus | '')}>
+      {/* 첨삭 워크플로우 탭 */}
+      {activeTab === 'workflow' && (
+        <WorkflowContainer>
+          {/* Left Panel: Request List */}
+          <RequestListPanel>
+            <PanelHeader>
+              <h2>요청 목록</h2>
+              <FilterSelect value={requestStatusFilter} onChange={(e) => setRequestStatusFilter(e.target.value as ResumeRequestStatus | '')}>
                 <option value="">전체</option>
                 <option value="PENDING">대기중</option>
                 <option value="IN_PROGRESS">진행중</option>
                 <option value="COMPLETED">완료</option>
                 <option value="CANCELLED">취소</option>
-              </select>
-            </FilterRow>
-          </SectionHeader>
+              </FilterSelect>
+            </PanelHeader>
 
-          {requestsLoading ? (
-            <LoadingText>로딩 중...</LoadingText>
-          ) : requests.length === 0 ? (
-            <EmptyText>이력서 요청이 없습니다.</EmptyText>
-          ) : (
-            <Table>
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>이름</th>
-                  <th>이메일</th>
-                  <th>상태</th>
-                  <th>생성일</th>
-                  <th>액션</th>
-                </tr>
-              </thead>
-              <tbody>
-                {requests.map((req) => (
-                  <React.Fragment key={req.id}>
-                  <tr>
-                    <td>{req.id}</td>
-                    <td>{req.userName}</td>
-                    <td>{req.userEmail || '-'}</td>
-                    <td><StatusBadge $color={STATUS_COLORS[req.status]}>{STATUS_LABELS[req.status]}</StatusBadge></td>
-                    <td>{formatDate(req.createdAt)}</td>
-                    <td>
+            {requestsLoading ? (
+              <LoadingText>로딩 중...</LoadingText>
+            ) : filteredRequests.length === 0 ? (
+              <EmptyText>이력서 요청이 없습니다.</EmptyText>
+            ) : (
+              <RequestCardList>
+                {filteredRequests.map((req) => (
+                  <RequestCard
+                    key={req.id}
+                    $active={selectedRequest?.id === req.id}
+                    onClick={() => handleSelectRequest(req)}
+                  >
+                    <RequestCardHeader>
+                      <RequestId>#{req.id}</RequestId>
+                      <StatusBadge $color={STATUS_COLORS[req.status]}>{STATUS_LABELS[req.status]}</StatusBadge>
+                    </RequestCardHeader>
+                    <RequestUserName>{req.userName}</RequestUserName>
+                    <RequestUserEmail>{req.userEmail || '-'}</RequestUserEmail>
+                    <RequestDate>{formatDate(req.createdAt)}</RequestDate>
+                  </RequestCard>
+                ))}
+              </RequestCardList>
+            )}
+          </RequestListPanel>
+
+          {/* Right Panel: Workflow Steps */}
+          <WorkflowPanel>
+            {!selectedRequest ? (
+              <PlaceholderMessage>
+                <p>왼쪽에서 요청을 선택하세요</p>
+              </PlaceholderMessage>
+            ) : (
+              <>
+                {/* Step Indicator */}
+                <StepIndicator>
+                  <StepCircle $active={activeStep === 1} onClick={() => setActiveStep(1)}>
+                    <StepNumber $active={activeStep === 1}>1</StepNumber>
+                  </StepCircle>
+                  <StepLine />
+                  <StepCircle $active={activeStep === 2} onClick={() => setActiveStep(2)}>
+                    <StepNumber $active={activeStep === 2}>2</StepNumber>
+                  </StepCircle>
+                  <StepLine />
+                  <StepCircle $active={activeStep === 3} onClick={() => setActiveStep(3)}>
+                    <StepNumber $active={activeStep === 3}>3</StepNumber>
+                  </StepCircle>
+                </StepIndicator>
+
+                <StepLabels>
+                  <StepLabel $active={activeStep === 1} onClick={() => setActiveStep(1)}>원본 확인</StepLabel>
+                  <StepLabel $active={activeStep === 2} onClick={() => setActiveStep(2)}>첨삭 작성</StepLabel>
+                  <StepLabel $active={activeStep === 3} onClick={() => setActiveStep(3)}>결과 확인/전달</StepLabel>
+                </StepLabels>
+
+                {/* Step 1: 원본 확인 */}
+                {activeStep === 1 && (
+                  <StepContent>
+                    <StepTitle>Step 1: 원본 확인</StepTitle>
+
+                    <StepSection>
+                      <SectionLabel>유저 제출 내용</SectionLabel>
+                      {(() => {
+                        const parsed = parseInputData(selectedRequest.inputData);
+                        if (!parsed) return <EmptyText>제출 데이터 없음</EmptyText>;
+                        if (parsed.type === 'PDF_UPLOAD') {
+                          return (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                              <span style={{ fontSize: '14px', color: '#6b7280' }}>PDF 업로드</span>
+                              <ActionButton onClick={() => window.open(parsed.pdfUrl, '_blank')} style={{ background: '#f59e0b', color: 'white' }}>
+                                원본 PDF 다운로드
+                              </ActionButton>
+                            </div>
+                          );
+                        }
+                        return (
+                          <div>
+                            {selectedRequest.formattedText ? (
+                              <DataPreview>
+                                {selectedRequest.formattedText}
+                              </DataPreview>
+                            ) : (
+                              <DataPreview>
+                                {parsed.data}
+                              </DataPreview>
+                            )}
+                            <ActionButton onClick={() => handleCopyFormattedText(selectedRequest.formattedText || parsed.data)}>
+                              복사
+                            </ActionButton>
+                          </div>
+                        );
+                      })()}
+                    </StepSection>
+
+                    <StepSection>
+                      <SectionLabel>상태 변경</SectionLabel>
                       <ActionRow>
-                        <SmallButton onClick={() => handleCopyFormattedText(req.formattedText)} disabled={!req.formattedText}>복사</SmallButton>
-                        {req.status === 'PENDING' && (
-                          <SmallButton
-                            onClick={() => handleAutoGenerate(req.id)}
-                            disabled={autoGenLoading === req.id}
-                            style={{ background: '#8b5cf6', color: 'white' }}
-                          >
-                            {autoGenLoading === req.id ? '생성중...' : 'AI 생성'}
-                          </SmallButton>
-                        )}
-                        <SmallButton
-                          onClick={() => handleToggleRequestResumes(req.id)}
-                          style={{ background: '#10b981', color: 'white' }}
-                        >
-                          {expandedRequestResumeIds.has(req.id) ? '접기' : '이력서 보기'}
-                        </SmallButton>
                         <select
-                          value={req.status}
-                          onChange={(e) => handleChangeRequestStatus(req.id, e.target.value as ResumeRequestStatus)}
+                          value={selectedRequest.status}
+                          onChange={(e) => handleChangeRequestStatus(selectedRequest.id, e.target.value as ResumeRequestStatus)}
                         >
                           <option value="PENDING">대기중</option>
                           <option value="IN_PROGRESS">진행중</option>
                           <option value="COMPLETED">완료</option>
                           <option value="CANCELLED">취소</option>
                         </select>
-                        <SmallButton $variant="danger" onClick={() => handleDeleteRequest(req.id)}>삭제</SmallButton>
+                        <ActionButton $variant="danger" onClick={() => handleDeleteRequest(selectedRequest.id)}>
+                          요청 삭제
+                        </ActionButton>
                       </ActionRow>
-                    </td>
-                  </tr>
-                  {expandedRequestResumeIds.has(req.id) && (
-                    <tr>
-                      <td colSpan={6} style={{ padding: '12px 16px', background: '#f9fafb' }}>
-                        {/* 유저 제출 원본 */}
-                        <div style={{ marginBottom: '16px' }}>
-                          <div style={{ fontSize: '13px', fontWeight: 600, color: '#374151', marginBottom: '8px' }}>유저 제출 내용</div>
-                          {(() => {
-                            const parsed = parseInputData(req.inputData);
-                            if (!parsed) return <span style={{ color: '#9ca3af', fontSize: '13px' }}>제출 데이터 없음</span>;
-                            if (parsed.type === 'PDF_UPLOAD') {
-                              return (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                  <span style={{ fontSize: '13px', color: '#6b7280' }}>PDF 업로드</span>
-                                  <SmallButton onClick={() => window.open(parsed.pdfUrl, '_blank')} style={{ background: '#f59e0b', color: 'white' }}>
-                                    원본 PDF 다운로드
-                                  </SmallButton>
-                                </div>
-                              );
-                            }
-                            return (
-                              <div>
-                                {req.formattedText && (
-                                  <pre style={{ background: '#f3f4f6', padding: '10px', borderRadius: '6px', fontSize: '12px', whiteSpace: 'pre-wrap', wordBreak: 'break-all', maxHeight: '200px', overflow: 'auto', marginBottom: '8px' }}>
-                                    {req.formattedText}
-                                  </pre>
-                                )}
-                                {!req.formattedText && (
-                                  <pre style={{ background: '#f3f4f6', padding: '10px', borderRadius: '6px', fontSize: '12px', whiteSpace: 'pre-wrap', wordBreak: 'break-all', maxHeight: '200px', overflow: 'auto' }}>
-                                    {parsed.data}
-                                  </pre>
-                                )}
-                              </div>
-                            );
-                          })()}
-                        </div>
+                    </StepSection>
+                  </StepContent>
+                )}
 
-                        {/* AI 생성 이력서 */}
-                        <div style={{ fontSize: '13px', fontWeight: 600, color: '#374151', marginBottom: '8px' }}>AI 생성 이력서</div>
-                        {resumesByRequestIdMap[req.id] === undefined ? (
-                          <span>로딩 중...</span>
-                        ) : resumesByRequestIdMap[req.id].length === 0 ? (
-                          <span style={{ color: '#9ca3af', fontSize: '13px' }}>생성된 이력서가 없습니다.</span>
-                        ) : (
-                          resumesByRequestIdMap[req.id].map((resume) => (
-                            <div key={resume.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-                              <span style={{ fontWeight: 500 }}>{resume.title}</span>
-                              <StatusBadge $color={STATUS_COLORS[resume.status]}>{STATUS_LABELS[resume.status]}</StatusBadge>
-                              <SmallButton onClick={() => handleDownloadResume(resume.pdfUrl)} disabled={!resume.pdfUrl}>다운로드</SmallButton>
-                              {resume.status === 'GENERATED' && (
-                                <SmallButton
-                                  onClick={() => handleMarkDelivered(resume.id)}
-                                  disabled={resumeStatusChanging === resume.id}
-                                  style={{ background: '#3b82f6', color: 'white' }}
-                                >
-                                  {resumeStatusChanging === resume.id ? '변경중...' : '전달 완료'}
-                                </SmallButton>
-                              )}
-                            </div>
-                          ))
-                        )}
-                      </td>
-                    </tr>
-                  )}
-                </React.Fragment>
-                ))}
-              </tbody>
-            </Table>
-          )}
-        </Section>
-      )}
+                {/* Step 2: 첨삭 작성 */}
+                {activeStep === 2 && (
+                  <StepContent>
+                    <StepTitle>Step 2: 첨삭 작성</StepTitle>
 
-      {/* PDF 변환기 탭 */}
-      {activeTab === 'converter' && (
-        <Section>
-          <SectionHeader>
-            <h2>HTML → PDF 변환기</h2>
-          </SectionHeader>
-
-          <FormGroup>
-            <label>제목</label>
-            <Input
-              type="text"
-              value={pdfTitle}
-              onChange={(e) => setPdfTitle(e.target.value)}
-              placeholder="이력서 제목을 입력하세요"
-            />
-          </FormGroup>
-
-          <FormGroup>
-            <label>연결할 요청 (선택사항)</label>
-            <div ref={requestSearchRef} style={{ position: 'relative' }}>
-              {selectedRequestId ? (
-                <SelectedRequestChip>
-                  <span>
-                    #{requests.find(r => r.id === selectedRequestId)?.id} - {requests.find(r => r.id === selectedRequestId)?.userName}
-                    {requests.find(r => r.id === selectedRequestId)?.userEmail && ` (${requests.find(r => r.id === selectedRequestId)?.userEmail})`}
-                  </span>
-                  <button onClick={() => { setSelectedRequestId(undefined); setRequestSearchQuery(''); }}>✕</button>
-                </SelectedRequestChip>
-              ) : (
-                <Input
-                  type="text"
-                  value={requestSearchQuery}
-                  onChange={(e) => { setRequestSearchQuery(e.target.value); setRequestSearchOpen(true); }}
-                  onFocus={() => setRequestSearchOpen(true)}
-                  placeholder="이름, 이메일, ID로 검색..."
-                />
-              )}
-              {requestSearchOpen && !selectedRequestId && (
-                <RequestSearchDropdown>
-                  {filteredRequestsForSearch.length === 0 ? (
-                    <RequestSearchItem style={{ color: '#9ca3af', cursor: 'default' }}>검색 결과 없음</RequestSearchItem>
-                  ) : (
-                    filteredRequestsForSearch.slice(0, 10).map((req) => (
-                      <RequestSearchItem
-                        key={req.id}
-                        onClick={() => {
-                          setSelectedRequestId(req.id);
-                          setRequestSearchQuery('');
-                          setRequestSearchOpen(false);
-                        }}
+                    <StepSection>
+                      <SectionLabel>AI 자동 생성</SectionLabel>
+                      <ActionButton
+                        $primary
+                        onClick={handleAutoGenerate}
+                        disabled={autoGenLoading}
+                        style={{ width: 'fit-content' }}
                       >
-                        <span style={{ fontWeight: 600 }}>#{req.id}</span>
-                        <span>{req.userName}</span>
-                        <span style={{ color: '#6b7280' }}>{req.userEmail || ''}</span>
-                        <StatusBadge $color={STATUS_COLORS[req.status]} style={{ marginLeft: 'auto', fontSize: '11px', padding: '2px 8px' }}>
-                          {STATUS_LABELS[req.status]}
-                        </StatusBadge>
-                      </RequestSearchItem>
-                    ))
-                  )}
-                </RequestSearchDropdown>
-              )}
-            </div>
-          </FormGroup>
+                        {autoGenLoading ? 'AI 생성 중...' : 'AI 자동 생성'}
+                      </ActionButton>
+                    </StepSection>
 
-          <FormGroup>
-            <label>HTML 코드</label>
-            <TextArea
-              rows={20}
-              value={htmlInput}
-              onChange={(e) => setHtmlInput(e.target.value)}
-              placeholder="이력서 HTML 코드를 붙여넣으세요..."
-            />
-          </FormGroup>
+                    <Divider>또는</Divider>
 
-          <ButtonRow>
-            <ActionButton onClick={handlePreview}>프리뷰</ActionButton>
-            <ActionButton $primary onClick={handleGeneratePdf} disabled={generating}>
-              {generating ? 'PDF 생성 중...' : 'PDF 생성'}
-            </ActionButton>
-          </ButtonRow>
+                    <StepSection>
+                      <SectionLabel>수동 작성</SectionLabel>
+                      <FormGroup>
+                        <label>제목</label>
+                        <Input
+                          type="text"
+                          value={pdfTitle}
+                          onChange={(e) => setPdfTitle(e.target.value)}
+                          placeholder="이력서 제목을 입력하세요"
+                        />
+                      </FormGroup>
 
-          {showPreview && (
-            <PreviewContainer>
-              <h3>프리뷰</h3>
-              <PreviewFrame srcDoc={previewHtml} title="Resume Preview" />
-            </PreviewContainer>
-          )}
-        </Section>
-      )}
+                      <FormGroup>
+                        <label>HTML 코드</label>
+                        <TextArea
+                          rows={15}
+                          value={htmlInput}
+                          onChange={(e) => setHtmlInput(e.target.value)}
+                          placeholder="이력서 HTML 코드를 붙여넣으세요..."
+                        />
+                      </FormGroup>
 
-      {/* 생성된 이력서 탭 */}
-      {activeTab === 'resumes' && (
-        <Section>
-          <SectionHeader>
-            <h2>생성된 이력서</h2>
-            <SmallButton onClick={fetchResumes}>새로고침</SmallButton>
-          </SectionHeader>
+                      <ButtonRow>
+                        <ActionButton onClick={handlePreview}>프리뷰</ActionButton>
+                        <ActionButton $primary onClick={handleGeneratePdf} disabled={generating}>
+                          {generating ? 'PDF 생성 중...' : 'PDF 생성'}
+                        </ActionButton>
+                      </ButtonRow>
 
-          {resumesLoading ? (
-            <LoadingText>로딩 중...</LoadingText>
-          ) : resumes.length === 0 ? (
-            <EmptyText>생성된 이력서가 없습니다.</EmptyText>
-          ) : (
-            <Table>
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>제목</th>
-                  <th>요청자</th>
-                  <th>모드</th>
-                  <th>파일 크기</th>
-                  <th>상태</th>
-                  <th>생성일</th>
-                  <th>액션</th>
-                </tr>
-              </thead>
-              <tbody>
-                {resumes.map((resume) => {
-                  const matchedRequest = resume.requestId
-                    ? requests.find((r) => r.id === resume.requestId)
-                    : undefined;
-                  return (
-                  <tr key={resume.id}>
-                    <td>{resume.id}</td>
-                    <td>{resume.title}</td>
-                    <td>{matchedRequest ? matchedRequest.userName : '-'}</td>
-                    <td>{resume.generationMode}</td>
-                    <td>{formatFileSize(resume.fileSizeBytes)}</td>
-                    <td><StatusBadge $color={STATUS_COLORS[resume.status]}>{STATUS_LABELS[resume.status]}</StatusBadge></td>
-                    <td>{formatDate(resume.createdAt)}</td>
-                    <td>
-                      <ActionRow>
-                        <SmallButton onClick={() => handleDownloadResume(resume.pdfUrl)} disabled={!resume.pdfUrl}>다운로드</SmallButton>
-                        {resume.status === 'GENERATED' && (
-                          <SmallButton
-                            onClick={() => handleMarkDelivered(resume.id)}
-                            disabled={resumeStatusChanging === resume.id}
-                            style={{ background: '#3b82f6', color: 'white' }}
-                          >
-                            {resumeStatusChanging === resume.id ? '변경중...' : '전달 완료'}
-                          </SmallButton>
-                        )}
-                        <SmallButton $variant="danger" onClick={() => handleDeleteResume(resume.id)}>삭제</SmallButton>
-                      </ActionRow>
-                    </td>
-                  </tr>
-                  );
-                })}
-              </tbody>
-            </Table>
-          )}
-        </Section>
+                      {showPreview && (
+                        <PreviewContainer>
+                          <h3>프리뷰</h3>
+                          <PreviewFrame srcDoc={previewHtml} title="Resume Preview" />
+                        </PreviewContainer>
+                      )}
+                    </StepSection>
+                  </StepContent>
+                )}
+
+                {/* Step 3: 결과 확인/전달 */}
+                {activeStep === 3 && (
+                  <StepContent>
+                    <StepTitle>Step 3: 결과 확인/전달</StepTitle>
+
+                    <StepSection>
+                      <SectionLabel>생성된 이력서</SectionLabel>
+                      {resumesLoading ? (
+                        <LoadingText>로딩 중...</LoadingText>
+                      ) : requestResumes.length === 0 ? (
+                        <EmptyText>생성된 이력서가 없습니다.</EmptyText>
+                      ) : (
+                        <ResumeList>
+                          {requestResumes.map((resume) => (
+                            <ResumeItem key={resume.id}>
+                              <ResumeInfo>
+                                <ResumeTitle>{resume.title}</ResumeTitle>
+                                <ResumeMetadata>
+                                  <StatusBadge $color={STATUS_COLORS[resume.status]}>
+                                    {STATUS_LABELS[resume.status]}
+                                  </StatusBadge>
+                                  <span>{formatFileSize(resume.fileSizeBytes)}</span>
+                                  <span>{formatDate(resume.createdAt)}</span>
+                                </ResumeMetadata>
+                              </ResumeInfo>
+                              <ResumeActions>
+                                <ActionButton onClick={() => handleDownloadResume(resume.pdfUrl)} disabled={!resume.pdfUrl}>
+                                  다운로드
+                                </ActionButton>
+                                {resume.status === 'GENERATED' && (
+                                  <ActionButton
+                                    onClick={() => handleMarkDelivered(resume.id)}
+                                    disabled={resumeStatusChanging === resume.id}
+                                    style={{ background: '#3b82f6', color: 'white' }}
+                                  >
+                                    {resumeStatusChanging === resume.id ? '변경중...' : '전달 완료'}
+                                  </ActionButton>
+                                )}
+                                <ActionButton $variant="danger" onClick={() => handleDeleteResume(resume.id)}>
+                                  삭제
+                                </ActionButton>
+                              </ResumeActions>
+                            </ResumeItem>
+                          ))}
+                        </ResumeList>
+                      )}
+                    </StepSection>
+                  </StepContent>
+                )}
+              </>
+            )}
+          </WorkflowPanel>
+        </WorkflowContainer>
       )}
 
       {/* 프롬프트 템플릿 탭 */}
@@ -821,7 +747,7 @@ const ToggleSwitch = styled.input.attrs({ type: 'checkbox' })`
   }
 `;
 
-const SubTabNav = styled.div`
+const TabNav = styled.div`
   display: flex;
   gap: 8px;
   margin-bottom: 24px;
@@ -829,7 +755,7 @@ const SubTabNav = styled.div`
   padding-bottom: 0;
 `;
 
-const SubTabButton = styled.button<{ $active: boolean }>`
+const TabButton = styled.button<{ $active: boolean }>`
   padding: 10px 20px;
   font-size: 14px;
   font-weight: ${({ $active }) => ($active ? '600' : '400')};
@@ -846,102 +772,235 @@ const SubTabButton = styled.button<{ $active: boolean }>`
   }
 `;
 
-const Section = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: ${({ theme }) => theme.radii.large};
-  padding: 24px;
-  box-shadow: ${({ theme }) => theme.shadows.small};
+const WorkflowContainer = styled.div`
+  display: flex;
+  gap: 24px;
+  height: calc(100vh - 200px);
 `;
 
-const SectionHeader = styled.div`
+const RequestListPanel = styled.div`
+  width: 320px;
+  background: ${({ theme }) => theme.colors.surface};
+  border-radius: ${({ theme }) => theme.radii.large};
+  padding: 20px;
+  box-shadow: ${({ theme }) => theme.shadows.small};
+  overflow-y: auto;
+  flex-shrink: 0;
+`;
+
+const PanelHeader = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 
   h2 {
-    font-size: 18px;
+    font-size: 16px;
     font-weight: 600;
     color: ${({ theme }) => theme.colors.text.primary};
   }
 `;
 
-const FilterRow = styled.div`
-  display: flex;
-  gap: 8px;
-
-  select {
-    padding: 6px 12px;
-    border: 1px solid ${({ theme }) => theme.colors.gray[300]};
-    border-radius: ${({ theme }) => theme.radii.medium};
-    font-size: 13px;
-  }
-`;
-
-const Table = styled.table`
-  width: 100%;
-  border-collapse: collapse;
-
-  th, td {
-    padding: 12px 16px;
-    text-align: left;
-    border-bottom: 1px solid ${({ theme }) => theme.colors.gray[100]};
-    font-size: 13px;
-  }
-
-  th {
-    font-weight: 600;
-    color: ${({ theme }) => theme.colors.gray[600]};
-    background: ${({ theme }) => theme.colors.gray[50]};
-  }
-
-  tr:hover td {
-    background: ${({ theme }) => theme.colors.gray[50]};
-  }
-`;
-
-const StatusBadge = styled.span<{ $color: string }>`
-  display: inline-block;
-  padding: 4px 10px;
-  border-radius: 12px;
+const FilterSelect = styled.select`
+  padding: 4px 8px;
+  border: 1px solid ${({ theme }) => theme.colors.gray[300]};
+  border-radius: ${({ theme }) => theme.radii.small};
   font-size: 12px;
-  font-weight: 500;
-  color: white;
-  background: ${({ $color }) => $color};
+`;
+
+const RequestCardList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+`;
+
+const RequestCard = styled.div<{ $active: boolean }>`
+  padding: 12px;
+  border-radius: ${({ theme }) => theme.radii.medium};
+  border: 2px solid ${({ $active, theme }) => ($active ? theme.colors.primary : theme.colors.gray[200])};
+  background: ${({ $active, theme }) => ($active ? theme.colors.primary + '10' : 'white')};
+  cursor: pointer;
+  transition: ${({ theme }) => theme.transitions.fast};
+
+  &:hover {
+    border-color: ${({ theme }) => theme.colors.primary};
+  }
+`;
+
+const RequestCardHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+`;
+
+const RequestId = styled.span`
+  font-size: 13px;
+  font-weight: 600;
+  color: ${({ theme }) => theme.colors.text.primary};
+`;
+
+const RequestUserName = styled.div`
+  font-size: 14px;
+  font-weight: 600;
+  color: ${({ theme }) => theme.colors.text.primary};
+  margin-bottom: 4px;
+`;
+
+const RequestUserEmail = styled.div`
+  font-size: 12px;
+  color: ${({ theme }) => theme.colors.gray[500]};
+  margin-bottom: 6px;
+`;
+
+const RequestDate = styled.div`
+  font-size: 11px;
+  color: ${({ theme }) => theme.colors.gray[400]};
+`;
+
+const WorkflowPanel = styled.div`
+  flex: 1;
+  background: ${({ theme }) => theme.colors.surface};
+  border-radius: ${({ theme }) => theme.radii.large};
+  padding: 32px;
+  box-shadow: ${({ theme }) => theme.shadows.small};
+  overflow-y: auto;
+`;
+
+const PlaceholderMessage = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+
+  p {
+    font-size: 16px;
+    color: ${({ theme }) => theme.colors.gray[400]};
+  }
+`;
+
+const StepIndicator = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+`;
+
+const StepCircle = styled.div<{ $active: boolean }>`
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: ${({ $active, theme }) => ($active ? theme.colors.primary : theme.colors.gray[200])};
+  cursor: pointer;
+  transition: ${({ theme }) => theme.transitions.normal};
+
+  &:hover {
+    opacity: 0.8;
+  }
+`;
+
+const StepNumber = styled.span<{ $active: boolean }>`
+  font-size: 16px;
+  font-weight: 600;
+  color: ${({ $active }) => ($active ? 'white' : '#6b7280')};
+`;
+
+const StepLine = styled.div`
+  width: 80px;
+  height: 2px;
+  background: ${({ theme }) => theme.colors.gray[300]};
+`;
+
+const StepLabels = styled.div`
+  display: flex;
+  justify-content: space-around;
+  margin-bottom: 32px;
+`;
+
+const StepLabel = styled.div<{ $active: boolean }>`
+  font-size: 14px;
+  font-weight: ${({ $active }) => ($active ? '600' : '400')};
+  color: ${({ $active, theme }) => ($active ? theme.colors.primary : theme.colors.gray[500])};
+  cursor: pointer;
+  transition: ${({ theme }) => theme.transitions.normal};
+
+  &:hover {
+    color: ${({ theme }) => theme.colors.primary};
+  }
+`;
+
+const StepContent = styled.div``;
+
+const StepTitle = styled.h3`
+  font-size: 18px;
+  font-weight: 600;
+  color: ${({ theme }) => theme.colors.text.primary};
+  margin-bottom: 24px;
+`;
+
+const StepSection = styled.div`
+  margin-bottom: 24px;
+`;
+
+const SectionLabel = styled.div`
+  font-size: 14px;
+  font-weight: 600;
+  color: ${({ theme }) => theme.colors.text.primary};
+  margin-bottom: 12px;
+`;
+
+const DataPreview = styled.pre`
+  background: ${({ theme }) => theme.colors.gray[50]};
+  padding: 16px;
+  border-radius: ${({ theme }) => theme.radii.medium};
+  font-size: 13px;
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 300px;
+  overflow: auto;
+  margin-bottom: 12px;
+  border: 1px solid ${({ theme }) => theme.colors.gray[200]};
 `;
 
 const ActionRow = styled.div`
   display: flex;
-  gap: 6px;
+  gap: 8px;
   align-items: center;
 
   select {
-    padding: 4px 8px;
+    padding: 8px 12px;
     border: 1px solid ${({ theme }) => theme.colors.gray[300]};
-    border-radius: ${({ theme }) => theme.radii.small};
-    font-size: 12px;
+    border-radius: ${({ theme }) => theme.radii.medium};
+    font-size: 14px;
   }
 `;
 
-const SmallButton = styled.button<{ $variant?: 'danger' }>`
-  padding: 4px 10px;
-  font-size: 12px;
-  border-radius: ${({ theme }) => theme.radii.small};
-  cursor: pointer;
-  transition: ${({ theme }) => theme.transitions.fast};
-  background: ${({ $variant, theme }) =>
-    $variant === 'danger' ? theme.colors.error : theme.colors.gray[100]};
-  color: ${({ $variant, theme }) =>
-    $variant === 'danger' ? 'white' : theme.colors.text.primary};
-  border: none;
+const Divider = styled.div`
+  text-align: center;
+  margin: 24px 0;
+  font-size: 14px;
+  color: ${({ theme }) => theme.colors.gray[400]};
+  position: relative;
 
-  &:hover:not(:disabled) {
-    opacity: 0.8;
+  &::before,
+  &::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: calc(50% - 40px);
+    height: 1px;
+    background: ${({ theme }) => theme.colors.gray[300]};
   }
 
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
+  &::before {
+    left: 0;
+  }
+
+  &::after {
+    right: 0;
   }
 `;
 
@@ -995,17 +1054,16 @@ const ButtonRow = styled.div`
   margin-top: 16px;
 `;
 
-const ActionButton = styled.button<{ $primary?: boolean }>`
+const ActionButton = styled.button<{ $primary?: boolean; $variant?: 'danger' }>`
   padding: 10px 20px;
   font-size: 14px;
   font-weight: 500;
   border-radius: ${({ theme }) => theme.radii.medium};
   cursor: pointer;
   transition: ${({ theme }) => theme.transitions.normal};
-  background: ${({ $primary, theme }) =>
-    $primary ? theme.colors.primary : theme.colors.gray[100]};
-  color: ${({ $primary, theme }) =>
-    $primary ? 'white' : theme.colors.text.primary};
+  background: ${({ $primary, $variant, theme }) =>
+    $variant === 'danger' ? theme.colors.error : $primary ? theme.colors.primary : theme.colors.gray[100]};
+  color: ${({ $primary, $variant }) => ($primary || $variant === 'danger' ? 'white' : '#374151')};
   border: none;
 
   &:hover:not(:disabled) {
@@ -1032,10 +1090,64 @@ const PreviewContainer = styled.div`
 
 const PreviewFrame = styled.iframe`
   width: 100%;
-  height: 800px;
+  height: 600px;
   border: 1px solid ${({ theme }) => theme.colors.gray[300]};
   border-radius: ${({ theme }) => theme.radii.medium};
   background: white;
+`;
+
+const ResumeList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+`;
+
+const ResumeItem = styled.div`
+  padding: 16px;
+  border: 1px solid ${({ theme }) => theme.colors.gray[200]};
+  border-radius: ${({ theme }) => theme.radii.medium};
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: ${({ theme }) => theme.transitions.fast};
+
+  &:hover {
+    box-shadow: ${({ theme }) => theme.shadows.small};
+  }
+`;
+
+const ResumeInfo = styled.div`
+  flex: 1;
+`;
+
+const ResumeTitle = styled.div`
+  font-size: 15px;
+  font-weight: 600;
+  color: ${({ theme }) => theme.colors.text.primary};
+  margin-bottom: 8px;
+`;
+
+const ResumeMetadata = styled.div`
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  font-size: 13px;
+  color: ${({ theme }) => theme.colors.gray[500]};
+`;
+
+const ResumeActions = styled.div`
+  display: flex;
+  gap: 8px;
+`;
+
+const StatusBadge = styled.span<{ $color: string }>`
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: white;
+  background: ${({ $color }) => $color};
 `;
 
 const LoadingText = styled.p`
@@ -1048,6 +1160,26 @@ const EmptyText = styled.p`
   text-align: center;
   color: ${({ theme }) => theme.colors.gray[400]};
   padding: 40px;
+`;
+
+const Section = styled.div`
+  background: ${({ theme }) => theme.colors.surface};
+  border-radius: ${({ theme }) => theme.radii.large};
+  padding: 24px;
+  box-shadow: ${({ theme }) => theme.shadows.small};
+`;
+
+const SectionHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+
+  h2 {
+    font-size: 18px;
+    font-weight: 600;
+    color: ${({ theme }) => theme.colors.text.primary};
+  }
 `;
 
 const TemplateGrid = styled.div`
@@ -1107,64 +1239,25 @@ const TemplateCardFooter = styled.div`
   color: ${({ theme }) => theme.colors.gray[400]};
 `;
 
-const SelectedRequestChip = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.primary};
-  border-radius: ${({ theme }) => theme.radii.medium};
-  background: ${({ theme }) => theme.colors.primary}10;
-  font-size: 14px;
-
-  span {
-    color: ${({ theme }) => theme.colors.text.primary};
-  }
-
-  button {
-    background: none;
-    border: none;
-    cursor: pointer;
-    font-size: 16px;
-    color: ${({ theme }) => theme.colors.gray[400]};
-    padding: 0 4px;
-
-    &:hover {
-      color: ${({ theme }) => theme.colors.error};
-    }
-  }
-`;
-
-const RequestSearchDropdown = styled.div`
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  z-index: 50;
-  background: white;
-  border: 1px solid ${({ theme }) => theme.colors.gray[300]};
-  border-radius: ${({ theme }) => theme.radii.medium};
-  box-shadow: ${({ theme }) => theme.shadows.medium};
-  max-height: 260px;
-  overflow-y: auto;
-  margin-top: 4px;
-`;
-
-const RequestSearchItem = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
-  font-size: 13px;
+const SmallButton = styled.button<{ $variant?: 'danger' }>`
+  padding: 4px 10px;
+  font-size: 12px;
+  border-radius: ${({ theme }) => theme.radii.small};
   cursor: pointer;
-  transition: background 0.15s;
+  transition: ${({ theme }) => theme.transitions.fast};
+  background: ${({ $variant, theme }) =>
+    $variant === 'danger' ? theme.colors.error : theme.colors.gray[100]};
+  color: ${({ $variant, theme }) =>
+    $variant === 'danger' ? 'white' : theme.colors.text.primary};
+  border: none;
 
-  &:hover {
-    background: ${({ theme }) => theme.colors.gray[50]};
+  &:hover:not(:disabled) {
+    opacity: 0.8;
   }
 
-  &:not(:last-child) {
-    border-bottom: 1px solid ${({ theme }) => theme.colors.gray[100]};
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 `;
 
