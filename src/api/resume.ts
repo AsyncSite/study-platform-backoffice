@@ -100,6 +100,11 @@ export const resumeApi = {
     await apiClient.delete(`${TEMPLATE_URL}/${id}`);
   },
 
+  toggleTemplateActive: async (id: number): Promise<ResumeTemplate> => {
+    const response = await apiClient.patch(`${TEMPLATE_URL}/${id}/toggle-active`);
+    return response.data;
+  },
+
   // === Requests ===
   getRequests: async (status?: ResumeRequestStatus): Promise<ResumeRequest[]> => {
     const params = status ? { status } : {};

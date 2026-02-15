@@ -332,6 +332,16 @@ const ResumeManagement: React.FC = () => {
     }
   };
 
+  const handleToggleTemplateActive = async (id: number) => {
+    try {
+      await resumeApi.toggleTemplateActive(id);
+      fetchTemplates();
+    } catch (error) {
+      console.error('템플릿 활성 상태 변경 실패:', error);
+      alert('활성 상태 변경에 실패했습니다.');
+    }
+  };
+
   const handleToggleAutoGeneration = async (enabled: boolean) => {
     try {
       const result = await resumeApi.setAutoGenerationSetting(enabled);
@@ -654,6 +664,9 @@ const ResumeManagement: React.FC = () => {
                   <TemplateCardFooter>
                     <span>{formatDate(template.createdAt)}</span>
                     <ActionRow>
+                      <SmallButton onClick={() => handleToggleTemplateActive(template.id)}>
+                        {template.active ? '비활성화' : '활성화'}
+                      </SmallButton>
                       <SmallButton onClick={() => handleEditTemplate(template)}>수정</SmallButton>
                       <SmallButton $variant="danger" onClick={() => handleDeleteTemplate(template.id)}>삭제</SmallButton>
                     </ActionRow>
