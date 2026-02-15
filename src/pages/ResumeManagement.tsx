@@ -145,21 +145,6 @@ const ResumeManagement: React.FC = () => {
     alert('클립보드에 복사되었습니다.');
   };
 
-  const handleChangeRequestStatus = async (id: number, status: ResumeRequestStatus) => {
-    try {
-      await resumeApi.changeRequestStatus(id, status);
-      await fetchRequests();
-      if (selectedRequest?.id === id) {
-        const updated = await resumeApi.getRequests();
-        const updatedReq = updated.find(r => r.id === id);
-        if (updatedReq) setSelectedRequest(updatedReq);
-      }
-    } catch (error) {
-      console.error('상태 변경 실패:', error);
-      alert('상태 변경에 실패했습니다.');
-    }
-  };
-
   const handleDeleteRequest = async (id: number) => {
     if (!confirm('정말 삭제하시겠습니까?')) return;
     try {
@@ -173,14 +158,48 @@ const ResumeManagement: React.FC = () => {
     }
   };
 
+  const handleGoToStep2 = async () => {
+    if (!selectedRequest) return;
+    // PENDING → IN_PROGRESS 자동 전환
+    if (selectedRequest.status === 'PENDING') {
+      try {
+        await resumeApi.changeRequestStatus(selectedRequest.id, 'IN_PROGRESS');
+        await fetchRequests();
+        const updated = (await resumeApi.getRequests()).find(r => r.id === selectedRequest.id);
+        if (updated) setSelectedRequest(updated);
+      } catch (error) {
+        console.error('상태 변경 실패:', error);
+      }
+    }
+    setActiveStep(2);
+  };
+
+  const handleCancelRequest = async () => {
+    if (!selectedRequest) return;
+    if (!confirm('이 요청을 취소하시겠습니까?')) return;
+    try {
+      await resumeApi.changeRequestStatus(selectedRequest.id, 'CANCELLED');
+      await fetchRequests();
+      const updated = (await resumeApi.getRequests()).find(r => r.id === selectedRequest.id);
+      if (updated) setSelectedRequest(updated);
+    } catch (error) {
+      console.error('취소 실패:', error);
+      alert('취소에 실패했습니다.');
+    }
+  };
+
   const handleAutoGenerate = async () => {
     if (!selectedRequest) return;
     if (!confirm('AI로 이력서를 자동 생성하시겠습니까?')) return;
     setAutoGenLoading(true);
     try {
       await resumeApi.autoGenerate(selectedRequest.id);
+      // 자동 상태 전환: → COMPLETED
+      await resumeApi.changeRequestStatus(selectedRequest.id, 'COMPLETED');
       alert('이력서가 자동 생성되었습니다.');
       await fetchRequests();
+      const updated = (await resumeApi.getRequests()).find(r => r.id === selectedRequest.id);
+      if (updated) setSelectedRequest(updated);
       await fetchRequestResumes(selectedRequest.id);
       setActiveStep(3);
     } catch (error) {
@@ -221,10 +240,15 @@ const ResumeManagement: React.FC = () => {
         htmlContent: htmlInput,
         mode: 'MANUAL',
       });
+      // 자동 상태 전환: → COMPLETED
+      await resumeApi.changeRequestStatus(selectedRequest.id, 'COMPLETED');
       alert('PDF가 생성되었습니다.');
       setHtmlInput('');
       setPdfTitle('');
       setShowPreview(false);
+      await fetchRequests();
+      const updated = (await resumeApi.getRequests()).find(r => r.id === selectedRequest.id);
+      if (updated) setSelectedRequest(updated);
       await fetchRequestResumes(selectedRequest.id);
       setActiveStep(3);
     } catch (error) {
@@ -418,7 +442,7 @@ const ResumeManagement: React.FC = () => {
                     <StepNumber $active={activeStep === 1}>1</StepNumber>
                   </StepCircle>
                   <StepLine />
-                  <StepCircle $active={activeStep === 2} onClick={() => setActiveStep(2)}>
+                  <StepCircle $active={activeStep === 2} onClick={() => handleGoToStep2()}>
                     <StepNumber $active={activeStep === 2}>2</StepNumber>
                   </StepCircle>
                   <StepLine />
@@ -429,7 +453,7 @@ const ResumeManagement: React.FC = () => {
 
                 <StepLabels>
                   <StepLabel $active={activeStep === 1} onClick={() => setActiveStep(1)}>원본 확인</StepLabel>
-                  <StepLabel $active={activeStep === 2} onClick={() => setActiveStep(2)}>첨삭 작성</StepLabel>
+                  <StepLabel $active={activeStep === 2} onClick={() => handleGoToStep2()}>첨삭 작성</StepLabel>
                   <StepLabel $active={activeStep === 3} onClick={() => setActiveStep(3)}>결과 확인/전달</StepLabel>
                 </StepLabels>
 
@@ -473,19 +497,17 @@ const ResumeManagement: React.FC = () => {
                     </StepSection>
 
                     <StepSection>
-                      <SectionLabel>상태 변경</SectionLabel>
                       <ActionRow>
-                        <select
-                          value={selectedRequest.status}
-                          onChange={(e) => handleChangeRequestStatus(selectedRequest.id, e.target.value as ResumeRequestStatus)}
-                        >
-                          <option value="PENDING">대기중</option>
-                          <option value="IN_PROGRESS">진행중</option>
-                          <option value="COMPLETED">완료</option>
-                          <option value="CANCELLED">취소</option>
-                        </select>
+                        <ActionButton $primary onClick={() => handleGoToStep2()}>
+                          첨삭 시작하기 &rarr;
+                        </ActionButton>
+                        {selectedRequest.status !== 'CANCELLED' && selectedRequest.status !== 'COMPLETED' && (
+                          <ActionButton onClick={handleCancelRequest} style={{ background: '#fef2f2', color: '#ef4444' }}>
+                            요청 취소
+                          </ActionButton>
+                        )}
                         <ActionButton $variant="danger" onClick={() => handleDeleteRequest(selectedRequest.id)}>
-                          요청 삭제
+                          삭제
                         </ActionButton>
                       </ActionRow>
                     </StepSection>
