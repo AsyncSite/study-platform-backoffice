@@ -394,14 +394,12 @@ const ResumeManagement: React.FC = () => {
                             {autoGenLoading === req.id ? '생성중...' : 'AI 생성'}
                           </SmallButton>
                         )}
-                        {req.status === 'COMPLETED' && (
-                          <SmallButton
-                            onClick={() => handleToggleRequestResumes(req.id)}
-                            style={{ background: '#10b981', color: 'white' }}
-                          >
-                            {expandedRequestResumeIds.has(req.id) ? '접기' : '이력서 보기'}
-                          </SmallButton>
-                        )}
+                        <SmallButton
+                          onClick={() => handleToggleRequestResumes(req.id)}
+                          style={{ background: '#10b981', color: 'white' }}
+                        >
+                          {expandedRequestResumeIds.has(req.id) ? '접기' : '이력서 보기'}
+                        </SmallButton>
                         <select
                           value={req.status}
                           onChange={(e) => handleChangeRequestStatus(req.id, e.target.value as ResumeRequestStatus)}
