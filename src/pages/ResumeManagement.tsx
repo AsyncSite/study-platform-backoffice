@@ -321,6 +321,19 @@ const ResumeManagement: React.FC = () => {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
   };
 
+  const parseInputData = (inputData: string | null): { type: 'PDF_UPLOAD'; pdfUrl: string } | { type: 'FORM'; data: string } | null => {
+    if (!inputData) return null;
+    try {
+      const parsed = JSON.parse(inputData);
+      if (parsed.type === 'PDF_UPLOAD' && parsed.pdfUrl) {
+        return { type: 'PDF_UPLOAD', pdfUrl: parsed.pdfUrl };
+      }
+    } catch {
+      // not JSON, treat as form data
+    }
+    return { type: 'FORM', data: inputData };
+  };
+
   return (
     <Container>
       <Header>
@@ -416,10 +429,45 @@ const ResumeManagement: React.FC = () => {
                   {expandedRequestResumeIds.has(req.id) && (
                     <tr>
                       <td colSpan={6} style={{ padding: '12px 16px', background: '#f9fafb' }}>
+                        {/* 유저 제출 원본 */}
+                        <div style={{ marginBottom: '16px' }}>
+                          <div style={{ fontSize: '13px', fontWeight: 600, color: '#374151', marginBottom: '8px' }}>유저 제출 내용</div>
+                          {(() => {
+                            const parsed = parseInputData(req.inputData);
+                            if (!parsed) return <span style={{ color: '#9ca3af', fontSize: '13px' }}>제출 데이터 없음</span>;
+                            if (parsed.type === 'PDF_UPLOAD') {
+                              return (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  <span style={{ fontSize: '13px', color: '#6b7280' }}>PDF 업로드</span>
+                                  <SmallButton onClick={() => window.open(parsed.pdfUrl, '_blank')} style={{ background: '#f59e0b', color: 'white' }}>
+                                    원본 PDF 다운로드
+                                  </SmallButton>
+                                </div>
+                              );
+                            }
+                            return (
+                              <div>
+                                {req.formattedText && (
+                                  <pre style={{ background: '#f3f4f6', padding: '10px', borderRadius: '6px', fontSize: '12px', whiteSpace: 'pre-wrap', wordBreak: 'break-all', maxHeight: '200px', overflow: 'auto', marginBottom: '8px' }}>
+                                    {req.formattedText}
+                                  </pre>
+                                )}
+                                {!req.formattedText && (
+                                  <pre style={{ background: '#f3f4f6', padding: '10px', borderRadius: '6px', fontSize: '12px', whiteSpace: 'pre-wrap', wordBreak: 'break-all', maxHeight: '200px', overflow: 'auto' }}>
+                                    {parsed.data}
+                                  </pre>
+                                )}
+                              </div>
+                            );
+                          })()}
+                        </div>
+
+                        {/* AI 생성 이력서 */}
+                        <div style={{ fontSize: '13px', fontWeight: 600, color: '#374151', marginBottom: '8px' }}>AI 생성 이력서</div>
                         {resumesByRequestIdMap[req.id] === undefined ? (
                           <span>로딩 중...</span>
                         ) : resumesByRequestIdMap[req.id].length === 0 ? (
-                          <span style={{ color: '#9ca3af' }}>생성된 이력서가 없습니다.</span>
+                          <span style={{ color: '#9ca3af', fontSize: '13px' }}>생성된 이력서가 없습니다.</span>
                         ) : (
                           resumesByRequestIdMap[req.id].map((resume) => (
                             <div key={resume.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
