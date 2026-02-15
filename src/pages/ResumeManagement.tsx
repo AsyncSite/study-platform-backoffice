@@ -123,8 +123,17 @@ const ResumeManagement: React.FC = () => {
   // Handlers
   const handleSelectRequest = (req: ResumeRequest) => {
     setSelectedRequest(req);
-    setActiveStep(1);
-    // Reset step 2 & 3
+    // 상태에 따라 적절한 Step으로 이동
+    if (req.status === 'COMPLETED') {
+      setActiveStep(3); // 완료 → 결과 확인
+    } else if (req.status === 'CANCELLED') {
+      setActiveStep(1); // 취소 → 원본만 확인
+    } else if (req.status === 'IN_PROGRESS') {
+      setActiveStep(2); // 진행중 → 첨삭 작성
+    } else {
+      setActiveStep(1); // 대기중 → 원본 확인
+    }
+    // Reset step 2 inputs
     setHtmlInput('');
     setPdfTitle('');
     setShowPreview(false);
@@ -420,25 +429,32 @@ const ResumeManagement: React.FC = () => {
             ) : (
               <>
                 {/* Step Indicator */}
-                <StepIndicator>
-                  <StepCircle $active={activeStep === 1} onClick={() => setActiveStep(1)}>
-                    <StepNumber $active={activeStep === 1}>1</StepNumber>
-                  </StepCircle>
-                  <StepLine />
-                  <StepCircle $active={activeStep === 2} onClick={() => handleGoToStep2()}>
-                    <StepNumber $active={activeStep === 2}>2</StepNumber>
-                  </StepCircle>
-                  <StepLine />
-                  <StepCircle $active={activeStep === 3} onClick={() => setActiveStep(3)}>
-                    <StepNumber $active={activeStep === 3}>3</StepNumber>
-                  </StepCircle>
-                </StepIndicator>
+                {(() => {
+                  const isFinished = selectedRequest?.status === 'COMPLETED' || selectedRequest?.status === 'CANCELLED';
+                  return (
+                    <>
+                      <StepIndicator>
+                        <StepCircle $active={activeStep === 1} onClick={() => setActiveStep(1)}>
+                          <StepNumber $active={activeStep === 1}>1</StepNumber>
+                        </StepCircle>
+                        <StepLine />
+                        <StepCircle $active={activeStep === 2} onClick={() => !isFinished && handleGoToStep2()} style={isFinished ? { opacity: 0.4, cursor: 'not-allowed' } : {}}>
+                          <StepNumber $active={activeStep === 2}>2</StepNumber>
+                        </StepCircle>
+                        <StepLine />
+                        <StepCircle $active={activeStep === 3} onClick={() => setActiveStep(3)}>
+                          <StepNumber $active={activeStep === 3}>3</StepNumber>
+                        </StepCircle>
+                      </StepIndicator>
 
-                <StepLabels>
-                  <StepLabel $active={activeStep === 1} onClick={() => setActiveStep(1)}>원본 확인</StepLabel>
-                  <StepLabel $active={activeStep === 2} onClick={() => handleGoToStep2()}>첨삭 작성</StepLabel>
-                  <StepLabel $active={activeStep === 3} onClick={() => setActiveStep(3)}>결과 확인/전달</StepLabel>
-                </StepLabels>
+                      <StepLabels>
+                        <StepLabel $active={activeStep === 1} onClick={() => setActiveStep(1)}>원본 확인</StepLabel>
+                        <StepLabel $active={activeStep === 2} onClick={() => !isFinished && handleGoToStep2()} style={isFinished ? { opacity: 0.4, cursor: 'not-allowed' } : {}}>첨삭 작성</StepLabel>
+                        <StepLabel $active={activeStep === 3} onClick={() => setActiveStep(3)}>결과 확인/전달</StepLabel>
+                      </StepLabels>
+                    </>
+                  );
+                })()}
 
                 {/* Step 1: 원본 확인 */}
                 {activeStep === 1 && (
@@ -481,9 +497,17 @@ const ResumeManagement: React.FC = () => {
 
                     <StepSection>
                       <ActionRow>
-                        <ActionButton $primary onClick={() => handleGoToStep2()}>
-                          첨삭 시작하기 &rarr;
-                        </ActionButton>
+                        {selectedRequest.status === 'COMPLETED' ? (
+                          <ActionButton $primary onClick={() => setActiveStep(3)}>
+                            결과 확인하기 &rarr;
+                          </ActionButton>
+                        ) : selectedRequest.status === 'CANCELLED' ? (
+                          <StatusBadge $color="#ef4444" style={{ fontSize: '14px', padding: '6px 16px' }}>취소된 요청</StatusBadge>
+                        ) : (
+                          <ActionButton $primary onClick={() => handleGoToStep2()}>
+                            첨삭 시작하기 &rarr;
+                          </ActionButton>
+                        )}
                         {selectedRequest.status !== 'CANCELLED' && selectedRequest.status !== 'COMPLETED' && (
                           <ActionButton onClick={handleCancelRequest} style={{ background: '#fef2f2', color: '#ef4444' }}>
                             요청 취소
