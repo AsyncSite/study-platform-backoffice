@@ -61,6 +61,11 @@ const ResumeManagement: React.FC = () => {
   const [editingTemplate, setEditingTemplate] = useState<ResumeTemplate | null>(null);
   const [templateForm, setTemplateForm] = useState<CreateTemplateRequest>({ name: '', description: '', promptText: '' });
 
+  // Request search state (for converter tab)
+  const [requestSearchQuery, setRequestSearchQuery] = useState('');
+  const [requestSearchOpen, setRequestSearchOpen] = useState(false);
+  const requestSearchRef = React.useRef<HTMLDivElement>(null);
+
   // Auto generation state
   const [autoGenerationEnabled, setAutoGenerationEnabled] = useState(false);
   const [autoGenLoading, setAutoGenLoading] = useState<number | null>(null);
@@ -69,6 +74,27 @@ const ResumeManagement: React.FC = () => {
   const [expandedRequestResumeIds, setExpandedRequestResumeIds] = useState<Set<number>>(new Set());
   const [resumesByRequestIdMap, setResumesByRequestIdMap] = useState<Record<number, Resume[]>>({});
   const [resumeStatusChanging, setResumeStatusChanging] = useState<number | null>(null);
+
+  // Close request search dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (requestSearchRef.current && !requestSearchRef.current.contains(e.target as Node)) {
+        setRequestSearchOpen(false);
+      }
+    };
+    if (requestSearchOpen) document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [requestSearchOpen]);
+
+  const filteredRequestsForSearch = requests.filter((req) => {
+    if (!requestSearchQuery) return true;
+    const q = requestSearchQuery.toLowerCase();
+    return (
+      String(req.id).includes(q) ||
+      req.userName.toLowerCase().includes(q) ||
+      (req.userEmail || '').toLowerCase().includes(q)
+    );
+  });
 
   // Fetch functions
   const fetchRequests = useCallback(async () => {
@@ -111,6 +137,7 @@ const ResumeManagement: React.FC = () => {
 
   useEffect(() => {
     if (activeTab === 'requests') fetchRequests();
+    if (activeTab === 'converter') fetchRequests(); // needed for request selector
     if (activeTab === 'resumes') {
       fetchResumes();
       fetchRequests(); // needed for requester name mapping
@@ -515,13 +542,51 @@ const ResumeManagement: React.FC = () => {
           </FormGroup>
 
           <FormGroup>
-            <label>연결할 요청 ID (선택사항)</label>
-            <Input
-              type="number"
-              value={selectedRequestId || ''}
-              onChange={(e) => setSelectedRequestId(e.target.value ? Number(e.target.value) : undefined)}
-              placeholder="요청 ID"
-            />
+            <label>연결할 요청 (선택사항)</label>
+            <div ref={requestSearchRef} style={{ position: 'relative' }}>
+              {selectedRequestId ? (
+                <SelectedRequestChip>
+                  <span>
+                    #{requests.find(r => r.id === selectedRequestId)?.id} - {requests.find(r => r.id === selectedRequestId)?.userName}
+                    {requests.find(r => r.id === selectedRequestId)?.userEmail && ` (${requests.find(r => r.id === selectedRequestId)?.userEmail})`}
+                  </span>
+                  <button onClick={() => { setSelectedRequestId(undefined); setRequestSearchQuery(''); }}>✕</button>
+                </SelectedRequestChip>
+              ) : (
+                <Input
+                  type="text"
+                  value={requestSearchQuery}
+                  onChange={(e) => { setRequestSearchQuery(e.target.value); setRequestSearchOpen(true); }}
+                  onFocus={() => setRequestSearchOpen(true)}
+                  placeholder="이름, 이메일, ID로 검색..."
+                />
+              )}
+              {requestSearchOpen && !selectedRequestId && (
+                <RequestSearchDropdown>
+                  {filteredRequestsForSearch.length === 0 ? (
+                    <RequestSearchItem style={{ color: '#9ca3af', cursor: 'default' }}>검색 결과 없음</RequestSearchItem>
+                  ) : (
+                    filteredRequestsForSearch.slice(0, 10).map((req) => (
+                      <RequestSearchItem
+                        key={req.id}
+                        onClick={() => {
+                          setSelectedRequestId(req.id);
+                          setRequestSearchQuery('');
+                          setRequestSearchOpen(false);
+                        }}
+                      >
+                        <span style={{ fontWeight: 600 }}>#{req.id}</span>
+                        <span>{req.userName}</span>
+                        <span style={{ color: '#6b7280' }}>{req.userEmail || ''}</span>
+                        <StatusBadge $color={STATUS_COLORS[req.status]} style={{ marginLeft: 'auto', fontSize: '11px', padding: '2px 8px' }}>
+                          {STATUS_LABELS[req.status]}
+                        </StatusBadge>
+                      </RequestSearchItem>
+                    ))
+                  )}
+                </RequestSearchDropdown>
+              )}
+            </div>
           </FormGroup>
 
           <FormGroup>
@@ -1040,6 +1105,67 @@ const TemplateCardFooter = styled.div`
   align-items: center;
   font-size: 12px;
   color: ${({ theme }) => theme.colors.gray[400]};
+`;
+
+const SelectedRequestChip = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  border: 1px solid ${({ theme }) => theme.colors.primary};
+  border-radius: ${({ theme }) => theme.radii.medium};
+  background: ${({ theme }) => theme.colors.primary}10;
+  font-size: 14px;
+
+  span {
+    color: ${({ theme }) => theme.colors.text.primary};
+  }
+
+  button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    color: ${({ theme }) => theme.colors.gray[400]};
+    padding: 0 4px;
+
+    &:hover {
+      color: ${({ theme }) => theme.colors.error};
+    }
+  }
+`;
+
+const RequestSearchDropdown = styled.div`
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  background: white;
+  border: 1px solid ${({ theme }) => theme.colors.gray[300]};
+  border-radius: ${({ theme }) => theme.radii.medium};
+  box-shadow: ${({ theme }) => theme.shadows.medium};
+  max-height: 260px;
+  overflow-y: auto;
+  margin-top: 4px;
+`;
+
+const RequestSearchItem = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s;
+
+  &:hover {
+    background: ${({ theme }) => theme.colors.gray[50]};
+  }
+
+  &:not(:last-child) {
+    border-bottom: 1px solid ${({ theme }) => theme.colors.gray[100]};
+  }
 `;
 
 const ModalOverlay = styled.div`
