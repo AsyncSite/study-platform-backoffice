@@ -200,9 +200,9 @@ const ResumeManagement: React.FC = () => {
     }
   };
 
-  const handleDownloadResume = (id: number) => {
-    const url = resumeApi.getDownloadUrl(id);
-    window.open(url, '_blank');
+  const handleDownloadResume = (pdfUrl: string | null) => {
+    if (!pdfUrl) return;
+    window.open(pdfUrl, '_blank');
   };
 
   // Template handlers
@@ -427,7 +427,7 @@ const ResumeManagement: React.FC = () => {
                             <div key={resume.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
                               <span style={{ fontWeight: 500 }}>{resume.title}</span>
                               <StatusBadge $color={STATUS_COLORS[resume.status]}>{STATUS_LABELS[resume.status]}</StatusBadge>
-                              <SmallButton onClick={() => handleDownloadResume(resume.id)} disabled={!resume.pdfUrl}>다운로드</SmallButton>
+                              <SmallButton onClick={() => handleDownloadResume(resume.pdfUrl)} disabled={!resume.pdfUrl}>다운로드</SmallButton>
                               {resume.status === 'GENERATED' && (
                                 <SmallButton
                                   onClick={() => handleMarkDelivered(resume.id)}
@@ -546,7 +546,7 @@ const ResumeManagement: React.FC = () => {
                     <td>{formatDate(resume.createdAt)}</td>
                     <td>
                       <ActionRow>
-                        <SmallButton onClick={() => handleDownloadResume(resume.id)} disabled={!resume.pdfUrl}>다운로드</SmallButton>
+                        <SmallButton onClick={() => handleDownloadResume(resume.pdfUrl)} disabled={!resume.pdfUrl}>다운로드</SmallButton>
                         {resume.status === 'GENERATED' && (
                           <SmallButton
                             onClick={() => handleMarkDelivered(resume.id)}
