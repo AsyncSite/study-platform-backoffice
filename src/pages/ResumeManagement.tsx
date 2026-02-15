@@ -65,9 +65,6 @@ const ResumeManagement: React.FC = () => {
   const [editingTemplate, setEditingTemplate] = useState<ResumeTemplate | null>(null);
   const [templateForm, setTemplateForm] = useState<CreateTemplateRequest>({ name: '', description: '', promptText: '' });
 
-  // Auto generation state
-  const [autoGenerationEnabled, setAutoGenerationEnabled] = useState(false);
-
   // Fetch functions
   const fetchRequests = useCallback(async () => {
     setRequestsLoading(true);
@@ -116,12 +113,6 @@ const ResumeManagement: React.FC = () => {
       fetchTemplates();
     }
   }, [activeTab, fetchRequests, fetchTemplates]);
-
-  useEffect(() => {
-    resumeApi.getAutoGenerationSetting()
-      .then(data => setAutoGenerationEnabled(data.enabled))
-      .catch(err => console.error('자동 생성 설정 조회 실패:', err));
-  }, []);
 
   useEffect(() => {
     if (selectedRequest) {
@@ -190,12 +181,11 @@ const ResumeManagement: React.FC = () => {
 
   const handleAutoGenerate = async () => {
     if (!selectedRequest) return;
-    if (!confirm('AI로 이력서를 자동 생성하시겠습니까?')) return;
+    if (!confirm('AI로 이력서를 자동 생성하시겠습니까? (약 30~60초 소요)')) return;
     setAutoGenLoading(true);
     try {
+      // 백엔드가 자동으로 PENDING→IN_PROGRESS→COMPLETED 상태 전환 처리
       await resumeApi.autoGenerate(selectedRequest.id);
-      // 자동 상태 전환: → COMPLETED
-      await resumeApi.changeRequestStatus(selectedRequest.id, 'COMPLETED');
       alert('이력서가 자동 생성되었습니다.');
       await fetchRequests();
       const updated = (await resumeApi.getRequests()).find(r => r.id === selectedRequest.id);
@@ -204,7 +194,7 @@ const ResumeManagement: React.FC = () => {
       setActiveStep(3);
     } catch (error) {
       console.error('자동 생성 실패:', error);
-      alert('자동 생성에 실패했습니다.');
+      alert('자동 생성에 실패했습니다. 다시 시도해주세요.');
     } finally {
       setAutoGenLoading(false);
     }
@@ -342,16 +332,6 @@ const ResumeManagement: React.FC = () => {
     }
   };
 
-  const handleToggleAutoGeneration = async (enabled: boolean) => {
-    try {
-      const result = await resumeApi.setAutoGenerationSetting(enabled);
-      setAutoGenerationEnabled(result.enabled);
-    } catch (error) {
-      console.error('자동 생성 설정 변경 실패:', error);
-      alert('설정 변경에 실패했습니다.');
-    }
-  };
-
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleString('ko-KR');
   };
@@ -383,13 +363,6 @@ const ResumeManagement: React.FC = () => {
     <Container>
       <Header>
         <h1>이력서 관리</h1>
-        <SettingRow>
-          <SettingLabel>AI 자동 생성</SettingLabel>
-          <ToggleSwitch
-            checked={autoGenerationEnabled}
-            onChange={(e) => handleToggleAutoGeneration(e.target.checked)}
-          />
-        </SettingRow>
       </Header>
 
       <TabNav>
@@ -736,49 +709,6 @@ const Header = styled.div`
     font-size: 24px;
     font-weight: 700;
     color: ${({ theme }) => theme.colors.text.primary};
-  }
-`;
-
-const SettingRow = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 10px;
-`;
-
-const SettingLabel = styled.span`
-  font-size: 14px;
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.text.secondary};
-`;
-
-const ToggleSwitch = styled.input.attrs({ type: 'checkbox' })`
-  appearance: none;
-  width: 44px;
-  height: 24px;
-  background: ${({ theme }) => theme.colors.gray[300]};
-  border-radius: 12px;
-  position: relative;
-  cursor: pointer;
-  transition: ${({ theme }) => theme.transitions.normal};
-
-  &:checked {
-    background: ${({ theme }) => theme.colors.primary};
-  }
-
-  &::before {
-    content: '';
-    position: absolute;
-    width: 20px;
-    height: 20px;
-    background: white;
-    border-radius: 50%;
-    top: 2px;
-    left: 2px;
-    transition: ${({ theme }) => theme.transitions.normal};
-  }
-
-  &:checked::before {
-    transform: translateX(20px);
   }
 `;
 
