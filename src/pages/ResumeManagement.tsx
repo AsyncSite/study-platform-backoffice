@@ -681,7 +681,8 @@ const ResumeManagement: React.FC = () => {
                                   SVG
                                 </ActionButton>
                                 <ActionButton
-                                  onClick={() => window.open(resumeApi.getHtmlDownloadUrl(resume.id), '_blank')}
+                                  onClick={() => handleDownloadResume(resume.htmlUrl)}
+                                  disabled={!resume.htmlUrl}
                                   style={{ background: '#059669', color: 'white' }}
                                 >
                                   HTML

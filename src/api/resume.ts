@@ -38,6 +38,8 @@ export interface Resume {
   fileSizeBytes: number;
   svgUrl: string | null;
   svgKey: string | null;
+  htmlUrl: string | null;
+  htmlKey: string | null;
   generationMode: ResumeGenerationMode;
   status: ResumeStatus;
   createdAt: string;
