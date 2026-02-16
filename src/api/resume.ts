@@ -172,6 +172,10 @@ export const resumeApi = {
     return `${env.apiBaseUrl}${RESUME_URL}/${id}/download`;
   },
 
+  getHtmlDownloadUrl: (id: number): string => {
+    return `${env.apiBaseUrl}${RESUME_URL}/${id}/download-html`;
+  },
+
   // === Auto Generation ===
   getAutoGenerationSetting: async (): Promise<{ enabled: boolean }> => {
     const response = await apiClient.get(`${RESUME_URL}/settings/auto-generation`);

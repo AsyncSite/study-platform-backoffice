@@ -680,6 +680,12 @@ const ResumeManagement: React.FC = () => {
                                 >
                                   SVG
                                 </ActionButton>
+                                <ActionButton
+                                  onClick={() => window.open(resumeApi.getHtmlDownloadUrl(resume.id), '_blank')}
+                                  style={{ background: '#059669', color: 'white' }}
+                                >
+                                  HTML
+                                </ActionButton>
                                 {resume.status === 'GENERATED' && (
                                   <ActionButton
                                     onClick={() => handleMarkDelivered(resume.id)}
