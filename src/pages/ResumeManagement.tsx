@@ -222,25 +222,30 @@ const ResumeManagement: React.FC = () => {
       .replace(/\u201D/g, '"');
   };
 
-  // PDF와 동일한 A4 시뮬레이션 CSS (Chrome --print-to-pdf와 동일한 레이아웃)
+  // PDF와 동일한 A4 시뮬레이션 CSS
+  // Chrome --print-to-pdf: A4(297mm), margin 15mm/12mm → 콘텐츠 영역 267mm × 186mm
+  // 각 .page를 독립된 A4 용지로 렌더링하여 PDF 페이지 나눔과 동일하게 표현
   const A4_PREVIEW_CSS = `
     <style>
       @page { size: A4; margin: 15mm 12mm 15mm 12mm; }
-      html { background: #e5e7eb; }
-      body {
-        width: 186mm; /* A4(210mm) - 좌우여백(12mm×2) */
-        margin: 0 auto;
+      html, body {
+        margin: 0;
+        padding: 0;
+        background: #e5e7eb;
+      }
+      .page {
+        width: 186mm;
+        min-height: 267mm;
         padding: 15mm 12mm;
+        margin: 20px auto;
         background: white;
-        min-height: 297mm;
         box-shadow: 0 2px 8px rgba(0,0,0,0.15);
         box-sizing: content-box;
-      }
-      .page + .page {
+        overflow: hidden;
         page-break-before: always;
-        border-top: 2px dashed #d1d5db;
-        margin-top: 10mm;
-        padding-top: 15mm;
+      }
+      .page:first-child {
+        page-break-before: auto;
       }
       h1, h2, h3 { page-break-after: avoid; }
       .project-block, .career-block { page-break-inside: avoid; }
