@@ -209,12 +209,25 @@ const ResumeManagement: React.FC = () => {
     }
   };
 
+  // 복사/붙여넣기 시 깨지는 문자 자동 정리
+  const sanitizeHtml = (html: string): string => {
+    return html
+      .replace(/```\w*\s*/g, '')  // 마크다운 코드 펜스 제거
+      .replace(/```/g, '')
+      .replace(/\u2013/g, '--')   // en-dash → --
+      .replace(/\u2014/g, '--')   // em-dash → --
+      .replace(/\u2018/g, "'")    // 스마트 따옴표
+      .replace(/\u2019/g, "'")
+      .replace(/\u201C/g, '"')
+      .replace(/\u201D/g, '"');
+  };
+
   const handlePreview = () => {
     if (!htmlInput.trim()) {
       alert('HTML을 입력해주세요.');
       return;
     }
-    setPreviewHtml(htmlInput);
+    setPreviewHtml(sanitizeHtml(htmlInput));
     setShowPreview(true);
   };
 
@@ -236,7 +249,7 @@ const ResumeManagement: React.FC = () => {
       await resumeApi.generateResume({
         requestId: selectedRequest.id,
         title: pdfTitle,
-        htmlContent: htmlInput,
+        htmlContent: sanitizeHtml(htmlInput),
         mode: 'MANUAL',
       });
       // 자동 상태 전환: → COMPLETED
