@@ -252,8 +252,10 @@ const ResumeManagement: React.FC = () => {
         htmlContent: sanitizeHtml(htmlInput),
         mode: 'MANUAL',
       });
-      // 자동 상태 전환: → COMPLETED
-      await resumeApi.changeRequestStatus(selectedRequest.id, 'COMPLETED');
+      // 자동 상태 전환: → COMPLETED (이미 COMPLETED면 스킵)
+      if (selectedRequest.status !== 'COMPLETED') {
+        await resumeApi.changeRequestStatus(selectedRequest.id, 'COMPLETED');
+      }
       alert('PDF가 생성되었습니다.');
       setHtmlInput('');
       setPdfTitle('');
@@ -443,7 +445,7 @@ const ResumeManagement: React.FC = () => {
               <>
                 {/* Step Indicator */}
                 {(() => {
-                  const isFinished = selectedRequest?.status === 'COMPLETED' || selectedRequest?.status === 'CANCELLED';
+                  const isCancelled = selectedRequest?.status === 'CANCELLED';
                   return (
                     <>
                       <StepIndicator>
@@ -451,7 +453,7 @@ const ResumeManagement: React.FC = () => {
                           <StepNumber $active={activeStep === 1}>1</StepNumber>
                         </StepCircle>
                         <StepLine />
-                        <StepCircle $active={activeStep === 2} onClick={() => !isFinished && handleGoToStep2()} style={isFinished ? { opacity: 0.4, cursor: 'not-allowed' } : {}}>
+                        <StepCircle $active={activeStep === 2} onClick={() => !isCancelled && handleGoToStep2()} style={isCancelled ? { opacity: 0.4, cursor: 'not-allowed' } : {}}>
                           <StepNumber $active={activeStep === 2}>2</StepNumber>
                         </StepCircle>
                         <StepLine />
@@ -462,7 +464,7 @@ const ResumeManagement: React.FC = () => {
 
                       <StepLabels>
                         <StepLabel $active={activeStep === 1} onClick={() => setActiveStep(1)}>원본 확인</StepLabel>
-                        <StepLabel $active={activeStep === 2} onClick={() => !isFinished && handleGoToStep2()} style={isFinished ? { opacity: 0.4, cursor: 'not-allowed' } : {}}>첨삭 작성</StepLabel>
+                        <StepLabel $active={activeStep === 2} onClick={() => !isCancelled && handleGoToStep2()} style={isCancelled ? { opacity: 0.4, cursor: 'not-allowed' } : {}}>첨삭 작성</StepLabel>
                         <StepLabel $active={activeStep === 3} onClick={() => setActiveStep(3)}>결과 확인/전달</StepLabel>
                       </StepLabels>
                     </>
@@ -599,7 +601,12 @@ const ResumeManagement: React.FC = () => {
                     <StepTitle>Step 3: 결과 확인/전달</StepTitle>
 
                     <StepSection>
-                      <SectionLabel>생성된 이력서</SectionLabel>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <SectionLabel>생성된 이력서</SectionLabel>
+                        <ActionButton onClick={() => setActiveStep(2)} style={{ background: '#6366f1', color: 'white' }}>
+                          PDF 재생성
+                        </ActionButton>
+                      </div>
                       {resumesLoading ? (
                         <LoadingText>로딩 중...</LoadingText>
                       ) : requestResumes.length === 0 ? (
