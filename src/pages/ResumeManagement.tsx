@@ -555,10 +555,11 @@ const ResumeManagement: React.FC = () => {
                       <FormGroup>
                         <label>HTML 코드</label>
                         <TextArea
-                          rows={15}
+                          rows={25}
                           value={htmlInput}
                           onChange={(e) => setHtmlInput(e.target.value)}
                           placeholder="이력서 HTML 코드를 붙여넣으세요..."
+                          style={{ fontFamily: 'monospace', fontSize: '12px' }}
                         />
                       </FormGroup>
 
@@ -1079,7 +1080,7 @@ const PreviewContainer = styled.div`
 
 const PreviewFrame = styled.iframe`
   width: 100%;
-  height: 600px;
+  height: 900px;
   border: 1px solid ${({ theme }) => theme.colors.gray[300]};
   border-radius: ${({ theme }) => theme.radii.medium};
   background: white;

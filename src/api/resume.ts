@@ -153,12 +153,12 @@ export const resumeApi = {
   },
 
   generateResume: async (request: GenerateResumeRequest): Promise<Resume> => {
-    const response = await apiClient.post(`${RESUME_URL}/generate`, request);
+    const response = await apiClient.post(`${RESUME_URL}/generate`, request, { timeout: 120000 });
     return response.data;
   },
 
   previewHtml: async (htmlContent: string): Promise<{ htmlContent: string }> => {
-    const response = await apiClient.post(`${RESUME_URL}/preview`, { htmlContent });
+    const response = await apiClient.post(`${RESUME_URL}/preview`, { htmlContent }, { timeout: 60000 });
     return response.data;
   },
 
@@ -182,7 +182,7 @@ export const resumeApi = {
   },
 
   autoGenerate: async (requestId: number): Promise<Resume> => {
-    const response = await apiClient.post(`${RESUME_URL}/auto-generate`, { requestId });
+    const response = await apiClient.post(`${RESUME_URL}/auto-generate`, { requestId }, { timeout: 180000 });
     return response.data;
   },
 };
