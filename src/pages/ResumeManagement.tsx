@@ -222,12 +222,48 @@ const ResumeManagement: React.FC = () => {
       .replace(/\u201D/g, '"');
   };
 
+  // PDF와 동일한 A4 시뮬레이션 CSS (Chrome --print-to-pdf와 동일한 레이아웃)
+  const A4_PREVIEW_CSS = `
+    <style>
+      @page { size: A4; margin: 15mm 12mm 15mm 12mm; }
+      html { background: #e5e7eb; }
+      body {
+        width: 186mm; /* A4(210mm) - 좌우여백(12mm×2) */
+        margin: 0 auto;
+        padding: 15mm 12mm;
+        background: white;
+        min-height: 297mm;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        box-sizing: content-box;
+      }
+      .page + .page {
+        page-break-before: always;
+        border-top: 2px dashed #d1d5db;
+        margin-top: 10mm;
+        padding-top: 15mm;
+      }
+      h1, h2, h3 { page-break-after: avoid; }
+      .project-block, .career-block { page-break-inside: avoid; }
+      table, figure, img { page-break-inside: avoid; }
+    </style>
+  `;
+
+  const injectPreviewCss = (html: string): string => {
+    if (html.includes('</head>')) {
+      return html.replace('</head>', A4_PREVIEW_CSS + '</head>');
+    }
+    if (html.match(/<html[^>]*>/)) {
+      return html.replace(/(<html[^>]*>)/, '$1<head>' + A4_PREVIEW_CSS + '</head>');
+    }
+    return A4_PREVIEW_CSS + html;
+  };
+
   const handlePreview = () => {
     if (!htmlInput.trim()) {
       alert('HTML을 입력해주세요.');
       return;
     }
-    setPreviewHtml(sanitizeHtml(htmlInput));
+    setPreviewHtml(injectPreviewCss(sanitizeHtml(htmlInput)));
     setShowPreview(true);
   };
 
@@ -1099,11 +1135,14 @@ const PreviewContainer = styled.div`
 `;
 
 const PreviewFrame = styled.iframe`
-  width: 100%;
-  height: 900px;
+  width: 830px; /* A4 210mm + 약간의 스크롤 여유 */
+  max-width: 100%;
+  height: 1100px;
   border: 1px solid ${({ theme }) => theme.colors.gray[300]};
   border-radius: ${({ theme }) => theme.radii.medium};
-  background: white;
+  background: #e5e7eb;
+  display: block;
+  margin: 0 auto;
 `;
 
 const ResumeList = styled.div`
