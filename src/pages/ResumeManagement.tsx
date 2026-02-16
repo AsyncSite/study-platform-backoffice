@@ -671,7 +671,14 @@ const ResumeManagement: React.FC = () => {
                               </ResumeInfo>
                               <ResumeActions>
                                 <ActionButton onClick={() => handleDownloadResume(resume.pdfUrl)} disabled={!resume.pdfUrl}>
-                                  다운로드
+                                  PDF
+                                </ActionButton>
+                                <ActionButton
+                                  onClick={() => handleDownloadResume(resume.svgUrl)}
+                                  disabled={!resume.svgUrl}
+                                  style={{ background: '#8b5cf6', color: 'white' }}
+                                >
+                                  SVG
                                 </ActionButton>
                                 {resume.status === 'GENERATED' && (
                                   <ActionButton

@@ -36,6 +36,8 @@ export interface Resume {
   pdfUrl: string | null;
   pdfKey: string | null;
   fileSizeBytes: number;
+  svgUrl: string | null;
+  svgKey: string | null;
   generationMode: ResumeGenerationMode;
   status: ResumeStatus;
   createdAt: string;
