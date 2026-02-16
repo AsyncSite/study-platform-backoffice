@@ -227,20 +227,23 @@ const ResumeManagement: React.FC = () => {
   // 각 .page를 독립된 A4 용지로 렌더링하여 PDF 페이지 나눔과 동일하게 표현
   const A4_PREVIEW_CSS = `
     <style>
-      @page { size: A4; margin: 15mm 12mm 15mm 12mm; }
+      @page { size: A4; margin: 0; }
       html, body {
         margin: 0;
         padding: 0;
         background: #e5e7eb;
       }
+      .resume-container {
+        max-width: 210mm;
+        margin: 0 auto;
+        box-shadow: none;
+      }
       .page {
-        width: 186mm;
-        min-height: 267mm;
-        padding: 15mm 12mm;
+        width: 210mm;
+        min-height: 297mm;
         margin: 20px auto;
         background: white;
         box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-        box-sizing: content-box;
         overflow: hidden;
         page-break-before: always;
       }
