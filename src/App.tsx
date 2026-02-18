@@ -22,6 +22,7 @@ import CouponManagement from './pages/CouponManagement';
 import ProductManagement from './pages/ProductManagement';
 import ReviewManagement from './pages/ReviewManagement';
 import ResumeManagement from './pages/ResumeManagement';
+import PsychtestCouponManagement from './pages/PsychtestCouponManagement';
 
 function App() {
   return (
@@ -179,6 +180,16 @@ function App() {
                 <PrivateRoute>
                   <Layout>
                     <ResumeManagement />
+                  </Layout>
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/psychtest-coupons"
+              element={
+                <PrivateRoute>
+                  <Layout>
+                    <PsychtestCouponManagement />
                   </Layout>
                 </PrivateRoute>
               }
