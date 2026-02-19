@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
-import { format } from 'date-fns';
-import { ko } from 'date-fns/locale';
 import Badge from '../components/common/Badge';
 import { couponApi, type CouponResponse, type CreateCouponRequest } from '../api/coupon';
 import { productApi, type ProductResponse } from '../api/product';
+import { formatDate as formatDateKst } from '../utils/dateUtils';
 
 const generateCouponCode = (): string => {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -189,13 +188,9 @@ const CouponManagement: React.FC = () => {
     return `${coupon.discountValue.toLocaleString()}원`;
   };
 
-  const formatDate = (dateStr: string | null) => {
+  const formatCouponDate = (dateStr: string | null) => {
     if (!dateStr) return '-';
-    try {
-      return format(new Date(dateStr), 'yyyy-MM-dd HH:mm', { locale: ko });
-    } catch {
-      return dateStr;
-    }
+    return formatDateKst(dateStr);
   };
 
   return (
@@ -222,7 +217,7 @@ const CouponManagement: React.FC = () => {
                 <Th>할인 유형</Th>
                 <Th>할인 값</Th>
                 <Th>사용 현황</Th>
-                <Th>유효 기간</Th>
+                <Th>유효 기간 (KST)</Th>
                 <Th>상태</Th>
                 <Th>액션</Th>
               </tr>
@@ -245,9 +240,9 @@ const CouponManagement: React.FC = () => {
                   </Td>
                   <Td>
                     <DateRange>
-                      <span>{formatDate(coupon.validFrom)}</span>
+                      <span>{formatCouponDate(coupon.validFrom)}</span>
                       <span>~</span>
-                      <span>{formatDate(coupon.validUntil)}</span>
+                      <span>{formatCouponDate(coupon.validUntil)}</span>
                     </DateRange>
                   </Td>
                   <Td>
@@ -385,23 +380,24 @@ const CouponManagement: React.FC = () => {
                 </FormGroup>
 
                 <FormGroup>
-                  <Label>유효 시작일 *</Label>
+                  <Label>유효 시작일 (KST) *</Label>
                   <Input
                     type="datetime-local"
                     value={formData.validFrom}
                     onChange={(e) => setFormData({ ...formData, validFrom: e.target.value })}
                     required
                   />
+                  <HelpText>한국 시간(KST) 기준으로 입력하세요</HelpText>
                 </FormGroup>
 
                 <FormGroup>
-                  <Label>유효 종료일</Label>
+                  <Label>유효 종료일 (KST)</Label>
                   <Input
                     type="datetime-local"
                     value={formData.validUntil ?? ''}
                     onChange={(e) => setFormData({ ...formData, validUntil: e.target.value || null })}
                   />
-                  <HelpText>비워두면 무기한</HelpText>
+                  <HelpText>비워두면 무기한 | 한국 시간(KST) 기준</HelpText>
                 </FormGroup>
 
                 <FormGroup $fullWidth>

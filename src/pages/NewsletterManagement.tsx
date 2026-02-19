@@ -998,7 +998,7 @@ const NewsletterManagement: React.FC = () => {
             </ModalHeader>
             <ModalBody>
               <FormGroup>
-                <Label>발송 예약 시간</Label>
+                <Label>발송 예약 시간 (KST)</Label>
                 <DateTimeInput
                   type="datetime-local"
                   value={scheduleDateTime}
@@ -1006,7 +1006,7 @@ const NewsletterManagement: React.FC = () => {
                   min={new Date().toISOString().slice(0, 16)}
                 />
                 <ScheduleHint>
-                  선택한 시간에 {totalCount}명의 구독자에게 발송됩니다.
+                  한국 시간(KST) 기준 | 선택한 시간에 {totalCount}명의 구독자에게 발송됩니다.
                 </ScheduleHint>
               </FormGroup>
               <ModalActions>
